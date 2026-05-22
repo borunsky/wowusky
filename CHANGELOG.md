@@ -4,7 +4,63 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.7] — 2026-05-22
+## [0.4.9] — 2026-05-22
+
+Packaging fix. Corrects the GitHub repository URL across the project.
+No code changes — `app.py` and all 109 tests are identical to 0.4.7.
+
+### Fixed
+- **Wrong GitHub URL everywhere.** PKGBUILD, `.SRCINFO`, README,
+  CONTRIBUTING, `pyproject.toml` and the AUR guide all pointed at
+  `github.com/wowusky/wowusky`. The actual repository is
+  `github.com/borunsky/wowusky`. This was build-breaking, not
+  cosmetic: the PKGBUILD `source=()` line builds the release-tarball
+  URL from it, so `makepkg` would have failed with a 404. All 25
+  occurrences across 6 files are corrected, including the historical
+  release link references in this changelog.
+
+### Note
+The `sha256sums` in the PKGBUILD is still `SKIP`. It can only be
+filled in after the v0.4.9 tag is pushed and the tarball exists on
+GitHub — see step 2 of `AUR-RELEASE.md` (`updpkgsums`).
+
+
+
+Packaging release. Makes the AUR submission actually publishable.
+No code changes — `app.py` and all 109 tests are identical to 0.4.7.
+
+### Fixed
+- **PKGBUILD `pkgver` was stuck at 0.4.1.** It would have pulled the
+  broken v0.4.1 tarball — the release that could not even be
+  imported. Bumped to 0.4.8.
+- **`.SRCINFO` was missing entirely.** The AUR requires this file;
+  a submission without it is rejected. Added, in the format
+  `makepkg --printsrcinfo` produces.
+- **`check()` could fail in a clean build container** — it runs
+  `pytest` but `python-pytest` was not declared. Added as
+  `checkdepends`.
+- PKGBUILD `LICENSE` install no longer swallows errors with
+  `|| true`; the file exists and must be installed.
+
+### Added
+- **`AUR-RELEASE.md`**: step-by-step publishing guide — tagging,
+  checksum generation with `updpkgsums`, local `makepkg -si` test,
+  `.SRCINFO` regeneration, and the AUR push.
+
+### Verified
+- `python -m build --wheel --no-isolation` (the PKGBUILD `build()`
+  step) runs and produces `wowusky-0.4.8-py3-none-any.whl`.
+- `python -m installer` (the `package()` step) lays down the
+  `wowusky` entry point and all modules correctly.
+- All nine files the PKGBUILD installs (README, LICENSE, .desktop,
+  SVG, five PNG icons) exist and are valid.
+
+### Still required before the AUR goes live
+Tagging `v0.4.8` on GitHub, creating the release, running
+`updpkgsums` for the real checksum, a local `makepkg -si`, and the
+AUR account/push. See `AUR-RELEASE.md`.
+
+
 
 Bug-fix release. Fixes a regression introduced by the B11 fix in
 v0.4.6, caught immediately in the next smoke-test run.
@@ -348,12 +404,14 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
-[0.4.7]:         https://github.com/wowusky/wowusky/releases/tag/v0.4.7
-[0.4.6]:         https://github.com/wowusky/wowusky/releases/tag/v0.4.6
-[0.4.5]:         https://github.com/wowusky/wowusky/releases/tag/v0.4.5
-[0.4.4]:         https://github.com/wowusky/wowusky/releases/tag/v0.4.4
-[0.4.3]:         https://github.com/wowusky/wowusky/releases/tag/v0.4.3
-[0.4.2]:         https://github.com/wowusky/wowusky/releases/tag/v0.4.2
-[0.4.1]:         https://github.com/wowusky/wowusky/releases/tag/v0.4.1
-[0.4.0]:         https://github.com/wowusky/wowusky/releases/tag/v0.4.0
-[0.3.0-alpha]:   https://github.com/wowusky/wowusky/releases/tag/v0.3.0-alpha
+[0.4.9]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.9
+[0.4.8]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.8
+[0.4.7]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.7
+[0.4.6]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.6
+[0.4.5]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.5
+[0.4.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.4
+[0.4.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.3
+[0.4.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.2
+[0.4.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.1
+[0.4.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.0
+[0.3.0-alpha]:   https://github.com/borunsky/wowusky/releases/tag/v0.3.0-alpha

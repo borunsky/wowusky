@@ -6,7 +6,7 @@ keep the codebase healthy.
 ## Development setup
 
 ```bash
-git clone https://github.com/wowusky/wowusky
+git clone https://github.com/borunsky/wowusky
 cd wowusky
 pip install -e ".[dev]"
 

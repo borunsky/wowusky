@@ -1,17 +1,19 @@
-# Maintainer: wowusky contributors
+# Maintainer: Kevin <your-email@example.com>
 
 pkgname=wowusky
-pkgver=0.4.1
+pkgver=0.4.9
 pkgrel=1
 pkgdesc='Minimalist World of Warcraft addon manager for Linux'
 arch=('any')
-url='https://github.com/wowusky/wowusky'
+url='https://github.com/borunsky/wowusky'
 license=('MIT')
 depends=('python' 'tk')
 makedepends=('python-build' 'python-installer' 'python-setuptools' 'python-wheel')
+checkdepends=('python-pytest')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz")
-# Replace with the real sha256 after tagging the release:
-#   updpkgsums
+# 'SKIP' is a placeholder. Before publishing to the AUR, tag and push
+# the v0.4.9 release on GitHub, then run `updpkgsums` in this directory
+# to replace SKIP with the real checksum of the release tarball.
 sha256sums=('SKIP')
 
 build() {
@@ -28,14 +30,16 @@ package() {
   cd "${pkgname}-${pkgver}"
   python -m installer --destdir="${pkgdir}" dist/*.whl
 
-  install -Dm644 README.md      "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-  install -Dm644 LICENSE        "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" 2>/dev/null || true
+  install -Dm644 README.md  "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+  install -Dm644 LICENSE    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 
-  # Desktop entry + icons
+  # Desktop entry + scalable icon
   install -Dm644 packaging/wowusky.desktop \
                  "${pkgdir}/usr/share/applications/wowusky.desktop"
   install -Dm644 packaging/wowusky.svg \
                  "${pkgdir}/usr/share/icons/hicolor/scalable/apps/wowusky.svg"
+
+  # Raster icons
   for sz in 32 64 128 256 512; do
     if [ -f "packaging/wowusky-${sz}.png" ]; then
       install -Dm644 "packaging/wowusky-${sz}.png" \

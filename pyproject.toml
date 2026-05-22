@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name        = "wowusky"
-version     = "0.4.7"
+version     = "0.4.9"
 description = "Minimalist World of Warcraft addon manager for Linux"
 readme      = "README.md"
 license     = { text = "MIT" }
@@ -36,9 +36,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/wowusky/wowusky"
-Issues   = "https://github.com/wowusky/wowusky/issues"
-Source   = "https://github.com/wowusky/wowusky"
+Homepage = "https://github.com/borunsky/wowusky"
+Issues   = "https://github.com/borunsky/wowusky/issues"
+Source   = "https://github.com/borunsky/wowusky"
 
 [project.scripts]
 wowusky = "wowusky.__main__:main"
