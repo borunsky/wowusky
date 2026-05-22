@@ -1,0 +1,739 @@
+{
+  "name": "wowusky-builtin",
+  "version": "0.4.0",
+  "description": "Curated builtin catalog shipped with wowusky.",
+  "addons": [
+    {
+      "id": "elvui",
+      "name": "ElvUI",
+      "author": "Elv & Simpy",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ElvUI",
+        "ElvUI_Options",
+        "ElvUI_Libraries"
+      ],
+      "description": "Complete UI replacement with unit frames, action bars, nameplates, bags, chat.",
+      "provider": "tukui",
+      "slug": "elvui"
+    },
+    {
+      "id": "tukui",
+      "name": "Tukui",
+      "author": "Tukz",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Tukui"
+      ],
+      "description": "Minimal UI replacement. Lightweight, fast, performant.",
+      "provider": "tukui",
+      "slug": "tukui"
+    },
+    {
+      "id": "shadowedunitframes",
+      "name": "Shadowed Unit Frames",
+      "author": "Shadowed / Nevcairiel",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ShadowedUnitFrames",
+        "ShadowedUF_Options"
+      ],
+      "description": "Lightweight, customizable unit frames. Uses the maintained Nevcairiel repo with Classic/TBC Anniversary packages.",
+      "provider": "github",
+      "repo": "Nevcairiel/ShadowedUnitFrames"
+    },
+    {
+      "id": "bartender4",
+      "name": "Bartender4",
+      "author": "Nevcairiel",
+      "category": "Action Bars",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Bartender4"
+      ],
+      "description": "Customizable action bars with extensive options. Current upstream is GitHub/WowAce, not the old WoWInterface id.",
+      "provider": "github",
+      "repo": "Nevcairiel/Bartender4"
+    },
+    {
+      "id": "dominos",
+      "name": "Dominos",
+      "author": "Tuller",
+      "category": "Action Bars",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic",
+        "vanilla"
+      ],
+      "folders": [
+        "Dominos",
+        "Dominos_Cast",
+        "Dominos_Encounter",
+        "Dominos_Roll",
+        "Dominos_XP",
+        "Dominos_Config"
+      ],
+      "description": "Replaces the default action bars with movable, configurable bars.",
+      "provider": "github",
+      "repo": "tullamods/Dominos"
+    },
+    {
+      "id": "weakauras",
+      "name": "WeakAuras 2",
+      "author": "WeakAuras Team",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WeakAuras",
+        "WeakAurasArchive",
+        "WeakAurasModelPaths",
+        "WeakAurasOptions",
+        "WeakAurasTemplates"
+      ],
+      "description": "Powerful framework for visual displays of buffs, cooldowns, mechanics. Wago.io support built-in.",
+      "provider": "github",
+      "repo": "WeakAuras/WeakAuras2"
+    },
+    {
+      "id": "wac",
+      "name": "WeakAuras Companion",
+      "author": "wowusky",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WeakAurasCompanion"
+      ],
+      "description": "Generates WeakAurasCompanion data from Wago.io subscriptions. Auto-installs.",
+      "provider": "internal_wac"
+    },
+    {
+      "id": "omnicc",
+      "name": "OmniCC",
+      "author": "Tuller",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "OmniCC",
+        "OmniCC_Config"
+      ],
+      "description": "Adds countdown text to ability cooldowns on action buttons.",
+      "provider": "github",
+      "repo": "tullamods/OmniCC"
+    },
+    {
+      "id": "tellmewhen",
+      "name": "TellMeWhen",
+      "author": "Cybeloras",
+      "category": "Buffs",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "vanilla",
+        "classic"
+      ],
+      "folders": [
+        "TellMeWhen",
+        "TellMeWhen_Options"
+      ],
+      "description": "Customizable icons for cooldown/buff/debuff tracking.",
+      "provider": "wowi",
+      "wowi_id": "10855"
+    },
+    {
+      "id": "details",
+      "name": "Details!",
+      "author": "Tercio",
+      "category": "Combat",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic"
+      ],
+      "folders": [
+        "Details"
+      ],
+      "description": "Detailed damage meter with extensive statistics and analysis. CurseForge is used because GitHub releases are outdated.",
+      "provider": "curseforge_web"
+    },
+    {
+      "id": "skada",
+      "name": "Skada",
+      "author": "Zarnivoop",
+      "category": "Combat",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic",
+        "vanilla"
+      ],
+      "folders": [
+        "Skada"
+      ],
+      "description": "Modular damage/healing/threat meter. Lightweight alternative to Details!.",
+      "provider": "github",
+      "repo": "zarnivoop/Skada"
+    },
+    {
+      "id": "recount",
+      "name": "Recount",
+      "author": "Resike",
+      "category": "Combat",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "vanilla",
+        "mop_classic"
+      ],
+      "folders": [
+        "Recount"
+      ],
+      "description": "Classic combat tracker. Uses maintained Resike/Recount repo with Retail, MoP and Classic tags.",
+      "provider": "github",
+      "repo": "Resike/Recount"
+    },
+    {
+      "id": "omen",
+      "name": "Omen Threat Meter",
+      "author": "Omen Team",
+      "category": "Combat",
+      "flavors": [
+        "anniversary",
+        "vanilla",
+        "mop_classic"
+      ],
+      "folders": [
+        "Omen"
+      ],
+      "description": "Classic-era threat meter. Open CurseForge/Wago and import the ZIP because current maintained sources vary by flavor.",
+      "provider": "curseforge_web"
+    },
+    {
+      "id": "bigwigs",
+      "name": "BigWigs",
+      "author": "BigWigs Team",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BigWigs",
+        "BigWigs_Core"
+      ],
+      "description": "Boss warnings for raids and dungeons. Uses flavor-specific BigWigs repositories where available.",
+      "provider": "github",
+      "repo": "BigWigsMods/BigWigs"
+    },
+    {
+      "id": "littlewigs",
+      "name": "LittleWigs",
+      "author": "BigWigs Team",
+      "category": "Boss Mods",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic"
+      ],
+      "folders": [
+        "LittleWigs"
+      ],
+      "description": "BigWigs for dungeons, delves, and scenarios.",
+      "provider": "github",
+      "repo": "BigWigsMods/LittleWigs"
+    },
+    {
+      "id": "dbm",
+      "name": "Deadly Boss Mods",
+      "author": "MysticalOS",
+      "category": "Boss Mods",
+      "flavors": [
+        "retail"
+      ],
+      "folders": [
+        "DBM-Core",
+        "DBM-GUI"
+      ],
+      "description": "The classic boss mod alternative for Retail.",
+      "provider": "github",
+      "repo": "DeadlyBossMods/DeadlyBossMods"
+    },
+    {
+      "id": "dbm_classic",
+      "name": "Deadly Boss Mods (Classic)",
+      "author": "MysticalOS",
+      "category": "Boss Mods",
+      "flavors": [
+        "vanilla",
+        "classic",
+        "anniversary"
+      ],
+      "folders": [
+        "DBM-Core",
+        "DBM-GUI"
+      ],
+      "description": "DBM for Classic Era and TBC Anniversary.",
+      "provider": "github",
+      "repo": "DeadlyBossMods/DBM-Classic"
+    },
+    {
+      "id": "plater",
+      "name": "Plater",
+      "author": "Tercio",
+      "category": "Nameplates",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic"
+      ],
+      "folders": [
+        "Plater"
+      ],
+      "description": "Highly customizable nameplates with profiles, scripting, threat display.",
+      "provider": "github",
+      "repo": "Tercioo/Plater-Nameplates"
+    },
+    {
+      "id": "kuinameplates",
+      "name": "Kui Nameplates",
+      "author": "Kesava",
+      "category": "Nameplates",
+      "flavors": [
+        "retail",
+        "mop_classic"
+      ],
+      "folders": [
+        "Kui_Nameplates",
+        "Kui_Media"
+      ],
+      "description": "Clean, customizable nameplates.",
+      "provider": "wowi",
+      "wowi_id": "19390"
+    },
+    {
+      "id": "threatplates",
+      "name": "Threat Plates",
+      "author": "Backupiseasy",
+      "category": "Nameplates",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "vanilla",
+        "mop_classic"
+      ],
+      "folders": [
+        "TidyPlates_ThreatPlates"
+      ],
+      "description": "Threat-coloured nameplates for tanks and dps. Uses the maintained Backupiseasy/ThreatPlates repo.",
+      "provider": "github",
+      "repo": "Backupiseasy/ThreatPlates"
+    },
+    {
+      "id": "questie",
+      "name": "Questie",
+      "author": "Questie Team",
+      "category": "Quests",
+      "flavors": [
+        "vanilla",
+        "classic",
+        "anniversary",
+        "tbc"
+      ],
+      "folders": [
+        "Questie"
+      ],
+      "description": "Quest helper for Classic/TBC \u2013 objectives on map and minimap.",
+      "provider": "github",
+      "repo": "Questie/Questie"
+    },
+    {
+      "id": "questguru",
+      "name": "Quest Guru",
+      "author": "QuestGuruTeam",
+      "category": "Quests",
+      "flavors": [
+        "anniversary",
+        "vanilla",
+        "classic",
+        "mop_classic"
+      ],
+      "folders": [
+        "QuestGuru",
+        "QuestGuru_Tracker"
+      ],
+      "description": "Enhanced quest log and tracker.",
+      "provider": "github",
+      "repo": "Road-block/QuestGuru_Classic"
+    },
+    {
+      "id": "leatrix_plus",
+      "name": "Leatrix Plus",
+      "author": "Leatrix",
+      "category": "Quests",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic",
+        "vanilla"
+      ],
+      "folders": [
+        "Leatrix_Plus"
+      ],
+      "description": "Quality of life modifications: auto-quest, faster looting, and more. CurseForge is used because the project supports all current WoW flavors there.",
+      "provider": "curseforge_web"
+    },
+    {
+      "id": "bagnon",
+      "name": "Bagnon",
+      "author": "Jaliborc",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Bagnon",
+        "Bagnon_Config",
+        "Bagnon_Forever",
+        "Bagnon_Options",
+        "BagBrother"
+      ],
+      "description": "Single-window inventory replacement. Uses current Jaliborc/Bagnon upstream.",
+      "provider": "github",
+      "repo": "Jaliborc/Bagnon"
+    },
+    {
+      "id": "arkinventory",
+      "name": "ArkInventory",
+      "author": "Arkayenro",
+      "category": "Bags",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic",
+        "vanilla"
+      ],
+      "folders": [
+        "ArkInventory"
+      ],
+      "description": "Highly configurable inventory with auto-sorting and rules.",
+      "provider": "wowi",
+      "wowi_id": "9173"
+    },
+    {
+      "id": "auctionator",
+      "name": "Auctionator",
+      "author": "Auctionator Team",
+      "category": "Auction",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic",
+        "vanilla"
+      ],
+      "folders": [
+        "Auctionator"
+      ],
+      "description": "Improved Auction House interface with price scanning.",
+      "provider": "github",
+      "repo": "Auctionator/Auctionator"
+    },
+    {
+      "id": "tradeskillmaster",
+      "name": "TradeSkillMaster",
+      "author": "TSM Team",
+      "category": "Auction",
+      "flavors": [
+        "retail"
+      ],
+      "folders": [
+        "TradeSkillMaster"
+      ],
+      "description": "Advanced auction house and crafting automation.",
+      "provider": "wowi",
+      "wowi_id": "19053"
+    },
+    {
+      "id": "gathermate2",
+      "name": "GatherMate2",
+      "author": "Nevcairiel",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "GatherMate2"
+      ],
+      "description": "Map markers for herbs, mining nodes, treasures, and gathered items.",
+      "provider": "wowi",
+      "wowi_id": "10950"
+    },
+    {
+      "id": "gatherer",
+      "name": "Gatherer",
+      "author": "Esamynn",
+      "category": "Professions",
+      "flavors": [
+        "anniversary",
+        "vanilla",
+        "classic"
+      ],
+      "folders": [
+        "Gatherer"
+      ],
+      "description": "Classic gathering profession tracker.",
+      "provider": "github",
+      "repo": "Gatherer-Addon/Gatherer"
+    },
+    {
+      "id": "mapster",
+      "name": "Mapster",
+      "author": "Nevcairiel",
+      "category": "Map",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic",
+        "vanilla"
+      ],
+      "folders": [
+        "Mapster"
+      ],
+      "description": "Lightweight world map enhancements.",
+      "provider": "wowi",
+      "wowi_id": "11636"
+    },
+    {
+      "id": "carbonite",
+      "name": "Carbonite Maps",
+      "author": "Rythal",
+      "category": "Map",
+      "flavors": [
+        "retail",
+        "anniversary"
+      ],
+      "folders": [
+        "Carbonite",
+        "Carbonite_Quests",
+        "Carbonite_Notes"
+      ],
+      "description": "Comprehensive map replacement with quest tracking.",
+      "provider": "github",
+      "repo": "Road-block/Carbonite_Classic"
+    },
+    {
+      "id": "gladius",
+      "name": "Gladius",
+      "author": "Knall",
+      "category": "PvP",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic"
+      ],
+      "folders": [
+        "Gladius"
+      ],
+      "description": "Arena enemy unit frames.",
+      "provider": "wowi",
+      "wowi_id": "8513"
+    },
+    {
+      "id": "gladdy",
+      "name": "Gladdy",
+      "author": "Knall",
+      "category": "PvP",
+      "flavors": [
+        "anniversary",
+        "vanilla",
+        "classic"
+      ],
+      "folders": [
+        "Gladdy"
+      ],
+      "description": "Classic-style arena unit frames.",
+      "provider": "github",
+      "repo": "schakal/Gladdy"
+    },
+    {
+      "id": "trinkettracker",
+      "name": "Trinket Menu",
+      "author": "Charva",
+      "category": "Utilities",
+      "flavors": [
+        "anniversary",
+        "vanilla",
+        "classic"
+      ],
+      "folders": [
+        "TrinketMenu"
+      ],
+      "description": "Quick trinket swap menu.",
+      "provider": "github",
+      "repo": "frob/TrinketMenuClassic"
+    },
+    {
+      "id": "pawn",
+      "name": "Pawn",
+      "author": "Vger",
+      "category": "Utilities",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic"
+      ],
+      "folders": [
+        "Pawn"
+      ],
+      "description": "Item comparison and upgrade scoring.",
+      "provider": "wowi",
+      "wowi_id": "8042"
+    },
+    {
+      "id": "rarescanner",
+      "name": "RareScanner",
+      "author": "Niclasco",
+      "category": "Utilities",
+      "flavors": [
+        "retail",
+        "anniversary"
+      ],
+      "folders": [
+        "RareScanner"
+      ],
+      "description": "Alerts when rare creatures are nearby.",
+      "provider": "wowi",
+      "wowi_id": "21893"
+    },
+    {
+      "id": "moveany",
+      "name": "Move Any",
+      "author": "TheGenericHero",
+      "category": "Utilities",
+      "flavors": [
+        "retail",
+        "anniversary"
+      ],
+      "folders": [
+        "MoveAny"
+      ],
+      "description": "Move and resize default UI panels.",
+      "provider": "github",
+      "repo": "TheGenericHero/MoveAny"
+    },
+    {
+      "id": "atlasloot",
+      "name": "AtlasLoot Classic",
+      "author": "Hegarol",
+      "category": "Utilities",
+      "flavors": [
+        "anniversary",
+        "vanilla",
+        "mop_classic"
+      ],
+      "folders": [
+        "AtlasLootClassic",
+        "AtlasLootClassic_Options",
+        "AtlasLootClassic_DungeonsAndRaids"
+      ],
+      "description": "Browse dungeon/raid loot tables.",
+      "provider": "github",
+      "repo": "Hoizame/AtlasLootClassic"
+    },
+    {
+      "id": "prat",
+      "name": "Prat",
+      "author": "Krtek",
+      "category": "Chat",
+      "flavors": [
+        "retail",
+        "anniversary",
+        "mop_classic",
+        "vanilla"
+      ],
+      "folders": [
+        "Prat-3.0"
+      ],
+      "description": "Customizable chat enhancements.",
+      "provider": "wowi",
+      "wowi_id": "10783"
+    },
+    {
+      "id": "wim",
+      "name": "WIM",
+      "author": "Maul",
+      "category": "Chat",
+      "flavors": [
+        "retail",
+        "anniversary"
+      ],
+      "folders": [
+        "WIM"
+      ],
+      "description": "WoW Instant Messenger \u2013 tabbed chat windows.",
+      "provider": "github",
+      "repo": "Mortalknight/WIM"
+    },
+    {
+      "id": "ace3",
+      "name": "Ace3",
+      "author": "Ace3 Team",
+      "category": "Library",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Ace3",
+        "AceAddon-3.0",
+        "AceBucket-3.0",
+        "AceComm-3.0",
+        "AceConfig-3.0",
+        "AceConsole-3.0",
+        "AceDB-3.0",
+        "AceDBOptions-3.0",
+        "AceEvent-3.0",
+        "AceGUI-3.0",
+        "AceHook-3.0",
+        "AceLocale-3.0",
+        "AceSerializer-3.0",
+        "AceTab-3.0",
+        "AceTimer-3.0",
+        "LibStub"
+      ],
+      "description": "Library framework used by many addons. Install if missing.",
+      "provider": "wowi",
+      "wowi_id": "8579"
+    },
+    {
+      "id": "libsharedmedia",
+      "name": "LibSharedMedia-3.0",
+      "author": "Elkano",
+      "category": "Library",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "!!Libraries",
+        "LibSharedMedia-3.0"
+      ],
+      "description": "Provides fonts, textures, sounds for other addons.",
+      "provider": "wowi",
+      "wowi_id": "8780"
+    }
+  ]
+}

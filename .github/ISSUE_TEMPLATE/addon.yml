@@ -1,0 +1,51 @@
+name: Catalog request
+description: Request an addon to be added to the curated catalog
+labels: ["catalog"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Addon name
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where is the addon hosted?
+      options:
+        - GitHub releases
+        - WoWInterface
+        - Tukui (ElvUI/Tukui only)
+        - CurseForge
+        - Wago Addons
+        - Other / unsure
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: Project URL
+      placeholder: "https://github.com/owner/repo  or  https://www.wowinterface.com/downloads/info12345"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: flavors
+    attributes:
+      label: Which WoW flavors does it support?
+      options:
+        - label: TBC Anniversary
+        - label: Classic Era / SoD
+        - label: MoP Classic
+        - label: Retail (Mainline)
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: |
+        If the addon ships with multiple folder names (libraries,
+        options module, etc.), please list them so the catalog entry
+        can clean up old versions on update.

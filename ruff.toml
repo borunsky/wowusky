@@ -1,0 +1,48 @@
+# Ruff configuration. Run with `ruff check wowusky tests` or
+# `ruff format --check wowusky tests`.
+
+target-version = "py310"
+line-length = 100
+extend-exclude = [
+  ".github",
+  "build",
+  "dist",
+]
+
+[lint]
+# Rule families:
+#   E, W   pycodestyle
+#   F      pyflakes
+#   I      isort
+#   B      bugbear
+#   UP     pyupgrade
+#   SIM    simplify
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+ignore = [
+  "E501",   # line too long — many UI/data lines are intentionally wide
+  "E731",   # lambda assignments are common in the GUI callbacks
+  "E741",   # ambiguous names like `l` — too pedantic for legacy GUI code
+  "B008",   # function calls in default args (common in dataclass fields)
+  "UP015",  # `open(p, "r")` — explicit mode is fine
+  "SIM102", # collapse nested ifs — sometimes hurts readability
+  "SIM108", # ternary vs if/else
+  "SIM117", # multi-with statements
+]
+
+[lint.per-file-ignores]
+# tests can re-import modules and use local fixtures freely
+"tests/*"          = ["E402", "F401", "F811"]
+# The legacy GUI monolith — we'll lint it strictly after the next refactor pass.
+# Most of these will go away as more code moves into wowusky/gui/.
+"wowusky/app.py"   = [
+  "F401", "F403", "F405", "F841",
+  "B007", "B023", "B015", "B028", "B904", "B905",
+  "UP006", "UP007", "UP032", "UP035",
+  "SIM103", "SIM105", "SIM118",
+  "E701", "E702", "E722",
+  "I001",
+]
+"wowusky/tools/*"  = ["E402"]
+
+[lint.isort]
+known-first-party = ["wowusky"]

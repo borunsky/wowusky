@@ -1,0 +1,64 @@
+name: Provider health check
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  ping-providers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install -U pip
+          pip install -e .
+
+      - name: Run health check
+        id: check
+        run: |
+          set +e
+          python -m wowusky.tools.health_check --json > health.json
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          cat health.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-health
+          path: health.json
+
+      - name: Open issue if failures
+        if: steps.check.outputs.exit_code != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('health.json', 'utf8'));
+            const failed = data.failed || [];
+            if (failed.length === 0) return;
+            const body = [
+              `Weekly provider health check found ${failed.length} broken catalog entries:`,
+              '',
+              ...failed.map(f => `- **${f.id}** (${f.provider}): ${f.error}`),
+              '',
+              'Edit the relevant manifest under `wowusky/catalog/manifests/` and bump the entry.',
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              title: `[health] ${failed.length} catalog entries failing (${new Date().toISOString().slice(0,10)})`,
+              body,
+              labels: ['provider-health', 'automated'],
+            });

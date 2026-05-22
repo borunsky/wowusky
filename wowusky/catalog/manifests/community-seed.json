@@ -1,0 +1,48 @@
+{
+  "addons": [
+    {
+      "id": "bugsack_manifest",
+      "name": "BugSack",
+      "provider": "github",
+      "repo": "Stanzilla/BugSack",
+      "author": "Stanzilla",
+      "category": "Development",
+      "flavors": ["all"],
+      "folders": ["BugSack"],
+      "description": "Captures Lua errors for debugging addons. Added through the manifest registry."
+    },
+    {
+      "id": "buggrabber_manifest",
+      "name": "BugGrabber",
+      "provider": "github",
+      "repo": "Stanzilla/BugGrabber",
+      "author": "Stanzilla",
+      "category": "Development",
+      "flavors": ["all"],
+      "folders": ["BugGrabber"],
+      "description": "Lua error collection library often used together with BugSack."
+    },
+    {
+      "id": "sharedmedia_manifest",
+      "name": "SharedMedia",
+      "provider": "github",
+      "repo": "tekkub/SharedMedia",
+      "author": "Tekkub",
+      "category": "Media",
+      "flavors": ["all"],
+      "folders": ["SharedMedia"],
+      "description": "Media assets for addons."
+    },
+    {
+      "id": "weakauras_cf_fallback",
+      "name": "WeakAuras 2 (CurseForge fallback)",
+      "provider": "curseforge_web",
+      "slug": "weakauras-2",
+      "author": "WeakAuras Team",
+      "category": "Buffs",
+      "flavors": ["all"],
+      "folders": ["WeakAuras", "WeakAurasOptions"],
+      "description": "Manual CurseForge fallback entry for WeakAuras."
+    }
+  ]
+}

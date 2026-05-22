@@ -1,0 +1,62 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      placeholder: |
+        Tell us what you tried, what you expected, and what actually happened.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: wowusky version
+      placeholder: "e.g. 0.4.0 (run `wowusky --version` if available, or check pyproject.toml)"
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "python3 --version"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: distro
+    attributes:
+      label: Linux distribution
+      options:
+        - CachyOS
+        - Arch
+        - Fedora
+        - Ubuntu / Debian
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: flavor
+    attributes:
+      label: WoW client flavor
+      options:
+        - TBC Anniversary
+        - Classic Era / SoD
+        - MoP Classic
+        - Retail
+        - PTR
+        - Not applicable
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Attach or paste the last screen of the Activity tab or
+        the last lines of `~/.local/share/wowusky/logs/wowusky.log`.
+      render: text

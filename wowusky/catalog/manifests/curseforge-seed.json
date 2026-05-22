@@ -1,0 +1,2932 @@
+{
+  "name": "wowusky-curseforge-seed",
+  "version": "0.4.0",
+  "description": "Curated CurseForge slugs (browser-import workflow).",
+  "addons": [
+    {
+      "id": "details_cf",
+      "name": "Details! Damage Meter",
+      "author": "Tercioo",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Details"
+      ],
+      "description": "Advanced combat meter for damage, healing, interrupts, deaths and more.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "details"
+    },
+    {
+      "id": "dbm_cf",
+      "name": "Deadly Boss Mods",
+      "author": "MysticalOS",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "DBM-Core"
+      ],
+      "description": "Boss warnings and encounter timers.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "deadly-boss-mods"
+    },
+    {
+      "id": "dbm_dungeons_cf",
+      "name": "DBM Dungeons & Events",
+      "author": "MysticalOS",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "DBM-Party"
+      ],
+      "description": "Dungeon, delve and event modules for Deadly Boss Mods.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "deadly-boss-mods-dbm-dungeons"
+    },
+    {
+      "id": "raiderio_cf",
+      "name": "Raider.IO Mythic Plus",
+      "author": "Raider.IO",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "RaiderIO"
+      ],
+      "description": "Mythic+ score and raid progress information in tooltips.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "raiderio"
+    },
+    {
+      "id": "questie_cf",
+      "name": "Questie",
+      "author": "Questie Team",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Questie"
+      ],
+      "description": "Classic/TBC quest helper and objective tracker.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "questie"
+    },
+    {
+      "id": "weakauras_cf",
+      "name": "WeakAuras",
+      "author": "WeakAuras Team",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WeakAuras"
+      ],
+      "description": "Powerful visual aura and cooldown framework.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "weakauras-2"
+    },
+    {
+      "id": "bigwigs_cf",
+      "name": "BigWigs Bossmods",
+      "author": "BigWigs Team",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BigWigs"
+      ],
+      "description": "Boss warnings, timers and alerts.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "big-wigs"
+    },
+    {
+      "id": "littlewigs_cf",
+      "name": "LittleWigs",
+      "author": "BigWigs Team",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "LittleWigs"
+      ],
+      "description": "Dungeon modules for BigWigs.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "little-wigs"
+    },
+    {
+      "id": "plater_cf",
+      "name": "Plater Nameplates",
+      "author": "Tercioo",
+      "category": "Nameplates",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Plater"
+      ],
+      "description": "Customizable nameplates with scripting.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "plater-nameplates"
+    },
+    {
+      "id": "auctionator_cf",
+      "name": "Auctionator",
+      "author": "Auctionator Team",
+      "category": "Auction",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Auctionator"
+      ],
+      "description": "Auction house quality-of-life and pricing tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "auctionator"
+    },
+    {
+      "id": "bagnon_cf",
+      "name": "Bagnon",
+      "author": "Tuller",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Bagnon"
+      ],
+      "description": "Single-window inventory replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "bagnon"
+    },
+    {
+      "id": "dominos_cf",
+      "name": "Dominos",
+      "author": "Tuller",
+      "category": "Action Bars",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Dominos"
+      ],
+      "description": "Action bar replacement and configuration.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "dominos"
+    },
+    {
+      "id": "bartender4_cf",
+      "name": "Bartender4",
+      "author": "Nevcairiel",
+      "category": "Action Bars",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Bartender4"
+      ],
+      "description": "Customizable action bars.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "bartender4"
+    },
+    {
+      "id": "gtfo_cf",
+      "name": "GTFO",
+      "author": "Zensunim",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "GTFO"
+      ],
+      "description": "Audio alerts when standing in harmful effects.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "gtfo"
+    },
+    {
+      "id": "simulationcraft_cf",
+      "name": "SimulationCraft",
+      "author": "SimulationCraft Team",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Simulationcraft"
+      ],
+      "description": "Exports character data for Raidbots and SimulationCraft.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "simulationcraft"
+    },
+    {
+      "id": "pawn_cf",
+      "name": "Pawn",
+      "author": "Vger",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Pawn"
+      ],
+      "description": "Item comparison and upgrade scoring.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "pawn"
+    },
+    {
+      "id": "tomtom_cf",
+      "name": "TomTom",
+      "author": "Cladhaire",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "TomTom"
+      ],
+      "description": "Waypoint arrow and coordinate tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "tomtom"
+    },
+    {
+      "id": "handynotes_cf",
+      "name": "HandyNotes",
+      "author": "Xinhuan",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "HandyNotes"
+      ],
+      "description": "Framework for notes on the world map.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "handynotes"
+    },
+    {
+      "id": "handynotes_dragonflight_cf",
+      "name": "HandyNotes Dragonflight",
+      "author": "Community",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "HandyNotes_Dragonflight"
+      ],
+      "description": "Dragonflight treasures, rares and points of interest.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "handynotes-dragonflight"
+    },
+    {
+      "id": "altoholic_cf",
+      "name": "Altoholic",
+      "author": "Thaoky",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Altoholic"
+      ],
+      "description": "Account-wide character and inventory overview.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "altoholic"
+    },
+    {
+      "id": "allthethings_cf",
+      "name": "All The Things",
+      "author": "ATT Team",
+      "category": "Collections",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AllTheThings"
+      ],
+      "description": "Completionist collection tracker.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "all-the-things"
+    },
+    {
+      "id": "rare_scanner_cf",
+      "name": "RareScanner",
+      "author": "Niclasco",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "RareScanner"
+      ],
+      "description": "Rare mob, treasure and event scanner.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "rarescanner"
+    },
+    {
+      "id": "world_quest_tracker_cf",
+      "name": "World Quest Tracker",
+      "author": "Tercioo",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WorldQuestTracker"
+      ],
+      "description": "World quest map and reward enhancements.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "world-quest-tracker"
+    },
+    {
+      "id": "btwquests_cf",
+      "name": "BtWQuests",
+      "author": "Breeni",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BtWQuests"
+      ],
+      "description": "Quest chain tracking and progress visualization.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "btw-quests"
+    },
+    {
+      "id": "mythic_dungeon_tools_cf",
+      "name": "Mythic Dungeon Tools",
+      "author": "Nnoggie",
+      "category": "Dungeons",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "MythicDungeonTools"
+      ],
+      "description": "Plan Mythic+ pulls and routes.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "mythic-dungeon-tools"
+    },
+    {
+      "id": "routes_cf",
+      "name": "Routes",
+      "author": "Xinhuan",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Routes"
+      ],
+      "description": "Route drawing for gathering and farming paths.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "routes"
+    },
+    {
+      "id": "sexymap_cf",
+      "name": "SexyMap",
+      "author": "funkydude",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "SexyMap"
+      ],
+      "description": "Customizable minimap styling and buttons.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "sexymap"
+    },
+    {
+      "id": "postal_cf",
+      "name": "Postal",
+      "author": "Xinhuan",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Postal"
+      ],
+      "description": "Mailbox quality-of-life tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "postal"
+    },
+    {
+      "id": "dejacharacterstats_cf",
+      "name": "DejaCharacterStats",
+      "author": "Deja",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "DejaCharacterStats"
+      ],
+      "description": "Expanded character stat panel.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "deja-character-stats"
+    },
+    {
+      "id": "advancedinterfaceoptions_cf",
+      "name": "AdvancedInterfaceOptions",
+      "author": "Resike",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AdvancedInterfaceOptions"
+      ],
+      "description": "Restores hidden Blizzard interface options and CVars.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "advancedinterfaceoptions"
+    },
+    {
+      "id": "buggrabber_cf",
+      "name": "BugGrabber",
+      "author": "Funkeh",
+      "category": "Developer",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BugGrabber"
+      ],
+      "description": "Captures Lua errors for display by BugSack.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "bug-grabber"
+    },
+    {
+      "id": "bugsack_cf",
+      "name": "BugSack",
+      "author": "Funkeh",
+      "category": "Developer",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BugSack"
+      ],
+      "description": "Readable Lua error display.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "bugsack"
+    },
+    {
+      "id": "savedinstances_cf",
+      "name": "SavedInstances",
+      "author": "Kemayo",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "SavedInstances"
+      ],
+      "description": "Tracks lockouts, currencies and weekly progress.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "saved_instances"
+    },
+    {
+      "id": "narcissus_cf",
+      "name": "Narcissus",
+      "author": "Peterodox",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Narcissus"
+      ],
+      "description": "Character showcase, screenshots and collection UI.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "narcissus"
+    },
+    {
+      "id": "immersion_cf",
+      "name": "Immersion",
+      "author": "MunkDev",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Immersion"
+      ],
+      "description": "Modern quest text and gossip replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "immersion"
+    },
+    {
+      "id": "decursive_cf",
+      "name": "Decursive",
+      "author": "Archarodim",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Decursive"
+      ],
+      "description": "Cleansing and affliction display.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "decursive"
+    },
+    {
+      "id": "clique_cf",
+      "name": "Clique",
+      "author": "Jnwhiteh",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Clique"
+      ],
+      "description": "Click-casting and hover-casting bindings.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "clique"
+    },
+    {
+      "id": "leatrix_plus_cf",
+      "name": "Leatrix Plus",
+      "author": "Leatrix",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Leatrix_Plus"
+      ],
+      "description": "Quality-of-life options for WoW.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "leatrix-plus"
+    },
+    {
+      "id": "leatrix_maps_cf",
+      "name": "Leatrix Maps",
+      "author": "Leatrix",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Leatrix_Maps"
+      ],
+      "description": "Map enhancements for all WoW flavors.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "leatrix-maps"
+    },
+    {
+      "id": "omnicc_cf",
+      "name": "OmniCC",
+      "author": "Tuller",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "OmniCC"
+      ],
+      "description": "Cooldown count text on buttons.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "omni-cc"
+    },
+    {
+      "id": "omnicd_cf",
+      "name": "OmniCD",
+      "author": "Treebonker",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "OmniCD"
+      ],
+      "description": "Party cooldown tracking for dungeons and raids.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "omnicd"
+    },
+    {
+      "id": "omnibar_cf",
+      "name": "OmniBar",
+      "author": "Jordon",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "OmniBar"
+      ],
+      "description": "Enemy cooldown tracking for PvP.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "omnibar"
+    },
+    {
+      "id": "details_tiny_threat_cf",
+      "name": "Details Tiny Threat",
+      "author": "Tercioo",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Details_TinyThreat"
+      ],
+      "description": "Threat plugin for Details.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "details-damage-meter-plugin-tiny-threat"
+    },
+    {
+      "id": "details_compare2_cf",
+      "name": "Details Compare2",
+      "author": "Tercioo",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Details_Compare2"
+      ],
+      "description": "Comparison plugin for Details.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "details-damage-meter-compare-2-0"
+    },
+    {
+      "id": "details_streamer_cf",
+      "name": "Details Streamer",
+      "author": "Tercioo",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Details_Streamer"
+      ],
+      "description": "Streamer plugin for Details.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "details-streamer"
+    },
+    {
+      "id": "method_raid_tools_cf",
+      "name": "Method Raid Tools",
+      "author": "Method",
+      "category": "Raid",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "MRT"
+      ],
+      "description": "Raid cooldowns, notes, inspect and combat tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "method-raid-tools"
+    },
+    {
+      "id": "exorsus_raid_tools_cf",
+      "name": "Exorsus Raid Tools",
+      "author": "Exorsus",
+      "category": "Raid",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ExRT"
+      ],
+      "description": "Raid utility toolkit.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "exorsus-raid-tools"
+    },
+    {
+      "id": "vuhdo_cf",
+      "name": "VuhDo",
+      "author": "Iza",
+      "category": "Raid Frames",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "VuhDo"
+      ],
+      "description": "Raid frames and healing tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "vuhdo"
+    },
+    {
+      "id": "healbot_cf",
+      "name": "HealBot Continued",
+      "author": "HealBot Team",
+      "category": "Raid Frames",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "HealBot"
+      ],
+      "description": "Healing frames and click-casting.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "heal-bot-continued"
+    },
+    {
+      "id": "grid2_cf",
+      "name": "Grid2",
+      "author": "Michael",
+      "category": "Raid Frames",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Grid2"
+      ],
+      "description": "Configurable raid and party frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "grid2"
+    },
+    {
+      "id": "cell_cf",
+      "name": "Cell",
+      "author": "EnderNeko",
+      "category": "Raid Frames",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Cell"
+      ],
+      "description": "Modern party and raid frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "cell"
+    },
+    {
+      "id": "shadowed_unit_frames_cf",
+      "name": "Shadowed Unit Frames",
+      "author": "Shadowed",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ShadowedUnitFrames"
+      ],
+      "description": "Lightweight customizable unit frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "shadowed-unit-frames"
+    },
+    {
+      "id": "pitbull4_cf",
+      "name": "PitBull Unit Frames 4.0",
+      "author": "Ckknight",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "PitBull4"
+      ],
+      "description": "Highly customizable unit frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "pitbull-unit-frames-4-0"
+    },
+    {
+      "id": "zperl_cf",
+      "name": "Z-Perl UnitFrames",
+      "author": "Resike",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ZPerl"
+      ],
+      "description": "Classic X-Perl style unit frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "zperl"
+    },
+    {
+      "id": "elvui_cf",
+      "name": "ElvUI",
+      "author": "ElvUI Team",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ElvUI"
+      ],
+      "description": "Full UI replacement, usually from Tukui, listed here for discovery.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "elvui"
+    },
+    {
+      "id": "tukui_cf",
+      "name": "Tukui",
+      "author": "Tukz",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Tukui"
+      ],
+      "description": "Minimal UI replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "tukui"
+    },
+    {
+      "id": "quartz_cf",
+      "name": "Quartz",
+      "author": "Nevcairiel",
+      "category": "Cast Bars",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Quartz"
+      ],
+      "description": "Modular casting bar addon.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "quartz"
+    },
+    {
+      "id": "weizpvp_cf",
+      "name": "WeizPVP",
+      "author": "WeizPVP",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WeizPVP"
+      ],
+      "description": "Open-world PvP player detection.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "weizpvp"
+    },
+    {
+      "id": "gladius_cf",
+      "name": "Gladius",
+      "author": "Knall",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Gladius"
+      ],
+      "description": "Arena enemy unit frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "gladius-v3"
+    },
+    {
+      "id": "gladius_ex_cf",
+      "name": "GladiusEx",
+      "author": "kunda",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "GladiusEx"
+      ],
+      "description": "Arena unit frames and cooldowns.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "gladiusex"
+    },
+    {
+      "id": "gladdy_cf",
+      "name": "Gladdy",
+      "author": "Knall",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Gladdy"
+      ],
+      "description": "Classic arena frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "gladdy-tbc"
+    },
+    {
+      "id": "safecraft_cf",
+      "name": "SafeQueue",
+      "author": "Community",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "SafeQueue"
+      ],
+      "description": "PvP queue protection helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "safequeue"
+    },
+    {
+      "id": "battlegroundenemies_cf",
+      "name": "BattleGroundEnemies",
+      "author": "Tarkas",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BattleGroundEnemies"
+      ],
+      "description": "Enemy battleground frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "battlegroundenemies"
+    },
+    {
+      "id": "nameplatecooldowns_cf",
+      "name": "NameplateCooldowns",
+      "author": "Maledictus",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "NameplateCooldowns"
+      ],
+      "description": "Cooldowns above enemy nameplates.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "nameplatecooldowns"
+    },
+    {
+      "id": "tellmewhen_cf",
+      "name": "TellMeWhen",
+      "author": "Cybeloras",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "TellMeWhen"
+      ],
+      "description": "Cooldown, buff and debuff icon tracking.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "tellmewhen"
+    },
+    {
+      "id": "raven_cf",
+      "name": "Raven",
+      "author": "Tomber",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Raven"
+      ],
+      "description": "Buff and debuff timer bars.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "raven"
+    },
+    {
+      "id": "masque_cf",
+      "name": "Masque",
+      "author": "StormFX",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Masque"
+      ],
+      "description": "Button skinning engine.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "masque"
+    },
+    {
+      "id": "sharedmedia_cf",
+      "name": "SharedMedia",
+      "author": "Elkano",
+      "category": "Media",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "SharedMedia"
+      ],
+      "description": "Fonts, sounds and textures for addons.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "sharedmedia"
+    },
+    {
+      "id": "libsharedmedia_cf",
+      "name": "LibSharedMedia-3.0",
+      "author": "Elkano",
+      "category": "Library",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "LibSharedMedia-3.0"
+      ],
+      "description": "Shared media library.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "libsharedmedia-3-0"
+    },
+    {
+      "id": "ace3_cf",
+      "name": "Ace3",
+      "author": "Ace3 Team",
+      "category": "Library",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Ace3"
+      ],
+      "description": "Library framework used by many addons.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ace3"
+    },
+    {
+      "id": "libdbicon_cf",
+      "name": "LibDBIcon-1.0",
+      "author": "Torhal",
+      "category": "Library",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "LibDBIcon-1.0"
+      ],
+      "description": "Minimap icon library.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "libdbicon-1-0"
+    },
+    {
+      "id": "libdatabroker_cf",
+      "name": "LibDataBroker-1.1",
+      "author": "LibDataBroker Team",
+      "category": "Library",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "LibDataBroker-1.1"
+      ],
+      "description": "Data broker display library.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "libdatabroker-1-1"
+    },
+    {
+      "id": "tiptac_cf",
+      "name": "TipTac Reborn",
+      "author": "Community",
+      "category": "Tooltips",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "TipTac"
+      ],
+      "description": "Highly configurable tooltips.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "tiptac-reborn"
+    },
+    {
+      "id": "dialogkey_cf",
+      "name": "DialogKey",
+      "author": "Kurapica",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "DialogKey"
+      ],
+      "description": "Keyboard shortcuts for dialogs and gossip.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "dialogkey"
+    },
+    {
+      "id": "moveany_cf",
+      "name": "MoveAny",
+      "author": "TheGenericHero",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "MoveAny"
+      ],
+      "description": "Move and resize default UI frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "moveany"
+    },
+    {
+      "id": "blizzmove_cf",
+      "name": "BlizzMove",
+      "author": "Kiatra",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BlizzMove"
+      ],
+      "description": "Make Blizzard windows movable.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "blizzmove"
+    },
+    {
+      "id": "dejunk_cf",
+      "name": "Dejunk",
+      "author": "Jaliborc",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Dejunk"
+      ],
+      "description": "Sell and destroy junk items.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "dejunk"
+    },
+    {
+      "id": "scrap_cf",
+      "name": "Scrap",
+      "author": "Jaliborc",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Scrap"
+      ],
+      "description": "Automatic junk selling.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "scrap"
+    },
+    {
+      "id": "adibags_cf",
+      "name": "AdiBags",
+      "author": "AdiAddons",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AdiBags"
+      ],
+      "description": "Smart inventory sorting.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "adibags"
+    },
+    {
+      "id": "arkinventory_cf",
+      "name": "ArkInventory",
+      "author": "Arkayenro",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ArkInventory"
+      ],
+      "description": "Highly configurable inventory rules.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ark-inventory"
+    },
+    {
+      "id": "baganator_cf",
+      "name": "Baganator",
+      "author": "Baganator Team",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Baganator"
+      ],
+      "description": "Modern bags and inventory tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "baganator"
+    },
+    {
+      "id": "sorted_cf",
+      "name": "Sorted",
+      "author": "MunkDev",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Sorted"
+      ],
+      "description": "Spreadsheet-like inventory sorting.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "sorted"
+    },
+    {
+      "id": "inventorian_cf",
+      "name": "Inventorian",
+      "author": "Jaliborc",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Inventorian"
+      ],
+      "description": "Inventory replacement with classic layout.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "inventorian"
+    },
+    {
+      "id": "vendorprice_cf",
+      "name": "Vendor Price",
+      "author": "Ketho",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "VendorPrice"
+      ],
+      "description": "Shows vendor sell price.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "vendor-price"
+    },
+    {
+      "id": "dejunk_classic_cf",
+      "name": "Dejunk Classic",
+      "author": "Jaliborc",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Dejunk"
+      ],
+      "description": "Classic junk selling helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "dejunk-classic"
+    },
+    {
+      "id": "trade_skill_master_cf",
+      "name": "TradeSkillMaster",
+      "author": "TSM Team",
+      "category": "Auction",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "TradeSkillMaster"
+      ],
+      "description": "Advanced auction and crafting tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "tradeskillmaster"
+    },
+    {
+      "id": "auctioneer_cf",
+      "name": "Auctioneer",
+      "author": "Norganna",
+      "category": "Auction",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Auc-Advanced"
+      ],
+      "description": "Auction house suite and pricing data.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "auctioneer"
+    },
+    {
+      "id": "aux_cf",
+      "name": "Aux",
+      "author": "Bit",
+      "category": "Auction",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "aux-addon"
+      ],
+      "description": "Classic auction house addon.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "aux"
+    },
+    {
+      "id": "craftsim_cf",
+      "name": "CraftSim",
+      "author": "Genju",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "CraftSim"
+      ],
+      "description": "Profession crafting simulation.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "craftsim"
+    },
+    {
+      "id": "gathermate2_cf",
+      "name": "GatherMate2",
+      "author": "Nevcairiel",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "GatherMate2"
+      ],
+      "description": "Gathering node database and map markers.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "gathermate2"
+    },
+    {
+      "id": "gathermate2_data_cf",
+      "name": "GatherMate2 Data",
+      "author": "Nevcairiel",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "GatherMate2_Data"
+      ],
+      "description": "Prebuilt gathering node database.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "gathermate2_data"
+    },
+    {
+      "id": "farmhud_cf",
+      "name": "FarmHud",
+      "author": "Dahk",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "FarmHud"
+      ],
+      "description": "HUD overlay for gathering routes.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "farmhud"
+    },
+    {
+      "id": "fishingbuddy_cf",
+      "name": "Fishing Buddy",
+      "author": "Sutorix",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "FishingBuddy"
+      ],
+      "description": "Fishing helper and outfit manager.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "fishing-buddy"
+    },
+    {
+      "id": "profession_shopping_list_cf",
+      "name": "Profession Shopping List",
+      "author": "Community",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ProfessionShoppingList"
+      ],
+      "description": "Shopping list for profession crafts.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "profession-shopping-list"
+    },
+    {
+      "id": "classicprofessionfilter_cf",
+      "name": "Classic Profession Filter",
+      "author": "Community",
+      "category": "Professions",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ClassicProfessionFilter"
+      ],
+      "description": "Profession recipe filtering for Classic.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "classic-profession-filter"
+    },
+    {
+      "id": "quest_completist_cf",
+      "name": "Quest Completist",
+      "author": "Community",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "QuestCompletist"
+      ],
+      "description": "Tracks completed and missing quests.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "quest_completist"
+    },
+    {
+      "id": "kaliels_tracker_cf",
+      "name": "Kaliel's Tracker",
+      "author": "Kaliel",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "!KalielsTracker"
+      ],
+      "description": "Quest tracker replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "kaliels-tracker"
+    },
+    {
+      "id": "azeroth_auto_pilot_cf",
+      "name": "Azeroth Auto Pilot",
+      "author": "Rycia",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AzerothAutoPilot"
+      ],
+      "description": "Fast leveling route helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "azeroth-auto-pilot"
+    },
+    {
+      "id": "guidelime_cf",
+      "name": "Guidelime",
+      "author": "Max",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Guidelime"
+      ],
+      "description": "Leveling guide framework.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "guidelime"
+    },
+    {
+      "id": "restedxp_cf",
+      "name": "RestedXP Guide",
+      "author": "RestedXP",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "RXPGuides"
+      ],
+      "description": "Leveling and route guide viewer.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "restedxp-guide"
+    },
+    {
+      "id": "immersion_extra_fade_cf",
+      "name": "Immersion ExtraFade",
+      "author": "Community",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ImmersionExtraFade"
+      ],
+      "description": "Extra UI polish for Immersion.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "immersion-extra-fade"
+    },
+    {
+      "id": "world_quests_list_cf",
+      "name": "World Quests List",
+      "author": "Community",
+      "category": "Quests",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WorldQuestsList"
+      ],
+      "description": "Compact world quest list.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "world-quests-list"
+    },
+    {
+      "id": "mapster_cf",
+      "name": "Mapster",
+      "author": "Nevcairiel",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Mapster"
+      ],
+      "description": "Lightweight world map enhancements.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "mapster"
+    },
+    {
+      "id": "atlas_cf",
+      "name": "Atlas",
+      "author": "Atlas Team",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Atlas"
+      ],
+      "description": "Dungeon maps and instance browser.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "atlas"
+    },
+    {
+      "id": "atlasloot_enhanced_cf",
+      "name": "AtlasLoot Enhanced",
+      "author": "AtlasLoot Team",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AtlasLootClassic"
+      ],
+      "description": "Classic loot tables and wishlist helpers.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "atlaslootclassic"
+    },
+    {
+      "id": "silverdragon_cf",
+      "name": "SilverDragon",
+      "author": "Kemayo",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "SilverDragon"
+      ],
+      "description": "Rare mob tracking and alerts.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "silver-dragon"
+    },
+    {
+      "id": "npcscan_cf",
+      "name": "_NPCScan",
+      "author": "Saiket",
+      "category": "Map",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "_NPCScan"
+      ],
+      "description": "Rare NPC detection.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "npcscan"
+    },
+    {
+      "id": "paste_cf",
+      "name": "Paste",
+      "author": "Ketho",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Paste"
+      ],
+      "description": "Paste large text blocks into WoW.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "paste"
+    },
+    {
+      "id": "opie_cf",
+      "name": "OPie",
+      "author": "Foxlit",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "OPie"
+      ],
+      "description": "Ring menus for spells, items and macros.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "opie"
+    },
+    {
+      "id": "molinari_cf",
+      "name": "Molinari",
+      "author": "P3lim",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Molinari"
+      ],
+      "description": "Alt-click disenchanting and milling helpers.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "molinari"
+    },
+    {
+      "id": "angry_keystones_cf",
+      "name": "Angry Keystones",
+      "author": "Jordon",
+      "category": "Dungeons",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AngryKeystones"
+      ],
+      "description": "Mythic+ timer and keystone enhancements.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "angry-keystones"
+    },
+    {
+      "id": "rarescanner_classic_cf",
+      "name": "RareScanner Classic",
+      "author": "Niclasco",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "RareScanner"
+      ],
+      "description": "Rare scanning for Classic flavors.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "rarescanner-classic"
+    },
+    {
+      "id": "nova_world_buffs_cf",
+      "name": "Nova World Buffs",
+      "author": "venomisto",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "NovaWorldBuffs"
+      ],
+      "description": "Classic world buff timers and tracking.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "nova-world-buffs"
+    },
+    {
+      "id": "nova_instance_tracker_cf",
+      "name": "Nova Instance Tracker",
+      "author": "venomisto",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "NovaInstanceTracker"
+      ],
+      "description": "Classic instance lockout tracker.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "nova-instance-tracker"
+    },
+    {
+      "id": "nova_world_buffs_tbc_cf",
+      "name": "Nova World Buffs TBC",
+      "author": "venomisto",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "NovaWorldBuffs"
+      ],
+      "description": "TBC world buff and timer helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "nova-world-buffs-tbc"
+    },
+    {
+      "id": "classic_castbars_cf",
+      "name": "ClassicCastbars",
+      "author": "Wardz",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ClassicCastbars"
+      ],
+      "description": "Adds cast bars to Classic targets.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "classiccastbars"
+    },
+    {
+      "id": "classic_aura_durations_cf",
+      "name": "ClassicAuraDurations",
+      "author": "Wardz",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ClassicAuraDurations"
+      ],
+      "description": "Aura duration display for Classic.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "classicauradurations"
+    },
+    {
+      "id": "weapon_swing_timer_cf",
+      "name": "WeaponSwingTimer",
+      "author": "LeftHandedGlove",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WeaponSwingTimer"
+      ],
+      "description": "Weapon swing timer for Classic.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "weaponswingtimer-sixxfix"
+    },
+    {
+      "id": "five_second_rule_cf",
+      "name": "Five Second Rule",
+      "author": "Community",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "FiveSecondRule"
+      ],
+      "description": "Mana regen five-second rule tracker.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "five-second-rule"
+    },
+    {
+      "id": "itemrack_tbc_cf",
+      "name": "ItemRack TBC Classic",
+      "author": "Cexal",
+      "category": "Equipment",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ItemRack"
+      ],
+      "description": "Equipment manager for TBC Anniversary.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "itemrack-tbc"
+    },
+    {
+      "id": "outfitter_cf",
+      "name": "Outfitter",
+      "author": "Cirk",
+      "category": "Equipment",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Outfitter"
+      ],
+      "description": "Equipment set manager.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "outfitter"
+    },
+    {
+      "id": "trinket_menu_cf",
+      "name": "TrinketMenu",
+      "author": "Charva",
+      "category": "Equipment",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "TrinketMenu"
+      ],
+      "description": "Classic trinket swapping menu.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "trinketmenu"
+    },
+    {
+      "id": "ratingbuster_cf",
+      "name": "RatingBuster",
+      "author": "Whitetooth",
+      "category": "Equipment",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "RatingBuster"
+      ],
+      "description": "Item stat conversion helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ratingbuster"
+    },
+    {
+      "id": "atlaslootclassic_cf",
+      "name": "AtlasLootClassic",
+      "author": "Hegarol",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AtlasLootClassic"
+      ],
+      "description": "Classic dungeon and raid loot tables.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "atlaslootclassic"
+    },
+    {
+      "id": "lfg_bulletin_board_cf",
+      "name": "LFG Bulletin Board",
+      "author": "Community",
+      "category": "Social",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "LFGBulletinBoard"
+      ],
+      "description": "Classic LFG chat parser.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "lfg-group-finder-bulletin-board"
+    },
+    {
+      "id": "lfg_expanded_cf",
+      "name": "LFG Expanded",
+      "author": "clearcmos",
+      "category": "Social",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "LFGExpanded"
+      ],
+      "description": "TBC Anniversary role/class filters for LFG browser.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "lfg-expanded"
+    },
+    {
+      "id": "global_ignore_list_cf",
+      "name": "Global Ignore List",
+      "author": "Community",
+      "category": "Social",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "GlobalIgnoreList"
+      ],
+      "description": "Account-wide ignore and spam tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "global-ignore-list"
+    },
+    {
+      "id": "prat_tbc_cf",
+      "name": "Prat-TBC",
+      "author": "morthalin",
+      "category": "Chat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Prat-3.0"
+      ],
+      "description": "Prat chat enhancements for TBC.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "prat-tbc"
+    },
+    {
+      "id": "prat_cf",
+      "name": "Prat 3.0",
+      "author": "Prat Team",
+      "category": "Chat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Prat-3.0"
+      ],
+      "description": "Highly configurable chat enhancement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "prat-3-0"
+    },
+    {
+      "id": "wim_cf",
+      "name": "WIM",
+      "author": "Maul",
+      "category": "Chat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WIM"
+      ],
+      "description": "WoW instant messenger windows.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "wim-3"
+    },
+    {
+      "id": "badboy_cf",
+      "name": "BadBoy",
+      "author": "Funkydude",
+      "category": "Chat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BadBoy"
+      ],
+      "description": "Spam blocker.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "bad-boy"
+    },
+    {
+      "id": "elephant_cf",
+      "name": "Elephant",
+      "author": "Community",
+      "category": "Chat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Elephant"
+      ],
+      "description": "Chat logging addon.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "elephant"
+    },
+    {
+      "id": "total_rp_3_cf",
+      "name": "Total RP 3",
+      "author": "Total RP Team",
+      "category": "Roleplay",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "totalRP3"
+      ],
+      "description": "Roleplay profile and immersion tools.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "total-rp-3"
+    },
+    {
+      "id": "total_rp_3_extended_cf",
+      "name": "Total RP 3 Extended",
+      "author": "Total RP Team",
+      "category": "Roleplay",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "totalRP3_Extended"
+      ],
+      "description": "Extended roleplay items and campaigns.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "total-rp-3-extended"
+    },
+    {
+      "id": "musician_cf",
+      "name": "Musician",
+      "author": "Lenwe",
+      "category": "Roleplay",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Musician"
+      ],
+      "description": "Play music with other players in-game.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "musician"
+    },
+    {
+      "id": "mogit_cf",
+      "name": "MogIt",
+      "author": "Ravendwyr",
+      "category": "Collections",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "MogIt"
+      ],
+      "description": "Transmog preview and browsing.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "mogit"
+    },
+    {
+      "id": "betterwardrobe_cf",
+      "name": "Better Wardrobe and Transmog",
+      "author": "Community",
+      "category": "Collections",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BetterWardrobe"
+      ],
+      "description": "Wardrobe collection improvements.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "better-wardrobe-and-transmog"
+    },
+    {
+      "id": "canimogit_cf",
+      "name": "Can I Mog It",
+      "author": "Acko",
+      "category": "Collections",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "CanIMogIt"
+      ],
+      "description": "Transmog collection tooltip helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "can-i-mog-it"
+    },
+    {
+      "id": "rarity_cf",
+      "name": "Rarity",
+      "author": "Torhal",
+      "category": "Collections",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Rarity"
+      ],
+      "description": "Tracks attempts for rare mounts, pets and toys.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "rarity"
+    },
+    {
+      "id": "rematch_cf",
+      "name": "Rematch",
+      "author": "Gello",
+      "category": "Pets",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Rematch"
+      ],
+      "description": "Battle pet team management.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "rematch"
+    },
+    {
+      "id": "pettracker_cf",
+      "name": "PetTracker",
+      "author": "Jaliborc",
+      "category": "Pets",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "PetTracker"
+      ],
+      "description": "Battle pet tracking on maps and tooltips.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "pettracker"
+    },
+    {
+      "id": "tdbattlepetscript_cf",
+      "name": "tdBattlePetScript",
+      "author": "Tercioo",
+      "category": "Pets",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "tdBattlePetScript"
+      ],
+      "description": "Automation scripts for pet battles.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "tdbattlepetscript"
+    },
+    {
+      "id": "battle_pet_breedid_cf",
+      "name": "Battle Pet BreedID",
+      "author": "Community",
+      "category": "Pets",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BattlePetBreedID"
+      ],
+      "description": "Shows battle pet breed information.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "battle_pet_breedid"
+    },
+    {
+      "id": "maxdps_cf",
+      "name": "MaxDps Rotation Helper",
+      "author": "Kaminaris",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "MaxDps"
+      ],
+      "description": "Rotation helper framework.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "maxdps-rotation-helper"
+    },
+    {
+      "id": "hekili_cf",
+      "name": "Hekili",
+      "author": "Hekili",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Hekili"
+      ],
+      "description": "Priority helper and rotation display.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "hekili"
+    },
+    {
+      "id": "hero_rotation_cf",
+      "name": "HeroRotation",
+      "author": "HeroTC",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "HeroRotation"
+      ],
+      "description": "Rotation helper modules.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "herorotation"
+    },
+    {
+      "id": "hero_lib_cf",
+      "name": "HeroLib",
+      "author": "HeroTC",
+      "category": "Library",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "HeroLib"
+      ],
+      "description": "Library for HeroRotation.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "herolib"
+    },
+    {
+      "id": "conro_cf",
+      "name": "ConRO",
+      "author": "Vae2009",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ConRO"
+      ],
+      "description": "Rotation helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "conro"
+    },
+    {
+      "id": "doom_cooldownpulse_cf",
+      "name": "Doom CooldownPulse",
+      "author": "Community",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Doom_CooldownPulse"
+      ],
+      "description": "Cooldown pulse visual alerts.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "doomcooldownpulse"
+    },
+    {
+      "id": "doom_shards_cf",
+      "name": "Doom Shards",
+      "author": "Community",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "DoomShards"
+      ],
+      "description": "Resource helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "doomshards"
+    },
+    {
+      "id": "needtoknow_cf",
+      "name": "NeedToKnow",
+      "author": "Community",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "NeedToKnow"
+      ],
+      "description": "Timer bars for buffs and cooldowns.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "need-to-know"
+    },
+    {
+      "id": "power_auras_classic_cf",
+      "name": "Power Auras Classic",
+      "author": "Sinsthar",
+      "category": "Buffs",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "PowerAuras"
+      ],
+      "description": "Visual aura alerts.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "power-auras-classic-v4"
+    },
+    {
+      "id": "threatplates_cf",
+      "name": "Threat Plates",
+      "author": "ThreatPlates Team",
+      "category": "Nameplates",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "TidyPlates_ThreatPlates"
+      ],
+      "description": "Threat-aware customizable nameplates.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "tidy-plates-threat-plates"
+    },
+    {
+      "id": "kuinameplates_cf",
+      "name": "KuiNameplates",
+      "author": "Kesava",
+      "category": "Nameplates",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Kui_Nameplates"
+      ],
+      "description": "Clean customizable nameplates.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "kuinameplates"
+    },
+    {
+      "id": "neatplates_cf",
+      "name": "NeatPlates",
+      "author": "Luxocracy",
+      "category": "Nameplates",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "NeatPlates"
+      ],
+      "description": "Nameplate replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "neatplates"
+    },
+    {
+      "id": "threatclassic2_cf",
+      "name": "ThreatClassic2",
+      "author": "Community",
+      "category": "Classic",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ThreatClassic2"
+      ],
+      "description": "Classic threat meter.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "threatclassic2"
+    },
+    {
+      "id": "omen_cf",
+      "name": "Omen Threat Meter",
+      "author": "Tekkub",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Omen"
+      ],
+      "description": "Threat meter for Classic-era gameplay.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "omen-threat-meter"
+    },
+    {
+      "id": "skada_cf",
+      "name": "Skada Damage Meter",
+      "author": "Zarnivoop",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Skada"
+      ],
+      "description": "Lightweight damage and healing meter.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "skada"
+    },
+    {
+      "id": "recount_cf",
+      "name": "Recount",
+      "author": "Recount Team",
+      "category": "Combat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Recount"
+      ],
+      "description": "Classic combat statistics tracker.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "recount"
+    },
+    {
+      "id": "tinyinspect_cf",
+      "name": "TinyInspect",
+      "author": "Community",
+      "category": "Equipment",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "TinyInspect"
+      ],
+      "description": "Inspect item levels and enchants.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "tinyinspect"
+    },
+    {
+      "id": "oilvl_cf",
+      "name": "O Item Level",
+      "author": "Community",
+      "category": "Equipment",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Oilvl"
+      ],
+      "description": "Item level display on character and inspect frames.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "o-item-level"
+    },
+    {
+      "id": "dejacharacterstats_retail_cf",
+      "name": "DejaCharacterStats Retail",
+      "author": "Deja",
+      "category": "Equipment",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "DejaCharacterStats"
+      ],
+      "description": "Detailed character stats.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "deja-character-stats"
+    },
+    {
+      "id": "pawn_classic_cf",
+      "name": "Pawn Classic",
+      "author": "Vger",
+      "category": "Equipment",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Pawn"
+      ],
+      "description": "Item upgrade scoring for Classic.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "pawn-classic"
+    },
+    {
+      "id": "scrap_junk_cf",
+      "name": "Scrap Junk Seller",
+      "author": "Jaliborc",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Scrap"
+      ],
+      "description": "Junk seller.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "scrap"
+    },
+    {
+      "id": "addonskins_cf",
+      "name": "AddOnSkins",
+      "author": "Azilroka",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AddOnSkins"
+      ],
+      "description": "Skins many popular addon windows.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "addonskins"
+    },
+    {
+      "id": "ls_toasts_cf",
+      "name": "ls_Toasts",
+      "author": "Lombra",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ls_Toasts"
+      ],
+      "description": "Notification toast replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ls-toasts"
+    },
+    {
+      "id": "ls_glass_cf",
+      "name": "ls_Glass",
+      "author": "Lombra",
+      "category": "Chat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ls_Glass"
+      ],
+      "description": "Modern chat styling.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ls-glass"
+    },
+    {
+      "id": "ls_ui_cf",
+      "name": "ls_UI",
+      "author": "Lombra",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ls_UI"
+      ],
+      "description": "Minimal UI suite.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ls-ui"
+    },
+    {
+      "id": "azeriteui_cf",
+      "name": "AzeriteUI",
+      "author": "Goldpaw",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AzeriteUI"
+      ],
+      "description": "Immersive fantasy UI replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "azeriteui"
+    },
+    {
+      "id": "gw2_ui_cf",
+      "name": "GW2 UI",
+      "author": "Mortalknight",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "GW2_UI"
+      ],
+      "description": "Guild Wars 2 inspired UI.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "gw2-ui"
+    },
+    {
+      "id": "glass_cf",
+      "name": "Glass",
+      "author": "MunkDev",
+      "category": "Chat",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Glass"
+      ],
+      "description": "Modern chat replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "glass"
+    },
+    {
+      "id": "ls_media_cf",
+      "name": "ls_Media",
+      "author": "Lombra",
+      "category": "Media",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ls_Media"
+      ],
+      "description": "Media pack for ls addons.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ls-media"
+    },
+    {
+      "id": "ls_toasts_skin_cf",
+      "name": "ls_Toasts Skin",
+      "author": "Lombra",
+      "category": "Interface",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ls_Toasts"
+      ],
+      "description": "Toast skins and improvements.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ls-toasts"
+    },
+    {
+      "id": "baud_bag_cf",
+      "name": "Baud Bag",
+      "author": "Baud",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BaudBag"
+      ],
+      "description": "Inventory replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "baud-bag"
+    },
+    {
+      "id": "baud_manifest_cf",
+      "name": "Baud Manifest",
+      "author": "Baud",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BaudManifest"
+      ],
+      "description": "Inventory tracking.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "baud-manifest"
+    },
+    {
+      "id": "bankstack_cf",
+      "name": "BankStack",
+      "author": "Kemayo",
+      "category": "Bags",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BankStack"
+      ],
+      "description": "Bag and bank sorting helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "bank-stack"
+    },
+    {
+      "id": "buyemall_cf",
+      "name": "BuyEmAll",
+      "author": "Cogwheel",
+      "category": "Utilities",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BuyEmAll"
+      ],
+      "description": "Bulk buying helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "buyemall"
+    },
+    {
+      "id": "autobar_cf",
+      "name": "AutoBar",
+      "author": "MuffinManKen",
+      "category": "Action Bars",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AutoBar"
+      ],
+      "description": "Contextual consumable action bars.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "autobar"
+    },
+    {
+      "id": "buttonforge_cf",
+      "name": "Button Forge",
+      "author": "PProvost",
+      "category": "Action Bars",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ButtonForge"
+      ],
+      "description": "Create extra action bars.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "button-forge"
+    },
+    {
+      "id": "flyplatebuffs_cf",
+      "name": "FlyPlateBuffs",
+      "author": "Community",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "FlyPlateBuffs"
+      ],
+      "description": "Buffs and debuffs on nameplates.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "flyplatebuffs"
+    },
+    {
+      "id": "losecontrol_cf",
+      "name": "LoseControl",
+      "author": "Jordon",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "LoseControl"
+      ],
+      "description": "Crowd control and spell lockout display.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "losecontrol"
+    },
+    {
+      "id": "diminish_cf",
+      "name": "Diminish",
+      "author": "Wardz",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "Diminish"
+      ],
+      "description": "Diminishing returns tracker.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "diminish"
+    },
+    {
+      "id": "arena_team_tracker_cf",
+      "name": "Arena Team Tracker",
+      "author": "Community",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ArenaTeamTracker"
+      ],
+      "description": "Team cooldown tracker for arena.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "arena-team-tracker"
+    },
+    {
+      "id": "sarena_cf",
+      "name": "sArena",
+      "author": "Sammystorm",
+      "category": "PvP",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "sArena"
+      ],
+      "description": "Arena frame replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "sarena"
+    },
+    {
+      "id": "premade_groups_filter_cf",
+      "name": "Premade Groups Filter",
+      "author": "Baerenhard",
+      "category": "Dungeons",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "PremadeGroupsFilter"
+      ],
+      "description": "Filters premade group finder listings.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "premade-groups-filter"
+    },
+    {
+      "id": "premade_group_finder_cf",
+      "name": "Premade Group Finder",
+      "author": "Community",
+      "category": "Dungeons",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "PremadeGroupFinder"
+      ],
+      "description": "Group finder enhancements.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "premade-group-finder"
+    },
+    {
+      "id": "auto_keystone_cf",
+      "name": "Auto Keystone",
+      "author": "Community",
+      "category": "Dungeons",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "AutoKeystone"
+      ],
+      "description": "Mythic+ keystone automation helpers.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "auto-keystone"
+    },
+    {
+      "id": "warpdeplete_cf",
+      "name": "WarpDeplete",
+      "author": "Heda",
+      "category": "Dungeons",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "WarpDeplete"
+      ],
+      "description": "Mythic+ timer and trash tracker.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "warpdeplete"
+    },
+    {
+      "id": "mythicplus_timer_cf",
+      "name": "MythicPlusTimer",
+      "author": "Community",
+      "category": "Dungeons",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "MythicPlusTimer"
+      ],
+      "description": "Enhanced Mythic+ timer.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "mythicplustimer"
+    },
+    {
+      "id": "keystone_hero_cf",
+      "name": "Keystone Hero",
+      "author": "Community",
+      "category": "Dungeons",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "KeystoneHero"
+      ],
+      "description": "Keystone and dungeon helper.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "keystone-hero"
+    },
+    {
+      "id": "dbm_voicepack_vem_cf",
+      "name": "DBM Voicepack VEM",
+      "author": "MysticalOS",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "DBM-VPVEM"
+      ],
+      "description": "Voice pack for DBM.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "dbm-voicepack-vem"
+    },
+    {
+      "id": "dbm_voicepack_yike_cf",
+      "name": "DBM Voicepack Yike",
+      "author": "MysticalOS",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "DBM-VPYike"
+      ],
+      "description": "Voice pack for DBM.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "dbm-voicepack-yike"
+    },
+    {
+      "id": "bigwigs_voice_cf",
+      "name": "BigWigs Voice",
+      "author": "BigWigs Team",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BigWigs_Voice"
+      ],
+      "description": "Voice pack support for BigWigs.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "bigwigs-voice"
+    },
+    {
+      "id": "boss_banner_cf",
+      "name": "Boss Banner",
+      "author": "Community",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "BossBanner"
+      ],
+      "description": "Boss kill banner replacement.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "boss-banner"
+    },
+    {
+      "id": "ls_boss_banner_cf",
+      "name": "ls_BossBanner",
+      "author": "Lombra",
+      "category": "Boss Mods",
+      "flavors": [
+        "all"
+      ],
+      "folders": [
+        "ls_BossBanner"
+      ],
+      "description": "Boss banner styling.",
+      "provider": "curseforge_web",
+      "curseforge_slug": "ls-bossbanner"
+    }
+  ]
+}

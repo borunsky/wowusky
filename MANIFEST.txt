@@ -1,0 +1,90 @@
+wowusky v0.4.0 — manifest
+=========================
+
+Top-level files
+---------------
+  pyproject.toml      Python build configuration (PEP 621)
+  PKGBUILD            Arch Linux package recipe
+  ruff.toml           Linter configuration
+  install.sh          Local installer (no root)
+  install-dev.sh      Install + launch (CachyOS testers)
+  run-local.sh        Run from checkout without installing
+  README.md           Documentation
+  CHANGELOG.md        Release history
+  CONTRIBUTING.md     Developer guide
+  LICENSE             MIT
+  .gitignore          Build artefacts, caches, OS junk
+  MANIFEST.txt        This file
+
+Python package wowusky/
+-----------------------
+  __init__.py         Version + package name
+  __main__.py         Entry point for `python -m wowusky`
+  app.py              Tk GUI orchestration (legacy, in active refactor)
+  core/               Reusable primitives (no GUI / no provider deps)
+    paths.py          XDG paths and per-profile locations
+    flavors.py        WoW client versions + compatibility map
+    toc.py            .toc parser with multi-flavor support
+    http.py           Cached HTTP layer with retry
+    versions.py       Version string normalisation
+    config.py         Global config + legacy migration
+    profiles.py       Profile dataclass + CRUD operations
+    installed.py      Per-profile installed-addon database
+    backup.py         Rollback archives (pruned to 3 newest)
+    filesystem.py     WoW install scanner (Steam/Wine/Lutris)
+    zipper.py         Smart ZIP extraction (GitHub wrappers)
+    logging_setup.py  Rotating file logger + UI ring buffer
+  providers/          Source providers (one per addon site)
+    base.py           AddonRef + AddonProvider protocol
+    tukui.py          ElvUI + Tukui via api.tukui.org
+    github.py         GitHub releases with flavor-aware asset picker
+    wowinterface.py   api.mmoui.com
+    curseforge.py     CurseForge Eternal API + browser fallback
+    wago.py           Wago.io WeakAura tracking
+  catalog/            Manifest-based addon catalog
+    __init__.py       Loader: builtin + community + user manifests
+    manifests/
+      builtin.json          (42 curated addons)
+      community-seed.json   (4 entries)
+      curseforge-seed.json  (195 CurseForge slugs)
+  tools/
+    health_check.py   CLI to ping every catalog entry
+  gui/                Placeholder (in-progress GUI split)
+
+Tests (79 total)
+----------------
+  tests/test_backup.py     6 tests
+  tests/test_catalog.py    7 tests
+  tests/test_flavors.py   12 tests
+  tests/test_profiles.py   9 tests
+  tests/test_providers.py 21 tests
+  tests/test_toc.py        9 tests
+  tests/test_versions.py   8 tests
+  tests/test_wago_import.py 4 tests
+  tests/test_zipper.py     5 tests
+
+CI workflows
+------------
+  .github/workflows/ci.yml            lint + test + build (every push)
+  .github/workflows/health-check.yml  weekly catalog ping → opens issues
+
+Issue templates
+---------------
+  .github/ISSUE_TEMPLATE/bug.yml      Structured bug-report form
+  .github/ISSUE_TEMPLATE/addon.yml    Catalog-addition request form
+
+Packaging
+---------
+  packaging/wowusky.desktop  Freedesktop entry
+  packaging/wowusky.svg      Scalable icon
+
+XDG runtime data (created on first run)
+---------------------------------------
+  ~/.local/share/wowusky/
+    config.json          global settings
+    profiles.json        WoW installations + active profile
+    wago.json            tracked WeakAuras
+    installed/           per-profile installed databases
+    backups/             rollback archives
+    manifests/           user catalog extensions
+    logs/                rotating wowusky.log

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" role="img" aria-label="wowusky">
+  
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#141821"></stop>
+      <stop offset="100%" stop-color="#0a0c0f"></stop>
+    </linearGradient>
+    <linearGradient id="w-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5eead4"></stop>
+      <stop offset="100%" stop-color="#14b8a6"></stop>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="256" height="256" rx="56" fill="url(#bg)"></rect>
+  <rect x="1" y="1" width="254" height="254" rx="55" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="2"></rect>
+  <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 92 56 H 76 C 64 56 58 64 58 78 V 110 C 58 120 52 124 44 124 C 52 124 58 128 58 138 V 170 C 58 184 64 192 76 192 H 92" stroke="#e7ecf3" stroke-width="14"></path>
+    <path d="M 164 56 H 180 C 192 56 198 64 198 78 V 110 C 198 120 204 124 212 124 C 204 124 198 128 198 138 V 170 C 198 184 192 192 180 192 H 164" stroke="#e7ecf3" stroke-width="14"></path>
+    <path d="M 92 92 L 104 168 L 116 124 L 128 148 L 140 124 L 152 168 L 164 92" stroke="url(#w-grad)" stroke-width="14"></path>
+  </g>
+</svg>
