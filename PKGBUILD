@@ -1,4 +1,4 @@
-# Maintainer: Kevin <your-email@example.com>
+# Maintainer: Kevin <info@borunsky.de>
 
 pkgname=wowusky
 pkgver=0.4.9
