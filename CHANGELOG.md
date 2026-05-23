@@ -4,6 +4,17 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.10] — 2026-05-23
+
+Packaging fix.
+
+### Fixed
+- Replaced the deprecated `license = { text = "MIT" }` TOML table
+  with the modern SPDX string `license = "MIT"` plus `license-files`,
+  and removed the deprecated `License ::` classifier. setuptools
+  warned these would stop working after 2027-Feb-18. Build now
+  emits no deprecation warnings. Requires setuptools >= 77.
+
 ## [0.4.9] — 2026-05-22
 
 Packaging fix. Corrects the GitHub repository URL across the project.
@@ -404,6 +415,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.4.10]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.10
 [0.4.9]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.9
 [0.4.8]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.8
 [0.4.7]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.7
