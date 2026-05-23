@@ -4,6 +4,16 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.11] — 2026-05-23
+
+Release-Korrektur zu 0.4.10.
+
+### Fixed
+- README-Versionsangaben (Banner, Install-Snippets) waren in 0.4.10
+  versehentlich bei 0.4.9 geblieben. 0.4.10 wurde nie als AUR-Paket
+  veröffentlicht; 0.4.11 ist der erste vollständige Stand der
+  SPDX-Lizenz-Umstellung.
+
 ## [0.4.10] — 2026-05-23
 
 Packaging fix.
@@ -415,6 +425,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.4.11]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.11
 [0.4.10]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.10
 [0.4.9]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.9
 [0.4.8]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.8
