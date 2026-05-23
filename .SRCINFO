@@ -13,6 +13,6 @@ pkgbase = wowusky
 	depends = python
 	depends = tk
 	source = wowusky-0.4.9.tar.gz::https://github.com/borunsky/wowusky/archive/refs/tags/v0.4.9.tar.gz
-	sha256sums = SKIP
+	sha256sums = e39fbc4c435b594de11e92b46a91c30d5060a9866c3c7a8ff37a6376548fecf5
 
 pkgname = wowusky

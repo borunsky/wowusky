@@ -14,7 +14,7 @@ source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz
 # 'SKIP' is a placeholder. Before publishing to the AUR, tag and push
 # the v0.4.9 release on GitHub, then run `updpkgsums` in this directory
 # to replace SKIP with the real checksum of the release tarball.
-sha256sums=('SKIP')
+sha256sums=('e39fbc4c435b594de11e92b46a91c30d5060a9866c3c7a8ff37a6376548fecf5')
 
 build() {
   cd "${pkgname}-${pkgver}"
