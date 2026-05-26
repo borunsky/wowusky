@@ -559,21 +559,6 @@
       "curseforge_slug": "clique"
     },
     {
-      "id": "leatrix_plus_cf",
-      "name": "Leatrix Plus",
-      "author": "Leatrix",
-      "category": "Utilities",
-      "flavors": [
-        "all"
-      ],
-      "folders": [
-        "Leatrix_Plus"
-      ],
-      "description": "Quality-of-life options for WoW.",
-      "provider": "curseforge_web",
-      "curseforge_slug": "leatrix-plus"
-    },
-    {
       "id": "leatrix_maps_cf",
       "name": "Leatrix Maps",
       "author": "Leatrix",
@@ -2342,21 +2327,6 @@
       "description": "Classic threat meter.",
       "provider": "curseforge_web",
       "curseforge_slug": "threatclassic2"
-    },
-    {
-      "id": "omen_cf",
-      "name": "Omen Threat Meter",
-      "author": "Tekkub",
-      "category": "Combat",
-      "flavors": [
-        "all"
-      ],
-      "folders": [
-        "Omen"
-      ],
-      "description": "Threat meter for Classic-era gameplay.",
-      "provider": "curseforge_web",
-      "curseforge_slug": "omen-threat-meter"
     },
     {
       "id": "skada_cf",

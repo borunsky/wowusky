@@ -106,3 +106,45 @@ def test_normalisation_fills_defaults():
     assert entry["flavors"] == ["all"]
     assert entry["folders"] == []
     assert entry["category"] == "Other"
+
+
+def test_no_real_duplicate_entries_in_shipped_catalog():
+    """No addon may appear twice with the SAME provider in the
+    shipped catalog.
+
+    Many popular addons intentionally appear twice — once per source
+    (e.g. ElvUI via 'tukui' and again via 'curseforge_web' as a
+    fallback). That deliberate source choice must stay. But two
+    entries with the same name AND the same provider point at the
+    identical download — an accidental duplicate. v0.4.12 removed two
+    such pairs ('omen_cf', 'leatrix_plus_cf'); this guards against new
+    ones creeping in.
+    """
+    from collections import defaultdict
+
+    from wowusky.catalog import load_catalog
+
+    by_name = defaultdict(list)
+    for addon in load_catalog():
+        by_name[addon["name"]].append(addon.get("provider"))
+
+    real_duplicates = {
+        name: providers
+        for name, providers in by_name.items()
+        if len(providers) != len(set(providers))
+    }
+    assert not real_duplicates, (
+        f"addon(s) listed twice with the same provider: {real_duplicates}"
+    )
+
+
+def test_catalog_ids_are_unique():
+    """Every catalog id must be unique — the loader merges by id, so a
+    collision would silently shadow one entry."""
+    from collections import Counter
+
+    from wowusky.catalog import load_catalog
+
+    ids = Counter(a["id"] for a in load_catalog())
+    collisions = {i: n for i, n in ids.items() if n > 1}
+    assert not collisions, f"duplicate catalog ids: {collisions}"

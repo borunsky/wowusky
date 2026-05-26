@@ -4,6 +4,23 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.12] — 2026-05-23
+
+Catalog cleanup.
+
+### Fixed
+- Removed two accidental duplicate catalog entries: 'omen_cf' and
+  'leatrix_plus_cf' each pointed at the same curseforge_web download
+  as their builtin counterpart ('omen', 'leatrix_plus'). The shipped
+  catalog goes from 241 to 239 entries. The 28 intentional
+  multi-source entries (same addon via different providers, e.g.
+  ElvUI via tukui and curseforge_web) are unaffected.
+
+### Added
+- tests/test_catalog.py: two consistency checks — no two entries may
+  share a name with the same provider, and all catalog ids must be
+  unique. 111 tests total.
+
 ## [0.4.11] — 2026-05-23
 
 Release-Korrektur zu 0.4.10.
@@ -425,6 +442,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.4.12]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.12
 [0.4.11]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.11
 [0.4.10]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.10
 [0.4.9]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.9
