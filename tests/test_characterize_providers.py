@@ -12,6 +12,7 @@ functions DERIVE from that response, not the network itself.
 from __future__ import annotations
 
 import wowusky.app as app
+import wowusky.providers.wowi_fns as wowi_fns
 
 
 # A representative MMOUI filedetails response (as the API returns it:
@@ -27,8 +28,8 @@ _FAKE_WOWI_RESPONSE = [
 
 
 def _patch_http(monkeypatch, response):
-    """Replace app.http_get_json with a stub returning `response`."""
-    monkeypatch.setattr(app, "http_get_json", lambda url: response)
+    """Replace http_get_json in the wowi_fns module with a stub."""
+    monkeypatch.setattr(wowi_fns, "http_get_json", lambda url: response)
 
 
 def test_wowi_info_unwraps_single_element_list(monkeypatch):
@@ -43,7 +44,7 @@ def test_wowi_info_returns_empty_dict_on_error(monkeypatch):
     """A network failure must yield {} — never raise."""
     def boom(url):
         raise RuntimeError("network down")
-    monkeypatch.setattr(app, "http_get_json", boom)
+    monkeypatch.setattr(wowi_fns, "http_get_json", boom)
     assert app.wowi_info("12345") == {}
 
 
