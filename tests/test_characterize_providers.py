@@ -15,6 +15,7 @@ import wowusky.app as app
 import wowusky.providers.wowi_fns as wowi_fns
 import wowusky.providers.wago_fns as wago_fns
 import wowusky.providers.tukui_fns as tukui_fns
+import wowusky.providers.github_fns as github_fns
 
 
 # A representative MMOUI filedetails response (as the API returns it:
@@ -272,13 +273,13 @@ def test_github_repo_plain_string_passthrough():
 
 def test_github_repo_uses_plain_repo_field(monkeypatch):
     """A dict without repo_by_flavor falls back to the 'repo' field."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
+    monkeypatch.setattr(github_fns, "get_current_flavor", lambda: "retail")
     assert app.github_repo_for_addon({"repo": "owner/repo"}) == "owner/repo"
 
 
 def test_github_repo_by_flavor_picks_flavor_specific(monkeypatch):
     """repo_by_flavor: the current flavor selects its own repository."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "vanilla")
+    monkeypatch.setattr(github_fns, "get_current_flavor", lambda: "vanilla")
     addon = {
         "repo": "owner/retail-repo",
         "repo_by_flavor": {
@@ -291,7 +292,7 @@ def test_github_repo_by_flavor_picks_flavor_specific(monkeypatch):
 
 def test_github_repo_by_flavor_falls_back_to_retail(monkeypatch):
     """A flavor with no specific entry falls back through retail/default."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "mop_classic")
+    monkeypatch.setattr(github_fns, "get_current_flavor", lambda: "mop_classic")
     addon = {
         "repo": "owner/plain",
         "repo_by_flavor": {"retail": "owner/retail-repo"},
@@ -303,7 +304,7 @@ def test_github_repo_by_flavor_falls_back_to_retail(monkeypatch):
 
 def test_github_releases_prefers_latest(monkeypatch):
     """When /releases/latest succeeds, it is wrapped in a one-item list."""
-    monkeypatch.setattr(app, "http_get_json",
+    monkeypatch.setattr(github_fns, "http_get_json",
                         lambda url: {"tag_name": "v1.2.3"})
     rels = app.github_releases("owner/repo")
     assert rels == [{"tag_name": "v1.2.3"}]
@@ -313,14 +314,14 @@ def test_github_releases_returns_empty_on_total_failure(monkeypatch):
     """All endpoints failing yields [] — never an exception."""
     def boom(url):
         raise RuntimeError("api down")
-    monkeypatch.setattr(app, "http_get_json", boom)
+    monkeypatch.setattr(github_fns, "http_get_json", boom)
     assert app.github_releases("owner/repo") == []
 
 
 # ---- github_tags ----
 
 def test_github_tags_returns_list(monkeypatch):
-    monkeypatch.setattr(app, "http_get_json",
+    monkeypatch.setattr(github_fns, "http_get_json",
                         lambda url: [{"name": "v2.0"}])
     assert app.github_tags("owner/repo") == [{"name": "v2.0"}]
 
@@ -328,7 +329,7 @@ def test_github_tags_returns_list(monkeypatch):
 def test_github_tags_empty_on_error(monkeypatch):
     def boom(url):
         raise RuntimeError("down")
-    monkeypatch.setattr(app, "http_get_json", boom)
+    monkeypatch.setattr(github_fns, "http_get_json", boom)
     assert app.github_tags("owner/repo") == []
 
 
@@ -336,7 +337,7 @@ def test_github_tags_empty_on_error(monkeypatch):
 
 def test_github_default_branch_from_api(monkeypatch):
     """When the API answers, its default_branch is used directly."""
-    monkeypatch.setattr(app, "http_get_json",
+    monkeypatch.setattr(github_fns, "http_get_json",
                         lambda url: {"default_branch": "develop"})
     assert app.github_default_branch("owner/repo") == "develop"
 
@@ -347,11 +348,11 @@ def test_github_default_branch_probes_master_on_api_failure(monkeypatch):
     'master', not a blind 'main'."""
     def api_down(url):
         raise RuntimeError("rate limited")
-    monkeypatch.setattr(app, "http_get_json", api_down)
+    monkeypatch.setattr(github_fns, "http_get_json", api_down)
 
     def fake_exists(repo, branch):
         return branch == "master"
-    monkeypatch.setattr(app, "_github_branch_exists", fake_exists)
+    monkeypatch.setattr(github_fns, "_github_branch_exists", fake_exists)
 
     assert app.github_default_branch("owner/repo") == "master"
 
@@ -359,9 +360,9 @@ def test_github_default_branch_probes_master_on_api_failure(monkeypatch):
 def test_github_default_branch_defaults_to_main_when_nothing_probes(
         monkeypatch):
     """If neither branch probes positive, the final fallback is 'main'."""
-    monkeypatch.setattr(app, "http_get_json",
+    monkeypatch.setattr(github_fns, "http_get_json",
                         lambda url: (_ for _ in ()).throw(RuntimeError()))
-    monkeypatch.setattr(app, "_github_branch_exists",
+    monkeypatch.setattr(github_fns, "_github_branch_exists",
                         lambda repo, branch: False)
     assert app.github_default_branch("owner/repo") == "main"
 
@@ -398,17 +399,17 @@ def test_branch_exists_true_on_network_error(monkeypatch):
 
 def test_github_version_from_release_tag(monkeypatch):
     """Release tag wins, with the leading 'v' stripped."""
-    monkeypatch.setattr(app, "github_releases",
+    monkeypatch.setattr(github_fns, "github_releases",
                         lambda repo: [{"tag_name": "v3.4.5"}])
     assert app.github_version({"repo": "o/r"}) == "3.4.5"
 
 
 def test_github_version_branch_snapshot_fallback(monkeypatch):
     """No releases, no tags → '<branch> snapshot'."""
-    monkeypatch.setattr(app, "github_releases", lambda repo: [])
-    monkeypatch.setattr(app, "github_tags", lambda repo: [])
-    monkeypatch.setattr(app, "github_default_branch", lambda repo: "main")
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
+    monkeypatch.setattr(github_fns, "github_releases", lambda repo: [])
+    monkeypatch.setattr(github_fns, "github_tags", lambda repo: [])
+    monkeypatch.setattr(github_fns, "github_default_branch", lambda repo: "main")
+    monkeypatch.setattr(github_fns, "get_current_flavor", lambda: "retail")
     assert app.github_version({"repo": "o/r"}) == "main snapshot"
 
 
@@ -416,7 +417,7 @@ def test_github_version_branch_snapshot_fallback(monkeypatch):
 
 def test_pick_asset_skips_nolib_and_nonzip(monkeypatch):
     """Non-zip and nolib assets are filtered out."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
+    monkeypatch.setattr(github_fns, "get_current_flavor", lambda: "retail")
     assets = [
         {"name": "Addon-nolib.zip", "size": 999},
         {"name": "Addon.txt", "size": 999},
@@ -429,7 +430,7 @@ def test_pick_asset_skips_nolib_and_nonzip(monkeypatch):
 def test_pick_asset_prefers_flavor_hint(monkeypatch):
     """With a vanilla flavor, an asset whose name contains 'classic'
     is preferred over a larger non-matching one."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "vanilla")
+    monkeypatch.setattr(github_fns, "get_current_flavor", lambda: "vanilla")
     assets = [
         {"name": "Addon-mainline.zip", "size": 5000},
         {"name": "Addon-classic.zip", "size": 100},
@@ -439,7 +440,7 @@ def test_pick_asset_prefers_flavor_hint(monkeypatch):
 
 
 def test_pick_asset_none_when_no_zip(monkeypatch):
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
+    monkeypatch.setattr(github_fns, "get_current_flavor", lambda: "retail")
     assert app._github_pick_asset([{"name": "readme.txt"}]) is None
 
 # ── CurseForge ────────────────────────────────────────────────────────
