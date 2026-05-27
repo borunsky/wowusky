@@ -703,8 +703,7 @@ http_download = _ws_http.download
 # Source adapters
 # ============================================================
 
-def tukui_version(a):  return http_get_json(a["api_url"]).get("version", "?")
-def tukui_url(a):      return a["download_url"]
+from wowusky.providers.tukui_fns import tukui_url, tukui_version  # noqa: E402
 
 def github_repo_for_addon(addon):
     """Return the best GitHub repository for the currently selected WoW flavor.

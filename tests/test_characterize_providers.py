@@ -14,6 +14,7 @@ from __future__ import annotations
 import wowusky.app as app
 import wowusky.providers.wowi_fns as wowi_fns
 import wowusky.providers.wago_fns as wago_fns
+import wowusky.providers.tukui_fns as tukui_fns
 
 
 # A representative MMOUI filedetails response (as the API returns it:
@@ -178,7 +179,7 @@ _FAKE_TUKUI_API_RESPONSE = {"version": "13.62", "name": "ElvUI"}
 
 def test_tukui_version_reads_version_field(monkeypatch):
     """tukui_version fetches api_url and returns its 'version'."""
-    monkeypatch.setattr(app, "http_get_json",
+    monkeypatch.setattr(tukui_fns, "http_get_json",
                         lambda url: _FAKE_TUKUI_API_RESPONSE)
     v = app.tukui_version({"api_url": "https://api.tukui.org/v1/addon/elvui"})
     assert v == "13.62"
@@ -186,7 +187,7 @@ def test_tukui_version_reads_version_field(monkeypatch):
 
 def test_tukui_version_falls_back_to_question_mark(monkeypatch):
     """With no 'version' field in the response, the literal '?' is used."""
-    monkeypatch.setattr(app, "http_get_json", lambda url: {"name": "ElvUI"})
+    monkeypatch.setattr(tukui_fns, "http_get_json", lambda url: {"name": "ElvUI"})
     v = app.tukui_version({"api_url": "https://api.tukui.org/v1/addon/elvui"})
     assert v == "?"
 
