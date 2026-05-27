@@ -162,3 +162,90 @@ def test_wago_fetch_encoded_returns_none_on_error(monkeypatch):
         raise RuntimeError("down")
     monkeypatch.setattr(app, "_http", boom)
     assert app.wago_fetch_encoded("abc123") is None
+
+# ── Tukui ─────────────────────────────────────────────────────────────
+#
+# Tukui is the simplest provider: tukui_version/tukui_url just read
+# fields off the catalog entry dict. The interesting bit is
+# _load_addon_catalog_with_compat(), which RECONSTRUCTS those fields
+# (api_url, download_url) from the slug when a manifest omits them.
+
+
+_FAKE_TUKUI_API_RESPONSE = {"version": "13.62", "name": "ElvUI"}
+
+
+def test_tukui_version_reads_version_field(monkeypatch):
+    """tukui_version fetches api_url and returns its 'version'."""
+    monkeypatch.setattr(app, "http_get_json",
+                        lambda url: _FAKE_TUKUI_API_RESPONSE)
+    v = app.tukui_version({"api_url": "https://api.tukui.org/v1/addon/elvui"})
+    assert v == "13.62"
+
+
+def test_tukui_version_falls_back_to_question_mark(monkeypatch):
+    """With no 'version' field in the response, the literal '?' is used."""
+    monkeypatch.setattr(app, "http_get_json", lambda url: {"name": "ElvUI"})
+    v = app.tukui_version({"api_url": "https://api.tukui.org/v1/addon/elvui"})
+    assert v == "?"
+
+
+def test_tukui_url_returns_download_url_field():
+    """tukui_url is a pure field read — no network."""
+    entry = {"download_url": "https://api.tukui.org/v1/download/dev/elvui/main"}
+    assert app.tukui_url(entry) == entry["download_url"]
+
+
+def test_compat_reconstructs_tukui_urls_when_missing(monkeypatch):
+    """_load_addon_catalog_with_compat must synthesise api_url and
+    download_url for a tukui entry that lacks them, using the slug."""
+    fake_manifest = [
+        {"id": "elvui", "provider": "tukui", "slug": "elvui", "name": "ElvUI"},
+    ]
+    monkeypatch.setattr(app, "_load_manifest_catalog", lambda: fake_manifest)
+
+    catalog = app._load_addon_catalog_with_compat()
+    entry = catalog[0]
+    assert entry["api_url"] == "https://api.tukui.org/v1/addon/elvui"
+    assert entry["download_url"] == \
+        "https://api.tukui.org/v1/download/dev/elvui/main"
+
+
+def test_compat_keeps_existing_tukui_urls(monkeypatch):
+    """If a manifest already provides the URLs, they must NOT be
+    overwritten — setdefault only fills what is missing."""
+    fake_manifest = [
+        {
+            "id": "elvui", "provider": "tukui", "slug": "elvui",
+            "api_url": "https://custom.example/api",
+            "download_url": "https://custom.example/dl",
+        },
+    ]
+    monkeypatch.setattr(app, "_load_manifest_catalog", lambda: fake_manifest)
+
+    entry = app._load_addon_catalog_with_compat()[0]
+    assert entry["api_url"] == "https://custom.example/api"
+    assert entry["download_url"] == "https://custom.example/dl"
+
+
+def test_compat_falls_back_to_id_when_no_slug(monkeypatch):
+    """Reconstruction uses 'slug', but falls back to 'id' when slug
+    is absent."""
+    fake_manifest = [
+        {"id": "tukui", "provider": "tukui", "name": "Tukui"},
+    ]
+    monkeypatch.setattr(app, "_load_manifest_catalog", lambda: fake_manifest)
+
+    entry = app._load_addon_catalog_with_compat()[0]
+    assert entry["api_url"] == "https://api.tukui.org/v1/addon/tukui"
+
+
+def test_compat_mirrors_provider_into_source(monkeypatch):
+    """The provider↔source duality: an entry with only 'provider'
+    must get a matching 'source' field."""
+    fake_manifest = [
+        {"id": "x", "provider": "github", "name": "X"},
+    ]
+    monkeypatch.setattr(app, "_load_manifest_catalog", lambda: fake_manifest)
+
+    entry = app._load_addon_catalog_with_compat()[0]
+    assert entry["source"] == "github"
