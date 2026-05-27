@@ -4,6 +4,42 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-05-27
+
+First stage of a larger restructuring (Etappe A of v0.5). All five
+provider function groups (WoWInterface, Wago, Tukui, GitHub,
+CurseForge) move out of app.py into dedicated providers/*_fns.py
+modules. Behaviour is identical — pinned by 55 new characterisation
+tests added in tests/test_characterize_providers.py before each
+extraction.
+
+### Changed
+- app.py shrinks from 4939 to ~4694 lines (≈250 lines of provider
+  logic moved into providers/*_fns.py modules).
+- The provider-dispatch table SOURCES and every call site stay
+  unchanged; the functions are imported from their new modules.
+
+### Added
+- providers/wowi_fns.py, providers/wago_fns.py, providers/tukui_fns.py,
+  providers/github_fns.py, providers/curseforge_fns.py — function-based
+  provider modules.
+- tests/test_characterize_providers.py — 55 tests that pin the
+  observable behaviour of the provider functions (including the B2
+  branch-probing fix for GitHub repos that still use 'master',
+  the repo_by_flavor flavour-aware repository selection, the
+  CurseForge gameVersionTypeId flavor matching, and the Tukui catalog
+  setdefault behaviour).
+
+### Notes
+- The older class-based providers/*.py modules (github.py, tukui.py,
+  wowinterface.py, wago.py, curseforge.py) are left in place untouched
+  and are still used by tools/health_check.py and test_providers.py.
+  Consolidating the two provider worlds is a separate later stage.
+- The Wago helpers wago_add/wago_remove/wago_check_updates and the
+  CurseForge install layer (install_curseforge, install_curseforge_
+  dependencies, import_zip_file) remain in app.py — they manage local
+  state and belong to a later persistence/install stage.
+
 ## [0.4.12] — 2026-05-23
 
 Catalog cleanup.
@@ -442,6 +478,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.5.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.0
 [0.4.12]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.12
 [0.4.11]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.11
 [0.4.10]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.10
