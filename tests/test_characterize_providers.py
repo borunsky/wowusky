@@ -73,3 +73,92 @@ def test_wowi_page_url_format(monkeypatch):
     """page_url is pure string-building — no network needed."""
     url = app.wowi_page_url({"wowi_id": "12345"})
     assert url == "https://www.wowinterface.com/downloads/info12345.html"
+
+
+# ── Wago ──────────────────────────────────────────────────────────────
+#
+# wago_fetch_info is trickier: it uses TWO network mechanisms.
+#   1. `with _http(url) as r: ... r.read()`  — low-level, primary path
+#   2. `http_get_json(url)`                  — fallback path
+# Both must be mocked or the test leaks to the real network.
+
+
+class _FakeResponse:
+    """Minimal stand-in for the object `_http` yields as a context
+    manager: supports `with ... as r` and `r.read()`."""
+
+    def __init__(self, payload: bytes):
+        self._payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self):
+        return self._payload
+
+
+def test_parse_wago_url_extracts_slug(monkeypatch):
+    """parse_wago_url is pure string parsing — no network."""
+    slug, version = app.parse_wago_url("https://wago.io/abc123XYZ")
+    assert slug == "abc123XYZ"
+
+
+def test_parse_wago_url_returns_none_pair_on_no_match():
+    """A non-wago string yields the (None, None) pair, never raises."""
+    result = app.parse_wago_url("not a wago url at all")
+    assert result == (None, None)
+
+
+def test_wago_fetch_info_uses_primary_endpoint(monkeypatch):
+    """When the _http path succeeds, its JSON payload is returned and
+    the http_get_json fallback is never consulted."""
+    import json as _json
+    payload = _json.dumps({"name": "My Aura", "version": 7}).encode("utf-8")
+    monkeypatch.setattr(app, "_http", lambda url: _FakeResponse(payload))
+
+    def fallback_must_not_run(url):
+        raise AssertionError("fallback http_get_json should not be called")
+    monkeypatch.setattr(app, "http_get_json", fallback_must_not_run)
+
+    info = app.wago_fetch_info("abc123")
+    assert info["name"] == "My Aura"
+    assert info["version"] == 7
+
+
+def test_wago_fetch_info_falls_back_on_primary_failure(monkeypatch):
+    """If the _http path raises, wago_fetch_info tries http_get_json."""
+    def primary_boom(url):
+        raise RuntimeError("primary endpoint down")
+    monkeypatch.setattr(app, "_http", primary_boom)
+    monkeypatch.setattr(app, "http_get_json",
+                        lambda url: {"wagoVersion": 3})
+
+    info = app.wago_fetch_info("abc123")
+    assert info == {"wagoVersion": 3}
+
+
+def test_wago_fetch_info_returns_none_when_both_fail(monkeypatch):
+    """Both endpoints down → None, never an exception."""
+    def boom(url):
+        raise RuntimeError("down")
+    monkeypatch.setattr(app, "_http", boom)
+    monkeypatch.setattr(app, "http_get_json", boom)
+    assert app.wago_fetch_info("abc123") is None
+
+
+def test_wago_fetch_encoded_returns_string(monkeypatch):
+    """wago_fetch_encoded returns the raw decoded import string."""
+    monkeypatch.setattr(app, "_http",
+                        lambda url: _FakeResponse(b"!WA:2!encodedstring"))
+    result = app.wago_fetch_encoded("abc123")
+    assert result == "!WA:2!encodedstring"
+
+
+def test_wago_fetch_encoded_returns_none_on_error(monkeypatch):
+    def boom(url):
+        raise RuntimeError("down")
+    monkeypatch.setattr(app, "_http", boom)
+    assert app.wago_fetch_encoded("abc123") is None
