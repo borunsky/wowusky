@@ -703,164 +703,24 @@ http_download = _ws_http.download
 # Source adapters
 # ============================================================
 
-def tukui_version(a):  return http_get_json(a["api_url"]).get("version", "?")
-def tukui_url(a):      return a["download_url"]
+from wowusky.providers.tukui_fns import tukui_url, tukui_version  # noqa: E402
 
-def github_repo_for_addon(addon):
-    """Return the best GitHub repository for the currently selected WoW flavor.
+from wowusky.providers import github_fns as _github_fns  # noqa: E402
+_github_fns.get_current_flavor = lambda: get_current_flavor()
+from wowusky.providers.github_fns import (  # noqa: E402
+    _github_branch_exists, _github_pick_asset, github_default_branch,
+    github_releases, github_repo_for_addon, github_repo_url, github_tags,
+    github_url, github_version)
+from wowusky.providers.wowi_fns import (  # noqa: E402
+    wowi_info, wowi_page_url, wowi_url, wowi_version)
 
-    Some addons keep Classic/TBC/Retail packages in different repositories.
-    repo_by_flavor keeps links and downloads flavor-aware without duplicating
-    addon cards.
-    """
-    if isinstance(addon, dict):
-        flavor = get_current_flavor() or "retail"
-        by_flavor = addon.get("repo_by_flavor") or {}
-        for key in (flavor, "anniversary" if flavor == "anniversary" else None, "retail", "default"):
-            if key and by_flavor.get(key):
-                return by_flavor[key]
-        return addon.get("repo", "")
-    return str(addon or "")
+from wowusky.providers.curseforge_fns import (  # noqa: E402
+    _cf_file_versions, cf_slug_from_ref, curseforge_file_matches_flavor,
+    curseforge_headers, curseforge_web_url, curseforge_web_version)
 
-
-def github_repo_url(repo):
-    return f"https://github.com/{repo}"
-
-
-def github_releases(repo):
-    """Return releases with fallbacks. Many WoW addons do not expose /latest."""
-    try:
-        latest = http_get_json(f"https://api.github.com/repos/{repo}/releases/latest")
-        if latest:
-            return [latest]
-    except Exception:
-        pass
-    try:
-        rels = http_get_json(f"https://api.github.com/repos/{repo}/releases?per_page=10")
-        if isinstance(rels, list):
-            return rels
-    except Exception:
-        pass
-    return []
-
-
-def github_tags(repo):
-    try:
-        tags = http_get_json(f"https://api.github.com/repos/{repo}/tags?per_page=10")
-        return tags if isinstance(tags, list) else []
-    except Exception:
-        return []
-
-
-def github_default_branch(repo):
-    try:
-        data = http_get_json(f"https://api.github.com/repos/{repo}")
-        branch = data.get("default_branch")
-        if branch:
-            return branch
-    except Exception:
-        pass
-    # The GitHub API failed (commonly: unauthenticated rate limit, 60
-    # req/h per IP). Do NOT blindly assume "main" — many WoW addon
-    # repos still use "master", which produced 404s on download (B2).
-    # Probe the actual archive URLs and use whichever branch exists.
-    for candidate in ("main", "master"):
-        if _github_branch_exists(repo, candidate):
-            return candidate
-    return "main"
-
-
-def _github_branch_exists(repo, branch):
-    """Return True if the branch archive URL is reachable (no download)."""
-    url = f"https://github.com/{repo}/archive/refs/heads/{branch}.zip"
-    try:
-        req = urllib.request.Request(
-            url, method="HEAD",
-            headers={"User-Agent": f"{APP_NAME}/{__version__}"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return 200 <= getattr(resp, "status", 200) < 400
-    except urllib.error.HTTPError:
-        return False
-    except Exception:
-        # Network error rather than a definitive 404 — don't claim the
-        # branch is missing, let the caller fall back to its default.
-        return True
-
-
-def github_version(a):
-    repo = github_repo_for_addon(a)
-    rels = github_releases(repo)
-    if rels:
-        tag = rels[0].get("tag_name") or rels[0].get("name")
-        if tag:
-            return str(tag).lstrip("v")
-    tags = github_tags(repo)
-    if tags:
-        return str(tags[0].get("name", "?")).lstrip("v")
-    branch = github_default_branch(repo)
-    return f"{branch} snapshot"
-
-
-def _github_pick_asset(assets):
-    assets = [x for x in assets
-              if x.get("name", "").lower().endswith(".zip")
-              and "nolib" not in x.get("name", "").lower()
-              and "source code" not in x.get("name", "").lower()]
-    if not assets:
-        return None
-    flavor = get_current_flavor()
-    flavor_hints = {
-        "anniversary": ["tbc", "bcc", "anniversary", "classic"],
-        "vanilla":     ["classic", "vanilla", "era", "sod"],
-        "mop_classic": ["mists", "mop", "classic"],
-        "retail":      ["mainline", "retail"],
-    }
-    if flavor and flavor in flavor_hints:
-        for hint in flavor_hints[flavor]:
-            matches = [a for a in assets if hint in a.get("name", "").lower()]
-            if matches:
-                matches.sort(key=lambda x: x.get("size", 0), reverse=True)
-                return matches[0]
-    assets.sort(key=lambda x: x.get("size", 0), reverse=True)
-    return assets[0]
-
-
-def github_url(a):
-    repo = github_repo_for_addon(a)
-    for rel in github_releases(repo):
-        asset = _github_pick_asset(rel.get("assets", []))
-        if asset and asset.get("browser_download_url"):
-            return asset["browser_download_url"]
-        if rel.get("zipball_url"):
-            return rel["zipball_url"]
-    tags = github_tags(repo)
-    if tags:
-        name = tags[0].get("name")
-        if name:
-            return f"https://github.com/{repo}/archive/refs/tags/{urllib.parse.quote(name)}.zip"
-    branch = github_default_branch(repo)
-    return f"https://github.com/{repo}/archive/refs/heads/{urllib.parse.quote(branch)}.zip"
-
-def wowi_info(wid):
-    try:
-        data = http_get_json(f"https://api.mmoui.com/v3/game/WOW/filedetails/{wid}.json")
-        return data[0] if isinstance(data, list) and data else data
-    except Exception:
-        return {}
-
-def wowi_version(a):
-    info = wowi_info(a["wowi_id"])
-    return info.get("UIVersion") or info.get("Version") or "manual"
-
-
-def wowi_page_url(a):
-    return f"https://www.wowinterface.com/downloads/info{a['wowi_id']}.html"
-
-
-def wowi_url(a):
-    info = wowi_info(a["wowi_id"])
-    return info.get("UIDownload") or ""
-
+from wowusky.providers import curseforge_fns as _cf_fns  # noqa: E402
+_cf_fns.get_current_flavor = lambda: get_current_flavor()
+_cf_fns.get_curseforge_api_key = lambda: get_curseforge_api_key()
 
 def internal_wac_version(a):
     """WeakAurasCompanion is generated locally — version = number of auras."""
@@ -879,25 +739,9 @@ def internal_wac_url(a):
 
 CURSEFORGE_API_BASE = "https://api.curseforge.com/v1"
 CURSEFORGE_GAME_ID = 1  # World of Warcraft
-CURSEFORGE_URL_RX = re.compile(r'curseforge\.com/wow/addons/([a-zA-Z0-9_-]+)')
 
-# CurseForge file objects can expose version info in different places.
-# The string matcher is deliberately broad because Blizzard and CurseForge
-# rename Classic branches over time.
-CF_FLAVOR_TEXT = {
-    "retail":      ("retail", "mainline", "the war within", "dragonflight", "war within"),
-    "ptr":         ("ptr", "retail", "mainline"),
-    "anniversary": ("anniversary", "tbc", "burning crusade", "classic", "bcc"),
-    "vanilla":     ("classic era", "classic", "vanilla", "sod", "season of discovery"),
-    "mop_classic": ("mists", "mop", "mists of pandaria", "classic"),
-}
-CF_VERSION_TYPE_HINTS = {
-    "retail": 517,
-    "ptr": 517,
-    "anniversary": 67408,
-    "vanilla": 67408,
-    "mop_classic": 73246,
-}
+from wowusky.providers.curseforge_fns import (  # noqa: E402
+    CF_FLAVOR_TEXT, CF_VERSION_TYPE_HINTS, CURSEFORGE_URL_RX)
 
 CF_WEB_VERSION_TYPE_HINTS = {
     # CurseForge web URLs use gameVersionTypeId. 67408 currently opens the
@@ -924,18 +768,6 @@ def current_cf_web_version_type():
     return CF_WEB_VERSION_TYPE_HINTS.get(get_current_flavor() or "retail")
 
 
-def cf_slug_from_ref(ref):
-    ref = (ref or "").strip()
-    if not ref:
-        return ""
-    m = CURSEFORGE_URL_RX.search(ref)
-    if m:
-        return m.group(1)
-    if ref.isdigit():
-        return ""
-    return ref.strip("/").split("/")[-1]
-
-
 def _cached_json(cache_key, loader):
     now = time.time()
     item = HTTP_CACHE.get(cache_key)
@@ -955,17 +787,6 @@ def retry(fn, attempts=3, delay=0.7):
             last = e
             time.sleep(delay)
     raise last
-
-
-def curseforge_headers():
-    key = get_curseforge_api_key()
-    if not key:
-        raise RuntimeError("CurseForge API key missing. Add it in Settings or set CURSEFORGE_API_KEY.")
-    return {
-        "Accept": "application/json",
-        "x-api-key": key,
-        "User-Agent": f"{APP_NAME}/{__version__}",
-    }
 
 
 def curseforge_json(path, params=None, cache=True):
@@ -1127,14 +948,6 @@ def import_zip_file(zip_path, addons_path, name=None, source="manual", log=print
     return addon_id
 
 
-def curseforge_web_version(a):
-    return "manual"
-
-
-def curseforge_web_url(a):
-    return "https://www.curseforge.com/wow/addons/" + a.get("curseforge_slug", a.get("id", ""))
-
-
 def curseforge_manual_latest(entry):
     """Best-effort latest version for manually imported CurseForge addons.
     Uses the official API when a valid key exists; otherwise returns None and
@@ -1195,32 +1008,6 @@ def curseforge_mod_from_ref(ref):
     if not data:
         raise RuntimeError(f"CurseForge addon not found: {ref}")
     return data[0]
-
-
-def _cf_file_versions(file_data):
-    versions = []
-    versions.extend(str(v).lower() for v in file_data.get("gameVersions", []) if v)
-    for v in file_data.get("sortableGameVersions", []) or []:
-        for key in ("gameVersion", "gameVersionName", "gameVersionPadded"):
-            if v.get(key):
-                versions.append(str(v[key]).lower())
-        if v.get("gameVersionTypeId"):
-            versions.append(f"type:{v['gameVersionTypeId']}")
-    return versions
-
-
-def curseforge_file_matches_flavor(file_data):
-    flavor = get_current_flavor() or "retail"
-    versions = _cf_file_versions(file_data)
-    text_hints = CF_FLAVOR_TEXT.get(flavor, ())
-    type_hint = CF_VERSION_TYPE_HINTS.get(flavor)
-
-    if type_hint and f"type:{type_hint}" in versions:
-        return True
-    if not versions:
-        return True
-    joined = " ".join(versions)
-    return any(h in joined for h in text_hints)
 
 
 def curseforge_get_files(mod_id):
@@ -1380,42 +1167,8 @@ def get_download_url(a):
 # Wago.io / WeakAuras Companion
 # ============================================================
 
-WAGO_SLUG_RX = re.compile(r'wago\.io/([a-zA-Z0-9_-]+)(?:/(\d+))?')
-
-def parse_wago_url(url):
-    """Extracts slug and optional version from a wago.io URL."""
-    m = WAGO_SLUG_RX.search(url)
-    if not m: return None, None
-    return m.group(1), m.group(2)
-
-
-def wago_fetch_info(slug):
-    """Fetch WeakAura metadata from wago.io API."""
-    try:
-        url = f"https://data.wago.io/api/raw/encoded?id={slug}"
-        with _http(url) as r:
-            data = json.loads(r.read().decode("utf-8"))
-        return data
-    except Exception:
-        # Try alternate endpoint
-        try:
-            url = f"https://data.wago.io/api/check/?id={slug}"
-            return http_get_json(url)
-        except Exception:
-            return None
-
-
-def wago_fetch_encoded(slug, version=None):
-    """Fetch the actual import string."""
-    try:
-        url = f"https://data.wago.io/api/raw/encoded?id={slug}"
-        if version:
-            url += f"&version={version}"
-        with _http(url) as r:
-            return r.read().decode("utf-8")
-    except Exception:
-        return None
-
+from wowusky.providers.wago_fns import (  # noqa: E402
+    WAGO_SLUG_RX, parse_wago_url, wago_fetch_encoded, wago_fetch_info)
 
 def wago_add(slug, name=None, note=None):
     """Add an aura to tracking list."""
