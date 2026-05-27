@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import wowusky.app as app
 import wowusky.providers.wowi_fns as wowi_fns
+import wowusky.providers.wago_fns as wago_fns
 
 
 # A representative MMOUI filedetails response (as the API returns it:
@@ -118,11 +119,11 @@ def test_wago_fetch_info_uses_primary_endpoint(monkeypatch):
     the http_get_json fallback is never consulted."""
     import json as _json
     payload = _json.dumps({"name": "My Aura", "version": 7}).encode("utf-8")
-    monkeypatch.setattr(app, "_http", lambda url: _FakeResponse(payload))
+    monkeypatch.setattr(wago_fns, "_http", lambda url: _FakeResponse(payload))
 
     def fallback_must_not_run(url):
         raise AssertionError("fallback http_get_json should not be called")
-    monkeypatch.setattr(app, "http_get_json", fallback_must_not_run)
+    monkeypatch.setattr(wago_fns, "http_get_json", fallback_must_not_run)
 
     info = app.wago_fetch_info("abc123")
     assert info["name"] == "My Aura"
@@ -133,8 +134,8 @@ def test_wago_fetch_info_falls_back_on_primary_failure(monkeypatch):
     """If the _http path raises, wago_fetch_info tries http_get_json."""
     def primary_boom(url):
         raise RuntimeError("primary endpoint down")
-    monkeypatch.setattr(app, "_http", primary_boom)
-    monkeypatch.setattr(app, "http_get_json",
+    monkeypatch.setattr(wago_fns, "_http", primary_boom)
+    monkeypatch.setattr(wago_fns, "http_get_json",
                         lambda url: {"wagoVersion": 3})
 
     info = app.wago_fetch_info("abc123")
@@ -145,14 +146,14 @@ def test_wago_fetch_info_returns_none_when_both_fail(monkeypatch):
     """Both endpoints down → None, never an exception."""
     def boom(url):
         raise RuntimeError("down")
-    monkeypatch.setattr(app, "_http", boom)
-    monkeypatch.setattr(app, "http_get_json", boom)
+    monkeypatch.setattr(wago_fns, "_http", boom)
+    monkeypatch.setattr(wago_fns, "http_get_json", boom)
     assert app.wago_fetch_info("abc123") is None
 
 
 def test_wago_fetch_encoded_returns_string(monkeypatch):
     """wago_fetch_encoded returns the raw decoded import string."""
-    monkeypatch.setattr(app, "_http",
+    monkeypatch.setattr(wago_fns, "_http",
                         lambda url: _FakeResponse(b"!WA:2!encodedstring"))
     result = app.wago_fetch_encoded("abc123")
     assert result == "!WA:2!encodedstring"
@@ -161,7 +162,7 @@ def test_wago_fetch_encoded_returns_string(monkeypatch):
 def test_wago_fetch_encoded_returns_none_on_error(monkeypatch):
     def boom(url):
         raise RuntimeError("down")
-    monkeypatch.setattr(app, "_http", boom)
+    monkeypatch.setattr(wago_fns, "_http", boom)
     assert app.wago_fetch_encoded("abc123") is None
 
 # ── Tukui ─────────────────────────────────────────────────────────────

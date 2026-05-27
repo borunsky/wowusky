@@ -1362,42 +1362,8 @@ def get_download_url(a):
 # Wago.io / WeakAuras Companion
 # ============================================================
 
-WAGO_SLUG_RX = re.compile(r'wago\.io/([a-zA-Z0-9_-]+)(?:/(\d+))?')
-
-def parse_wago_url(url):
-    """Extracts slug and optional version from a wago.io URL."""
-    m = WAGO_SLUG_RX.search(url)
-    if not m: return None, None
-    return m.group(1), m.group(2)
-
-
-def wago_fetch_info(slug):
-    """Fetch WeakAura metadata from wago.io API."""
-    try:
-        url = f"https://data.wago.io/api/raw/encoded?id={slug}"
-        with _http(url) as r:
-            data = json.loads(r.read().decode("utf-8"))
-        return data
-    except Exception:
-        # Try alternate endpoint
-        try:
-            url = f"https://data.wago.io/api/check/?id={slug}"
-            return http_get_json(url)
-        except Exception:
-            return None
-
-
-def wago_fetch_encoded(slug, version=None):
-    """Fetch the actual import string."""
-    try:
-        url = f"https://data.wago.io/api/raw/encoded?id={slug}"
-        if version:
-            url += f"&version={version}"
-        with _http(url) as r:
-            return r.read().decode("utf-8")
-    except Exception:
-        return None
-
+from wowusky.providers.wago_fns import (  # noqa: E402
+    WAGO_SLUG_RX, parse_wago_url, wago_fetch_encoded, wago_fetch_info)
 
 def wago_add(slug, name=None, note=None):
     """Add an aura to tracking list."""
