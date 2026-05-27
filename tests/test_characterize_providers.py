@@ -438,3 +438,124 @@ def test_pick_asset_prefers_flavor_hint(monkeypatch):
 def test_pick_asset_none_when_no_zip(monkeypatch):
     monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
     assert app._github_pick_asset([{"name": "readme.txt"}]) is None
+
+# ── CurseForge ────────────────────────────────────────────────────────
+#
+# CurseForge is the most complex provider. We characterise the PROVIDER
+# layer only — slug parsing, the web-fallback functions, header
+# building, and the flavor-matching logic. The INSTALL layer
+# (install_curseforge, install_curseforge_dependencies, import_zip_file)
+# is deliberately NOT covered here: per the migration dossier it belongs
+# to a separate post-A stage, not provider extraction.
+
+
+# ---- cf_slug_from_ref ----
+
+def test_cf_slug_from_full_url():
+    """A full CurseForge addon URL yields just the slug."""
+    slug = app.cf_slug_from_ref(
+        "https://www.curseforge.com/wow/addons/details")
+    assert slug == "details"
+
+
+def test_cf_slug_from_bare_slug():
+    """A bare slug passes through unchanged."""
+    assert app.cf_slug_from_ref("weakauras") == "weakauras"
+
+
+def test_cf_slug_empty_for_blank():
+    assert app.cf_slug_from_ref("") == ""
+    assert app.cf_slug_from_ref(None) == ""
+
+
+def test_cf_slug_empty_for_pure_digits():
+    """A pure numeric ref is NOT a slug — it returns empty."""
+    assert app.cf_slug_from_ref("123456") == ""
+
+
+# ---- curseforge_web_version / curseforge_web_url ----
+
+def test_cf_web_version_is_always_manual():
+    """The web fallback cannot discover a version — always 'manual'."""
+    assert app.curseforge_web_version({"id": "x"}) == "manual"
+
+
+def test_cf_web_url_uses_slug():
+    entry = {"curseforge_slug": "weakauras"}
+    url = app.curseforge_web_url(entry)
+    assert url == "https://www.curseforge.com/wow/addons/weakauras"
+
+
+def test_cf_web_url_falls_back_to_id():
+    """With no slug, the addon id is used to build the URL."""
+    url = app.curseforge_web_url({"id": "details"})
+    assert url.endswith("/addons/details")
+
+
+# ---- curseforge_headers ----
+
+def test_cf_headers_raise_without_key(monkeypatch):
+    """Building headers without an API key is a hard error — it must
+    raise, not return half-built headers."""
+    monkeypatch.setattr(app, "get_curseforge_api_key", lambda: "")
+    import pytest
+    with pytest.raises(RuntimeError):
+        app.curseforge_headers()
+
+
+def test_cf_headers_include_key_when_present(monkeypatch):
+    monkeypatch.setattr(app, "get_curseforge_api_key", lambda: "SECRET123")
+    headers = app.curseforge_headers()
+    assert "SECRET123" in headers.values()
+
+
+# ---- _cf_file_versions ----
+
+def test_cf_file_versions_extracts_game_versions():
+    """gameVersions entries are lower-cased into the version list."""
+    versions = app._cf_file_versions({"gameVersions": ["11.0.5", "Retail"]})
+    assert "11.0.5" in versions
+    assert "retail" in versions
+
+
+def test_cf_file_versions_extracts_type_ids():
+    """A gameVersionTypeId becomes a 'type:NNN' marker."""
+    file_data = {
+        "sortableGameVersions": [
+            {"gameVersion": "11.0.5", "gameVersionTypeId": 517},
+        ]
+    }
+    versions = app._cf_file_versions(file_data)
+    assert "type:517" in versions
+
+
+# ---- curseforge_file_matches_flavor ----
+
+def test_cf_file_matches_flavor_by_type_id(monkeypatch):
+    """A file whose type id matches the flavor's hint matches."""
+    monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
+    file_data = {
+        "sortableGameVersions": [{"gameVersionTypeId": 517}]
+    }
+    assert app.curseforge_file_matches_flavor(file_data) is True
+
+
+def test_cf_file_matches_flavor_by_text(monkeypatch):
+    """A file matches when a version string contains a flavor keyword."""
+    monkeypatch.setattr(app, "get_current_flavor", lambda: "vanilla")
+    file_data = {"gameVersions": ["1.15.4 Classic Era"]}
+    assert app.curseforge_file_matches_flavor(file_data) is True
+
+
+def test_cf_file_matches_flavor_empty_versions_passes(monkeypatch):
+    """A file with NO version info is treated as matching — better to
+    offer it than to hide a possibly-correct download."""
+    monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
+    assert app.curseforge_file_matches_flavor({}) is True
+
+
+def test_cf_file_does_not_match_wrong_flavor(monkeypatch):
+    """A retail-only file must NOT match the vanilla flavor."""
+    monkeypatch.setattr(app, "get_current_flavor", lambda: "vanilla")
+    file_data = {"gameVersions": ["11.0.5 The War Within"]}
+    assert app.curseforge_file_matches_flavor(file_data) is False
