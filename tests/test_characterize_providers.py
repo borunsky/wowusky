@@ -16,6 +16,7 @@ import wowusky.providers.wowi_fns as wowi_fns
 import wowusky.providers.wago_fns as wago_fns
 import wowusky.providers.tukui_fns as tukui_fns
 import wowusky.providers.github_fns as github_fns
+import wowusky.providers.curseforge_fns as cf_fns
 
 
 # A representative MMOUI filedetails response (as the API returns it:
@@ -501,14 +502,14 @@ def test_cf_web_url_falls_back_to_id():
 def test_cf_headers_raise_without_key(monkeypatch):
     """Building headers without an API key is a hard error — it must
     raise, not return half-built headers."""
-    monkeypatch.setattr(app, "get_curseforge_api_key", lambda: "")
+    monkeypatch.setattr(cf_fns, "get_curseforge_api_key", lambda: "")
     import pytest
     with pytest.raises(RuntimeError):
         app.curseforge_headers()
 
 
 def test_cf_headers_include_key_when_present(monkeypatch):
-    monkeypatch.setattr(app, "get_curseforge_api_key", lambda: "SECRET123")
+    monkeypatch.setattr(cf_fns, "get_curseforge_api_key", lambda: "SECRET123")
     headers = app.curseforge_headers()
     assert "SECRET123" in headers.values()
 
@@ -537,7 +538,7 @@ def test_cf_file_versions_extracts_type_ids():
 
 def test_cf_file_matches_flavor_by_type_id(monkeypatch):
     """A file whose type id matches the flavor's hint matches."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
+    monkeypatch.setattr(cf_fns, "get_current_flavor", lambda: "retail")
     file_data = {
         "sortableGameVersions": [{"gameVersionTypeId": 517}]
     }
@@ -546,7 +547,7 @@ def test_cf_file_matches_flavor_by_type_id(monkeypatch):
 
 def test_cf_file_matches_flavor_by_text(monkeypatch):
     """A file matches when a version string contains a flavor keyword."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "vanilla")
+    monkeypatch.setattr(cf_fns, "get_current_flavor", lambda: "vanilla")
     file_data = {"gameVersions": ["1.15.4 Classic Era"]}
     assert app.curseforge_file_matches_flavor(file_data) is True
 
@@ -554,12 +555,12 @@ def test_cf_file_matches_flavor_by_text(monkeypatch):
 def test_cf_file_matches_flavor_empty_versions_passes(monkeypatch):
     """A file with NO version info is treated as matching — better to
     offer it than to hide a possibly-correct download."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "retail")
+    monkeypatch.setattr(cf_fns, "get_current_flavor", lambda: "retail")
     assert app.curseforge_file_matches_flavor({}) is True
 
 
 def test_cf_file_does_not_match_wrong_flavor(monkeypatch):
     """A retail-only file must NOT match the vanilla flavor."""
-    monkeypatch.setattr(app, "get_current_flavor", lambda: "vanilla")
+    monkeypatch.setattr(cf_fns, "get_current_flavor", lambda: "vanilla")
     file_data = {"gameVersions": ["11.0.5 The War Within"]}
     assert app.curseforge_file_matches_flavor(file_data) is False

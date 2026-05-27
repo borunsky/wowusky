@@ -714,6 +714,14 @@ from wowusky.providers.github_fns import (  # noqa: E402
 from wowusky.providers.wowi_fns import (  # noqa: E402
     wowi_info, wowi_page_url, wowi_url, wowi_version)
 
+from wowusky.providers.curseforge_fns import (  # noqa: E402
+    _cf_file_versions, cf_slug_from_ref, curseforge_file_matches_flavor,
+    curseforge_headers, curseforge_web_url, curseforge_web_version)
+
+from wowusky.providers import curseforge_fns as _cf_fns  # noqa: E402
+_cf_fns.get_current_flavor = lambda: get_current_flavor()
+_cf_fns.get_curseforge_api_key = lambda: get_curseforge_api_key()
+
 def internal_wac_version(a):
     """WeakAurasCompanion is generated locally — version = number of auras."""
     wago = load_wago()
@@ -731,25 +739,9 @@ def internal_wac_url(a):
 
 CURSEFORGE_API_BASE = "https://api.curseforge.com/v1"
 CURSEFORGE_GAME_ID = 1  # World of Warcraft
-CURSEFORGE_URL_RX = re.compile(r'curseforge\.com/wow/addons/([a-zA-Z0-9_-]+)')
 
-# CurseForge file objects can expose version info in different places.
-# The string matcher is deliberately broad because Blizzard and CurseForge
-# rename Classic branches over time.
-CF_FLAVOR_TEXT = {
-    "retail":      ("retail", "mainline", "the war within", "dragonflight", "war within"),
-    "ptr":         ("ptr", "retail", "mainline"),
-    "anniversary": ("anniversary", "tbc", "burning crusade", "classic", "bcc"),
-    "vanilla":     ("classic era", "classic", "vanilla", "sod", "season of discovery"),
-    "mop_classic": ("mists", "mop", "mists of pandaria", "classic"),
-}
-CF_VERSION_TYPE_HINTS = {
-    "retail": 517,
-    "ptr": 517,
-    "anniversary": 67408,
-    "vanilla": 67408,
-    "mop_classic": 73246,
-}
+from wowusky.providers.curseforge_fns import (  # noqa: E402
+    CF_FLAVOR_TEXT, CF_VERSION_TYPE_HINTS, CURSEFORGE_URL_RX)
 
 CF_WEB_VERSION_TYPE_HINTS = {
     # CurseForge web URLs use gameVersionTypeId. 67408 currently opens the
@@ -776,18 +768,6 @@ def current_cf_web_version_type():
     return CF_WEB_VERSION_TYPE_HINTS.get(get_current_flavor() or "retail")
 
 
-def cf_slug_from_ref(ref):
-    ref = (ref or "").strip()
-    if not ref:
-        return ""
-    m = CURSEFORGE_URL_RX.search(ref)
-    if m:
-        return m.group(1)
-    if ref.isdigit():
-        return ""
-    return ref.strip("/").split("/")[-1]
-
-
 def _cached_json(cache_key, loader):
     now = time.time()
     item = HTTP_CACHE.get(cache_key)
@@ -807,17 +787,6 @@ def retry(fn, attempts=3, delay=0.7):
             last = e
             time.sleep(delay)
     raise last
-
-
-def curseforge_headers():
-    key = get_curseforge_api_key()
-    if not key:
-        raise RuntimeError("CurseForge API key missing. Add it in Settings or set CURSEFORGE_API_KEY.")
-    return {
-        "Accept": "application/json",
-        "x-api-key": key,
-        "User-Agent": f"{APP_NAME}/{__version__}",
-    }
 
 
 def curseforge_json(path, params=None, cache=True):
@@ -979,14 +948,6 @@ def import_zip_file(zip_path, addons_path, name=None, source="manual", log=print
     return addon_id
 
 
-def curseforge_web_version(a):
-    return "manual"
-
-
-def curseforge_web_url(a):
-    return "https://www.curseforge.com/wow/addons/" + a.get("curseforge_slug", a.get("id", ""))
-
-
 def curseforge_manual_latest(entry):
     """Best-effort latest version for manually imported CurseForge addons.
     Uses the official API when a valid key exists; otherwise returns None and
@@ -1047,32 +1008,6 @@ def curseforge_mod_from_ref(ref):
     if not data:
         raise RuntimeError(f"CurseForge addon not found: {ref}")
     return data[0]
-
-
-def _cf_file_versions(file_data):
-    versions = []
-    versions.extend(str(v).lower() for v in file_data.get("gameVersions", []) if v)
-    for v in file_data.get("sortableGameVersions", []) or []:
-        for key in ("gameVersion", "gameVersionName", "gameVersionPadded"):
-            if v.get(key):
-                versions.append(str(v[key]).lower())
-        if v.get("gameVersionTypeId"):
-            versions.append(f"type:{v['gameVersionTypeId']}")
-    return versions
-
-
-def curseforge_file_matches_flavor(file_data):
-    flavor = get_current_flavor() or "retail"
-    versions = _cf_file_versions(file_data)
-    text_hints = CF_FLAVOR_TEXT.get(flavor, ())
-    type_hint = CF_VERSION_TYPE_HINTS.get(flavor)
-
-    if type_hint and f"type:{type_hint}" in versions:
-        return True
-    if not versions:
-        return True
-    joined = " ".join(versions)
-    return any(h in joined for h in text_hints)
 
 
 def curseforge_get_files(mod_id):

@@ -19,7 +19,7 @@ maintained package.
 
 ### Architecture
 - **Modular layout** under `wowusky/core/`, `wowusky/providers/`,
-  `wowusky/catalog/`. app.py is down from 5179 to 4757 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
+  `wowusky/catalog/`. app.py is down from 5179 to 4692 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
   shed its duplicated `WOW_FLAVORS`, TOC helpers, HTTP helpers, and
   the inlined 241-entry catalog literal in favour of importing from
   `wowusky.core` and `wowusky.catalog`.
@@ -141,7 +141,7 @@ wowusky/
 ├── wowusky/
 │   ├── __init__.py
 │   ├── __main__.py
-│   ├── app.py              ← Tk GUI + install orchestration (~4757 lines)
+│   ├── app.py              ← Tk GUI + install orchestration (~4692 lines)
 │   ├── core/
 │   │   ├── paths.py        ← XDG paths, per-profile locations
 │   │   ├── flavors.py      ← WoW versions + compatibility rules
