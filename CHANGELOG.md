@@ -6,25 +6,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.5] — 2026-06-01
 
-GUI extraction — Etappe D (start). Begin moving the Tk layer out of the
-`app.py` monolith into a new `wowusky/gui/` package, starting with the
-self-contained, Tk-free / closure-free pieces.
-
-### Changed
-- `wowusky/gui/theme.py` — theme palettes (`PALETTE_DARK`,
-  `PALETTE_LIGHT`), `detect_system_theme`, `get_palette`, and
-  `set_theme_mode` moved here. Reads the theme preference via
-  `core.config` directly (no circular import); stays Tk-free so it is
-  importable headless.
-- `wowusky/gui/widgets.py` — `UltraHiddenScrollbar` / `HoverScrollbar`
-  moved here.
-- `app.py` imports these back; the duplicated definitions and the unused
-  `gui/theme.py` stub are removed. app.py drops from ~4323 to ~4201 lines.
+GUI extraction — Etappe D (D1–D5). Move the Tk layer out of the `app.py`
+monolith into a new `wowusky/gui/` package in five staged steps: first the
+self-contained, Tk-free / closure-free pieces, then a shared context
+object, then the first tab classes. `app.py` drops from ~4323 to ~4117
+lines; the test suite grows from 185 to 211 (+7 Tk-gated tests that skip
+cleanly when no display is available).
 
 ### Added
-- `tests/test_gui_theme.py` — 7 headless tests covering palette key
-  parity, hex-colour validity, mode resolution (explicit dark/light,
-  auto via detection), and persistence. Total: 192 suite-wide.
+- `wowusky/gui/` package: `theme.py`, `widgets.py`, `fonts.py`,
+  `context.py`, and a `tabs/` subpackage (`log.py`, `backups.py`).
+- `AppContext` dataclass (`gui/context.py`) — bundles palette, theme mode,
+  font families, font-set, root window, `make_button`, `app_log`, and the
+  shared `version_cache` / `checking_versions`. Future tab classes accept
+  a single `ctx` instead of capturing dozens of `run_gui()` locals.
+- `LogTab` (`gui/tabs/log.py`) — first tab as a class: builds its own
+  read-only `ScrolledText` and exposes `.frame` / `.log_msg()`.
+- `BackupsTab` (`gui/tabs/backups.py`) — full-backup manager as a class,
+  establishing the callback-injection pattern: the tab builds UI and
+  renders data, while threading/install logic stays in `app.py` and is
+  passed in as plain callables.
+- New tests: `test_gui_theme.py` (7), `test_gui_fonts.py` (10),
+  `test_gui_context.py` (10), `test_gui_log_tab.py` (2),
+  `test_gui_backups_tab.py` (5).
+
+### Changed
+- **D1** — `gui/theme.py` (palettes, `detect_system_theme`, `get_palette`,
+  `set_theme_mode`; reads via `core.config`, stays Tk-free) and
+  `gui/widgets.py` (`UltraHiddenScrollbar` / `HoverScrollbar`).
+- **D2** — `gui/fonts.py` (`_font_exists`, `resolve_sans_family`,
+  `resolve_mono_family`, `make_font_set`) and the `make_button` factory +
+  `_safe_grab` helper moved into `gui/widgets.py`; `run_gui()`'s inline
+  font block and button closure replaced with calls + a
+  `functools.partial` binding.
+- **D3** — `AppContext` constructed inside `run_gui()` alongside the
+  existing closures.
+- **D4 / D5** — `LogTab` and `BackupsTab` replace their inline frames; the
+  `render_backups` closure becomes `BackupsTab.render()`.
+- `app.py` imports everything back, so runtime behaviour is unchanged.
 
 ## [0.5.4] — 2026-06-01
 
