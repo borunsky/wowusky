@@ -4,6 +4,28 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] — 2026-06-01
+
+CurseForge API consolidation — Etappe C3. The API call layer and
+install orchestration for CurseForge were duplicated between app.py
+and the stub `providers/curseforge_fns.py`. This release moves
+everything into the single module.
+
+### Changed
+- `providers/curseforge_fns.py` gains the full API call layer
+  (`curseforge_json`, `curseforge_mod_from_ref`, `curseforge_get_files`,
+  `curseforge_pick_file`, `curseforge_download_url`, `curseforge_search`,
+  `curseforge_mod_summary`, `curseforge_api_diagnose`,
+  `curseforge_version_from_installed`, `curseforge_url_from_installed`,
+  `curseforge_manual_latest`, `curseforge_manual_url`) plus the install
+  layer (`install_curseforge`, `install_curseforge_dependencies`) — all
+  with injected service callbacks.
+- `app.py` — all duplicated CF bodies removed; thin wrappers wire in
+  `http_download`, `load_installed`, `save_installed`, and the
+  flavor-aware URL builders. app.py drops from ~4507 to ~4323 lines.
+- `curseforge_json` now uses `core.http._cache` / `CACHE_TTL` directly
+  instead of maintaining a separate `HTTP_CACHE` dict in app.py.
+
 ## [0.5.3] — 2026-06-01
 
 Install-path extraction — Etappe C2. `install_addon` and
@@ -564,6 +586,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.5.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.4
 [0.5.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.3
 [0.5.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.2
 [0.5.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.1

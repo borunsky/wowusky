@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.5.3    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.5.4    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -19,7 +19,7 @@ maintained package.
 
 ### Architecture
 - **Modular layout** under `wowusky/core/`, `wowusky/providers/`,
-  `wowusky/catalog/`. app.py is down from 5179 to 4507 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
+  `wowusky/catalog/`. app.py is down from 5179 to 4323 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
   shed its duplicated `WOW_FLAVORS`, TOC helpers, HTTP helpers, and
   the inlined 241-entry catalog literal in favour of importing from
   `wowusky.core` and `wowusky.catalog`.
@@ -69,8 +69,8 @@ maintained package.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.5.3.zip
-cd wowusky-v0.5.3
+unzip wowusky-v0.5.4.zip
+cd wowusky-v0.5.4
 chmod +x install.sh
 ./install.sh
 ```
@@ -94,7 +94,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.5.3-py3-none-any.whl
+pip install dist/wowusky-0.5.4-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
@@ -141,7 +141,7 @@ wowusky/
 ├── wowusky/
 │   ├── __init__.py
 │   ├── __main__.py
-│   ├── app.py              ← Tk GUI + install orchestration (~4507 lines)
+│   ├── app.py              ← Tk GUI + install orchestration (~4323 lines)
 │   ├── core/
 │   │   ├── paths.py        ← XDG paths, per-profile locations
 │   │   ├── flavors.py      ← WoW versions + compatibility rules

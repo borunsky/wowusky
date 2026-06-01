@@ -745,11 +745,19 @@ def internal_wac_url(a):
 # CurseForge requires an API key. Paste it in Settings or export
 # CURSEFORGE_API_KEY before launching wowusky. The key is never bundled.
 
-CURSEFORGE_API_BASE = "https://api.curseforge.com/v1"
-CURSEFORGE_GAME_ID = 1  # World of Warcraft
+# CURSEFORGE_API_BASE and CURSEFORGE_GAME_ID imported from curseforge_fns.
 
 from wowusky.providers.curseforge_fns import (  # noqa: E402
-    CF_FLAVOR_TEXT, CF_VERSION_TYPE_HINTS, CURSEFORGE_URL_RX)
+    CF_FLAVOR_TEXT, CF_VERSION_TYPE_HINTS, CURSEFORGE_URL_RX,
+    curseforge_api_diagnose, curseforge_download_url,
+    curseforge_get_files, curseforge_json, curseforge_manual_latest,
+    curseforge_manual_url as _cf_manual_url, curseforge_mod_from_ref, curseforge_mod_summary,
+    curseforge_pick_file, curseforge_search, curseforge_url_from_installed,
+    curseforge_version_from_installed,
+    install_curseforge as _cf_install_curseforge,
+    install_curseforge_dependencies as _cf_install_deps,
+    CURSEFORGE_API_BASE, CURSEFORGE_GAME_ID,
+)
 
 CF_WEB_VERSION_TYPE_HINTS = {
     # CurseForge web URLs use gameVersionTypeId. 67408 currently opens the
@@ -797,40 +805,7 @@ def retry(fn, attempts=3, delay=0.7):
     raise last
 
 
-def curseforge_json(path, params=None, cache=True):
-    url = CURSEFORGE_API_BASE + path
-    if params:
-        clean = {k: v for k, v in params.items() if v not in (None, "")}
-        if clean:
-            url += "?" + urllib.parse.urlencode(clean)
-
-    def load():
-        try:
-            return retry(lambda: http_get_json(url, headers=curseforge_headers()))
-        except urllib.error.HTTPError as e:
-            if e.code == 403:
-                raise RuntimeError(
-                    "CurseForge API returned 403 Forbidden. "
-                    "Der API-Key ist nicht fuer die Core/Third-Party API freigeschaltet "
-                    "oder wurde gesperrt. ZIP-Import oder 'Open on CurseForge' verwenden."
-                ) from e
-            if e.code == 401:
-                raise RuntimeError("CurseForge API key rejected (401). Bitte Key in Settings pruefen.") from e
-            raise
-
-    if cache:
-        return _cached_json("cf:" + url, load)
-    return load()
-
-
-def curseforge_api_diagnose():
-    """Return (ok, message) for the configured CurseForge Core API key."""
-    try:
-        data = curseforge_json("/games", cache=False)
-        games = data.get("data", []) if isinstance(data, dict) else []
-        return True, f"API key OK. {len(games)} games returned."
-    except Exception as e:
-        return False, str(e)
+# curseforge_json and curseforge_api_diagnose imported from curseforge_fns.
 
 
 def curseforge_search_url(query=""):
@@ -914,196 +889,37 @@ def import_zip_file(zip_path, addons_path, name=None, source="manual", log=print
     return addon_id
 
 
-def curseforge_manual_latest(entry):
-    """Best-effort latest version for manually imported CurseForge addons.
-    Uses the official API when a valid key exists; otherwise returns None and
-    the UI offers the flavor-filtered CurseForge files page for manual update.
-    """
-    mod_id = entry.get("curseforge_mod_id") or entry.get("project_id")
-    slug = entry.get("curseforge_slug")
-    if not get_curseforge_api_key():
-        return None
-    try:
-        mod = curseforge_json(f"/mods/{mod_id}").get("data") if mod_id else curseforge_mod_from_ref(slug)
-        file = curseforge_pick_file(mod)
-        return file.get("displayName") or file.get("fileName") or str(file.get("id"))
-    except Exception:
-        return None
+# curseforge_manual_latest, curseforge_manual_url, curseforge_search,
+# curseforge_mod_from_ref, curseforge_get_files, curseforge_pick_file,
+# curseforge_download_url, curseforge_mod_summary, curseforge_version_from_installed,
+# curseforge_url_from_installed imported from curseforge_fns.
 
 
 def curseforge_manual_url(entry):
-    slug = entry.get("curseforge_slug") or cf_slug_from_ref(entry.get("url", ""))
-    if slug:
-        return curseforge_files_url(slug)
-    return entry.get("url") or curseforge_search_url(entry.get("name", ""))
-
-
-def curseforge_search(query="", page_size=40):
-    query = (query or "").strip()
-    params = {
-        "gameId": CURSEFORGE_GAME_ID,
-        "pageSize": page_size,
-        "sortField": 2,  # popularity
-        "sortOrder": "desc",
-    }
-    if query:
-        params["searchFilter"] = query
-    data = curseforge_json("/mods/search", params)
-    return data.get("data", [])
-
-
-def curseforge_mod_from_ref(ref):
-    """Accepts a CurseForge project id, full URL, or addon slug/search text."""
-    ref = (ref or "").strip()
-    if not ref:
-        raise RuntimeError("CurseForge project URL, slug, or numeric project id missing.")
-
-    if ref.isdigit():
-        return curseforge_json(f"/mods/{ref}").get("data")
-
-    m = CURSEFORGE_URL_RX.search(ref)
-    slug = m.group(1) if m else ref.strip("/").split("/")[-1]
-
-    data = curseforge_json("/mods/search", {
-        "gameId": CURSEFORGE_GAME_ID,
-        "slug": slug,
-        "pageSize": 1,
-    }).get("data", [])
-    if not data:
-        data = curseforge_search(slug.replace("-", " "), page_size=1)
-    if not data:
-        raise RuntimeError(f"CurseForge addon not found: {ref}")
-    return data[0]
-
-
-def curseforge_get_files(mod_id):
-    flavor = get_current_flavor() or "retail"
-    version_type = CF_VERSION_TYPE_HINTS.get(flavor)
-    params = {"pageSize": 50}
-    if version_type:
-        params["gameVersionTypeId"] = version_type
-    files = curseforge_json(f"/mods/{mod_id}/files", params).get("data", [])
-    if not files:
-        files = curseforge_json(f"/mods/{mod_id}/files", {"pageSize": 50}).get("data", [])
-    return [f for f in files if f.get("isAvailable", True) and not f.get("isServerPack")]
-
-
-def curseforge_pick_file(mod):
-    files = curseforge_get_files(mod["id"])
-    if not files:
-        raise RuntimeError("No downloadable CurseForge file found for this addon.")
-
-    matching = [f for f in files if curseforge_file_matches_flavor(f)]
-    candidates = matching or files
-
-    def file_key(f):
-        # Release files first, then latest by fileDate/id.
-        return (f.get("releaseType") == 1, f.get("fileDate", ""), int(f.get("id") or 0))
-
-    return sorted(candidates, key=file_key, reverse=True)[0]
-
-
-def curseforge_download_url(mod_id, file):
-    url = file.get("downloadUrl")
-    if url:
-        return url
-    data = curseforge_json(f"/mods/{mod_id}/files/{file['id']}/download-url", cache=False)
-    return data.get("data")
-
-
-def curseforge_mod_summary(mod):
-    logo = mod.get("logo") or {}
-    return {
-        "id": mod.get("id"),
-        "name": mod.get("name") or "Unknown",
-        "summary": mod.get("summary") or "",
-        "downloads": mod.get("downloadCount") or 0,
-        "thumbnail": logo.get("thumbnailUrl") or logo.get("url") or "",
-        "url": (mod.get("links") or {}).get("websiteUrl") or "",
-        "slug": mod.get("slug") or "",
-    }
-
-
-def install_curseforge_dependencies(file_data, addons_path, log=print, seen=None):
-    if seen is None:
-        seen = set()
-    deps = file_data.get("dependencies", []) or []
-    required = [d for d in deps if d.get("relationType") == 3 and d.get("modId")]
-    for dep in required:
-        mod_id = dep["modId"]
-        if mod_id in seen:
-            continue
-        seen.add(mod_id)
-        try:
-            dep_mod = curseforge_json(f"/mods/{mod_id}").get("data")
-            if dep_mod:
-                log(f"  dependency: {dep_mod.get('name', mod_id)}")
-                install_curseforge(dep_mod, addons_path, log=log, install_deps=False)
-        except Exception as e:
-            log(f"  dependency skipped: {mod_id} ({e})")
+    """Thin wrapper — passes flavor-aware URL builders into the core helper."""
+    return _cf_manual_url(entry, files_url_fn=curseforge_files_url, search_url_fn=curseforge_search_url)
 
 
 def install_curseforge(ref_or_mod, addons_path, log=print, progress=None, install_deps=True):
-    mod = ref_or_mod if isinstance(ref_or_mod, dict) else curseforge_mod_from_ref(ref_or_mod)
-    file = curseforge_pick_file(mod)
-    url = curseforge_download_url(mod["id"], file)
-    if not url:
-        raise RuntimeError("CurseForge did not return a download URL for this file.")
-
-    name = mod.get("name") or str(mod.get("id"))
-    version = file.get("displayName") or file.get("fileName") or str(file.get("id"))
-    log(f"⟩ CurseForge: {name}")
-    log(f"  file: {version}")
-
-    if install_deps:
-        install_curseforge_dependencies(file, addons_path, log=log)
-
-    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-        tmp_path = tmp.name
-    try:
-        http_download(url, tmp_path, progress=progress)
-        log(f"  done ({os.path.getsize(tmp_path) // 1024} KB)")
-        fake = {"id": f"curse_{mod['id']}", "name": name, "source": "curseforge", "folders": []}
-        folders = extract_zip(tmp_path, addons_path, fake, log)
-
-        inst = load_installed()
-        inst[fake["id"]] = {
-            "name": name,
-            "version": version,
-            "folders": folders,
-            "source": "curseforge",
-            "curseforge_mod_id": mod["id"],
-            "curseforge_file_id": file.get("id"),
-            "url": (mod.get("links") or {}).get("websiteUrl"),
-        }
-        save_installed(inst)
-        log(f"  ✓ {name}\n")
-        return True
-    finally:
-        try: os.unlink(tmp_path)
-        except Exception: pass
+    """Thin wrapper — wires profile I/O into the core CurseForge install."""
+    return _cf_install_curseforge(
+        ref_or_mod, addons_path,
+        http_download=http_download,
+        load_installed=load_installed,
+        save_installed=save_installed,
+        log=log, progress=progress, install_deps=install_deps,
+    )
 
 
-def curseforge_version_from_installed(entry):
-    mod_id = entry.get("curseforge_mod_id") or entry.get("project_id")
-    if not mod_id:
-        return None
-    try:
-        mod = curseforge_json(f"/mods/{mod_id}").get("data")
-        file = curseforge_pick_file(mod)
-        return file.get("displayName") or file.get("fileName") or str(file.get("id"))
-    except Exception:
-        return None
-
-
-def curseforge_url_from_installed(entry):
-    mod_id = entry.get("curseforge_mod_id") or entry.get("project_id")
-    if not mod_id:
-        return None
-    mod = curseforge_json(f"/mods/{mod_id}").get("data")
-    file = curseforge_pick_file(mod)
-    return curseforge_download_url(mod_id, file)
-
+def install_curseforge_dependencies(file_data, addons_path, log=print, seen=None):
+    """Thin wrapper — wires profile I/O into the dependency installer."""
+    return _cf_install_deps(
+        file_data, addons_path,
+        http_download=http_download,
+        load_installed=load_installed,
+        save_installed=save_installed,
+        log=log, seen=seen,
+    )
 
 
 SOURCES = {
