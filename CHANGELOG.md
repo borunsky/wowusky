@@ -27,6 +27,12 @@ app.py delegates to it.
 - `tests/test_zipper.py` — 5 new tests pinning `extract_addon_zip`
   (release-subdir recursion, nested-library dropping, empty-archive
   error) and the `sha256_file` alias.
+- `core/installer.py` — the I/O-light core of the ZIP-import path
+  (`guess_addon_name_from_zip`, `build_import_entry`). `app.py`'s
+  `import_zip_file()` now delegates to it and only keeps the
+  profile-aware `installed.json` write; the duplicated body and name
+  guesser were removed from app.py. 6 new tests in
+  `tests/test_installer.py`.
 
 ## [0.5.1] — 2026-06-01
 

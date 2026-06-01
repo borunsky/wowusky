@@ -68,6 +68,7 @@ from wowusky.core.toc import (
     strip_color_codes,
 )
 from wowusky.core.versions import normalise_version, version_tokens, versions_equal
+from wowusky.core.installer import build_import_entry, guess_addon_name_from_zip
 from wowusky.core.zipper import extract_addon_zip, sha256_file
 
 
@@ -891,61 +892,19 @@ def newest_download_zip():
     return zips[0] if zips else ""
 
 
-def guess_addon_name_from_zip(zip_path):
-    base = os.path.splitext(os.path.basename(zip_path))[0]
-    base = re.sub(r'[-_]?v?\d+(\.\d+)*.*$', '', base).strip("-_ ") or base
-    try:
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            names = zf.namelist()
-            toc_dirs = []
-            for n in names:
-                if n.lower().endswith(".toc") and "/" in n:
-                    toc_dirs.append(n.split("/")[-2])
-            if toc_dirs:
-                toc_dirs.sort(key=len)
-                return strip_color_codes(toc_dirs[0]) or base
-    except Exception:
-        pass
-    return base
-
-
 def import_zip_file(zip_path, addons_path, name=None, source="manual", log=print, curseforge_slug=None, curseforge_url=None):
-    if not zip_path or not os.path.isfile(zip_path):
-        raise RuntimeError("ZIP file not found")
-    if not addons_path or not os.path.isdir(addons_path):
-        raise RuntimeError("WoW AddOns path not configured")
-    display_name = (name or guess_addon_name_from_zip(zip_path)).strip() or "Imported Addon"
-    addon_id = source + "_" + re.sub(r'[^a-z0-9]+', '_', display_name.lower()).strip("_")
-    fake = {"id": addon_id, "name": display_name, "source": source, "folders": []}
-    log(f"⟩ importing {display_name}")
-    folders = extract_zip(zip_path, addons_path, fake, log)
-    version = "imported"
-    interface = None
-    title = display_name
-    if folders:
-        toc = read_toc_info(os.path.join(addons_path, folders[0]))
-        if toc:
-            version = toc.get("version") or version
-            interface = toc.get("interface")
-            title = toc.get("title") or title
+    """Import a manual / CurseForge ZIP and record it in the active profile.
+
+    Extraction and entry-building live in ``wowusky.core.installer``; this
+    wrapper only adds the profile-aware ``installed.json`` write.
+    """
+    addon_id, entry = build_import_entry(
+        zip_path, addons_path, name=name, source=source,
+        curseforge_slug=curseforge_slug, curseforge_url=curseforge_url, log=log,
+    )
     inst = load_installed()
-    entry = {
-        "name": title,
-        "version": version,
-        "folders": folders,
-        "source": source,
-        "interface": interface,
-        "imported_from": zip_path,
-    }
-    if curseforge_slug:
-        entry["curseforge_slug"] = curseforge_slug
-        entry["url"] = curseforge_url or ("https://www.curseforge.com/wow/addons/" + curseforge_slug)
-        entry["source"] = "curseforge_manual"
-    elif curseforge_url:
-        entry["url"] = curseforge_url
     inst[addon_id] = entry
     save_installed(inst)
-    log(f"  ✓ {title} ({version})\n")
     return addon_id
 
 
