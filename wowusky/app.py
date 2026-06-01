@@ -1547,7 +1547,8 @@ from wowusky.gui.theme import (  # noqa: E402
 
 # _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
 from wowusky.gui.context import AppContext  # noqa: E402
-from wowusky.gui.tabs import BackupsTab, LogTab, WeakAurasTab  # noqa: E402
+from wowusky.gui.tabs import (  # noqa: E402
+    BackupsTab, InstalledTab, LogTab, WeakAurasTab)
 from wowusky.gui.fonts import (  # noqa: E402
     _font_exists, make_font_set, resolve_mono_family, resolve_sans_family)
 from wowusky.gui.widgets import (  # noqa: E402, F401
@@ -2161,78 +2162,8 @@ def run_gui():
     # ----------------------------------------------------------
     # Tab: INSTALLED
     # ----------------------------------------------------------
-    installed_tab = tk.Frame(content, bg=C["bg"])
-    tabs["installed"] = installed_tab
-
-    inst_top = tk.Frame(installed_tab, bg=C["bg"])
-    inst_top.pack(fill="x", padx=10, pady=(16, 12))
-
-    inst_count_var = tk.StringVar(value="Installed")
-    tk.Label(inst_top, textvariable=inst_count_var,
-             bg=C["bg"], fg=C["text"],
-             font=FONT_HEAD).pack(side="left")
-
-    installed_source_labels = {
-        "tukui": "Tukui", "github": "GitHub", "wowi": "WoWInterface",
-        "curseforge": "CurseForge API", "curseforge_web": "CurseForge Web",
-        "curseforge_manual": "CurseForge ZIP", "manual": "Manual",
-        "external": "Local", "internal_wac": "wowusky",
-    }
-    installed_source_vars = {k: tk.BooleanVar(value=True) for k in installed_source_labels}
-    installed_source_btn_text = tk.StringVar(value="Sources: all")
-    installed_source_menu = tk.Menu(root, tearoff=0)
-
-    def selected_installed_sources():
-        return {k for k, v in installed_source_vars.items() if v.get()}
-
-    def update_installed_source_btn():
-        selected = selected_installed_sources()
-        if len(selected) == len(installed_source_vars):
-            installed_source_btn_text.set("Sources: all")
-        elif not selected:
-            installed_source_btn_text.set("Sources: none")
-        else:
-            names = [installed_source_labels[k] for k in installed_source_labels if k in selected]
-            installed_source_btn_text.set("Sources: " + ", ".join(names[:2]) + (f" +{len(names)-2}" if len(names) > 2 else ""))
-        render_installed()
-
-    for key, label in installed_source_labels.items():
-        installed_source_menu.add_checkbutton(label=label, variable=installed_source_vars[key], command=update_installed_source_btn)
-    installed_source_menu.add_separator()
-    def set_all_installed_sources(value=True):
-        for v in installed_source_vars.values():
-            v.set(value)
-        update_installed_source_btn()
-    installed_source_menu.add_command(label="Select all", command=lambda: set_all_installed_sources(True))
-    installed_source_menu.add_command(label="Select none", command=lambda: set_all_installed_sources(False))
-    installed_source_btn = tk.Label(inst_top, textvariable=installed_source_btn_text, bg=C["surface"], fg=C["text"], font=FONT_SM, padx=12, pady=7, cursor="hand2")
-    installed_source_btn.pack(side="left", padx=(12, 0))
-    installed_source_btn.bind("<Button-1>", lambda e: installed_source_menu.tk_popup(e.x_root, e.y_root))
-
-    make_button(inst_top, "Rescan", lambda: trigger_rescan(),
-                variant="outline").pack(side="right", padx=(8, 0))
-
-    make_button(inst_top, "Check all profiles", lambda: trigger_check_updates_all_profiles(),
-                variant="ghost").pack(side="right", padx=(8, 0))
-
-    make_button(inst_top, "Check updates", lambda: trigger_check_updates(),
-                variant="primary").pack(side="right")
-
-    installed_scroll = tk.Frame(installed_tab, bg=C["bg"])
-    installed_scroll.pack(fill="both", expand=True, padx=10, pady=(0, 16))
-
-    installed_canvas = tk.Canvas(installed_scroll, bg=C["bg"],
-                                  highlightthickness=0, borderwidth=0)
-    installed_canvas.pack(side="left", fill="both", expand=True)
-
-    HoverScrollbar(installed_scroll, installed_canvas)
-
-    installed_inner = tk.Frame(installed_canvas, bg=C["bg"])
-    icw = installed_canvas.create_window((0, 0), window=installed_inner, anchor="nw")
-    installed_inner.bind("<Configure>",
-        lambda e: installed_canvas.configure(scrollregion=installed_canvas.bbox("all")))
-    installed_canvas.bind("<Configure>",
-        lambda e: installed_canvas.itemconfig(icw, width=e.width))
+    # Tab: INSTALLED is built below (wowusky.gui.tabs.InstalledTab), after
+    # SOURCE_LABEL and the action closures it depends on are defined.
 
     # ----------------------------------------------------------
     # Tab: WEAKAURAS  (wowusky.gui.tabs.WeakAurasTab)
@@ -2630,6 +2561,53 @@ def run_gui():
         "curseforge": "CurseForge", "curseforge_web": "CurseForge", "curseforge_manual": "CurseForge ZIP",
     }
 
+    # ----------------------------------------------------------
+    # Tab: INSTALLED  (wowusky.gui.tabs.InstalledTab)
+    # ----------------------------------------------------------
+    installed_tab_obj = InstalledTab(
+        ctx, content,
+        load_installed=load_installed,
+        find_catalog=find_addon_by_id,
+        get_latest=lambda aid: version_cache.get(aid),
+        versions_equal=versions_equal,
+        has_backup=latest_backup_for_addon,
+        cf_manual_latest=curseforge_manual_latest,
+        cf_manual_url=curseforge_manual_url,
+        source_label=SOURCE_LABEL,
+        on_rescan=lambda: trigger_rescan(),
+        on_check_updates=lambda: trigger_check_updates(),
+        on_check_all_profiles=lambda: trigger_check_updates_all_profiles(),
+        on_open_manager=lambda aid, ent: show_installed_addon_manager(aid, ent),
+        on_update=lambda a: trigger_install(a),
+        on_rollback=lambda aid, ent: do_installed_rollback(aid, ent),
+        on_remove=lambda aid, ent: do_installed_remove(aid, ent),
+        open_url=lambda u: open_in_browser(u),
+    )
+    tabs["installed"] = installed_tab_obj.frame
+
+    def render_installed():
+        installed_tab_obj.render()
+
+    def do_installed_rollback(addon_id, entry):
+        if not latest_backup_for_addon(addon_id):
+            messagebox.showinfo("Rollback", "No backup found for this addon.")
+            return
+        if messagebox.askyesno("Rollback", f"Restore last backup for {entry['name']}?"):
+            ap = get_addons_path()
+            threading.Thread(
+                target=lambda: (rollback_addon(addon_id, ap, log=log_msg),
+                                root.after(0, refresh_all)),
+                daemon=True).start()
+
+    def do_installed_remove(addon_id, entry):
+        if messagebox.askyesno("Remove",
+                               f"Remove {entry['name']}?\nA backup is created first. This deletes the active folders."):
+            ap = get_addons_path()
+            threading.Thread(
+                target=lambda: (uninstall_addon(addon_id, ap, log=log_msg),
+                                root.after(0, refresh_all)),
+                daemon=True).start()
+
 
     def provider_page_url(addon):
         src = addon.get("source")
@@ -2949,129 +2927,6 @@ def run_gui():
         footer.pack(fill="x", padx=16, pady=(0, 16))
         make_button(footer, "Close", dlg.destroy, variant="ghost").pack(side="right")
 
-    def render_installed_card(parent, addon_id, entry):
-        catalog = find_addon_by_id(addon_id)
-        latest = version_cache.get(addon_id) if catalog else None
-        installed_version = entry["version"]
-        has_update = (
-            catalog and latest and latest != "?"
-            and not versions_equal(installed_version, latest)
-        )
-
-        card = tk.Frame(parent, bg=C["bg"])
-        card.pack(fill="x")
-
-        inner = tk.Frame(card, bg=C["bg"])
-        inner.pack(fill="x", pady=14)
-
-        if has_update:
-            bar_color = C["accent"]
-        elif catalog and latest:
-            bar_color = C["accent_dim"]
-        else:
-            bar_color = C["border"]
-        bar = tk.Frame(inner, bg=bar_color, width=3)
-        bar.pack(side="left", fill="y", padx=(0, 14))
-
-        text_col = tk.Frame(inner, bg=C["bg"])
-        text_col.pack(side="left", fill="both", expand=True)
-
-        title_row = tk.Frame(text_col, bg=C["bg"])
-        title_row.pack(anchor="w", fill="x")
-
-        name_lbl = tk.Label(title_row, text=entry["name"],
-                 bg=C["bg"], fg=C["text"],
-                 font=FONT_NAME, cursor="hand2")
-        name_lbl.pack(side="left")
-        name_lbl.bind("<Button-1>", lambda e, aid=addon_id, ent=entry: show_installed_addon_manager(aid, ent))
-
-        ver_text = f"  {installed_version}"
-        if has_update:
-            ver_text += f"  →  {latest}"
-        ver_color = C["accent"] if has_update else (C["accent_dim"] if (catalog and latest) else C["text_muted"])
-        tk.Label(title_row, text=ver_text,
-                 bg=C["bg"], fg=ver_color,
-                 font=FONT_VER).pack(side="left")
-
-        src = entry.get("source", "external")
-        iface = entry.get("interface", "")
-        iface_text = f" · interface {iface}" if iface else ""
-        hash_text = f" · sha256 {entry.get('sha256','')[:8]}" if entry.get('sha256') else ""
-        meta = f"{SOURCE_LABEL.get(src, src)} · {len(entry['folders'])} folder(s){iface_text}{hash_text}"
-        tk.Label(text_col, text=meta,
-                 bg=C["bg"], fg=C["text_muted"],
-                 font=FONT_XS, anchor="w").pack(anchor="w", pady=(3, 6))
-
-        folders_text = ", ".join(entry["folders"][:5])
-        if len(entry["folders"]) > 5:
-            folders_text += f"  +{len(entry['folders']) - 5} more"
-        if len(folders_text) > 90:
-            folders_text = folders_text[:87] + "…"
-        tk.Label(text_col, text=folders_text,
-                 bg=C["bg"], fg=C["text_dim"],
-                 font=FONT_SM, anchor="w").pack(anchor="w")
-
-        btn_col = tk.Frame(inner, bg=C["bg"])
-        btn_col.pack(side="right", padx=(14, 0))
-
-        if src == "curseforge_manual":
-            cf_latest = curseforge_manual_latest(entry)
-            cf_url = curseforge_manual_url(entry)
-            if cf_latest and not versions_equal(cf_latest, installed_version):
-                make_button(btn_col, "Open update",
-                    lambda url=cf_url: open_in_browser(url),
-                    variant="primary").pack(side="left", padx=(0, 6))
-            else:
-                make_button(btn_col, "Check on CF",
-                    lambda url=cf_url: open_in_browser(url),
-                    variant="ghost").pack(side="left", padx=(0, 6))
-        elif catalog:
-            if has_update:
-                make_button(btn_col, "Update",
-                    lambda a=catalog: trigger_install(a),
-                    variant="primary").pack(side="left", padx=(0, 6))
-            elif latest is None:
-                make_button(btn_col, "…",
-                    lambda: None, variant="outline",
-                    enabled=False).pack(side="left", padx=(0, 6))
-            else:
-                make_button(btn_col, "Current",
-                    lambda: None, variant="outline",
-                    enabled=False).pack(side="left", padx=(0, 6))
-
-        def do_rollback():
-            if not latest_backup_for_addon(addon_id):
-                messagebox.showinfo("Rollback", "No backup found for this addon.")
-                return
-            if messagebox.askyesno("Rollback", f"Restore last backup for {entry['name']}?"):
-                ap = get_addons_path()
-                threading.Thread(
-                    target=lambda: (rollback_addon(addon_id, ap, log=log_msg),
-                                    root.after(0, refresh_all)),
-                    daemon=True).start()
-
-        make_button(btn_col, "Manager",
-                    lambda aid=addon_id, ent=entry: show_installed_addon_manager(aid, ent),
-                    variant="ghost").pack(side="left", padx=(0, 6))
-
-        if latest_backup_for_addon(addon_id):
-            make_button(btn_col, "Rollback", do_rollback,
-                        variant="ghost").pack(side="left", padx=(0, 6))
-
-        def confirm_remove():
-            if messagebox.askyesno("Remove",
-                                   f"Remove {entry['name']}?\nA backup is created first. This deletes the active folders."):
-                ap = get_addons_path()
-                threading.Thread(
-                    target=lambda: (uninstall_addon(addon_id, ap, log=log_msg),
-                                    root.after(0, refresh_all)),
-                    daemon=True).start()
-
-        make_button(btn_col, "Remove", confirm_remove,
-                    variant="danger").pack(side="left")
-
-        tk.Frame(card, bg=C["border"], height=1).pack(fill="x")
-
     # ----------------------------------------------------------
     # Render functions
     # ----------------------------------------------------------
@@ -3158,35 +3013,6 @@ def run_gui():
         for a in filtered:
             render_browse_card(browse_inner, a, installed.get(a["id"]))
 
-    def render_installed():
-        for w in installed_inner.winfo_children():
-            w.destroy()
-
-        installed_all = load_installed()
-        selected_sources = selected_installed_sources()
-        installed = {aid: entry for aid, entry in installed_all.items() if entry.get("source", "external") in selected_sources}
-        inst_count_var.set(f"Installed  ({len(installed)}/{len(installed_all)})")
-
-        if not installed:
-            empty = tk.Frame(installed_inner, bg=C["bg"])
-            empty.pack(expand=True, pady=80)
-            tk.Label(empty, text="No addons installed",
-                     bg=C["bg"], fg=C["text"], font=FONT_BODY).pack()
-            tk.Label(empty,
-                     text="Install from Browse, or import a ZIP",
-                     bg=C["bg"], fg=C["text_muted"],
-                     font=FONT_SM).pack(pady=(6, 0))
-            return
-
-        tk.Frame(installed_inner, bg=C["border"], height=1).pack(fill="x")
-
-        sorted_items = sorted(installed.items(),
-                              key=lambda kv: (find_addon_by_id(kv[0]) is None,
-                                              kv[1]["name"].lower()))
-        for aid, entry in sorted_items:
-            render_installed_card(installed_inner, aid, entry)
-
-
     def trigger_create_full_backup():
         current_tab.set("log"); update_nav_styles(); show_tab("log")
         def task():
@@ -3265,7 +3091,7 @@ def run_gui():
 
         def task():
             installed = load_installed()
-            selected_sources = selected_installed_sources()
+            selected_sources = installed_tab_obj.selected_sources()
             updatable = [aid for aid in installed
                          if find_addon_by_id(aid)
                          and find_addon_by_id(aid)["source"] != "internal_wac"
@@ -3424,7 +3250,7 @@ def run_gui():
         tab = current_tab.get()
         canvas = {
             "browse":    browse_canvas,
-            "installed": installed_canvas,
+            "installed": installed_tab_obj.canvas,
             "weakauras": weakauras_tab_obj.canvas,
             "backups":   backups_tab_obj.canvas,
         }.get(tab)

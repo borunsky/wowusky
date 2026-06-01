@@ -19,7 +19,7 @@ maintained package.
 
 ### Architecture
 - **Modular layout** under `wowusky/core/`, `wowusky/providers/`,
-  `wowusky/catalog/`. app.py is down from 5179 to 3976 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
+  `wowusky/catalog/`. app.py is down from 5179 to 3802 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
   shed its duplicated `WOW_FLAVORS`, TOC helpers, HTTP helpers, and
   the inlined 241-entry catalog literal in favour of importing from
   `wowusky.core` and `wowusky.catalog`.
@@ -141,7 +141,7 @@ wowusky/
 ├── wowusky/
 │   ├── __init__.py
 │   ├── __main__.py
-│   ├── app.py              ← Tk GUI + install orchestration (~3976 lines)
+│   ├── app.py              ← Tk GUI + install orchestration (~3802 lines)
 │   ├── core/
 │   │   ├── paths.py        ← XDG paths, per-profile locations
 │   │   ├── flavors.py      ← WoW versions + compatibility rules
@@ -176,7 +176,8 @@ wowusky/
 │   │   └── tabs/
 │   │       ├── log.py        ← LogTab (activity-log pane)
 │   │       ├── backups.py    ← BackupsTab (full-backup manager)
-│   │       └── weakauras.py  ← WeakAurasTab (Wago.io aura tracker)
+│   │       ├── weakauras.py  ← WeakAurasTab (Wago.io aura tracker)
+│   │       └── installed.py  ← InstalledTab (installed-addon manager)
 │   └── tools/
 │       └── health_check.py  ← CLI that pings every catalog entry
 ├── tests/                   ← 109 tests
