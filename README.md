@@ -169,8 +169,10 @@ wowusky/
 │   │       ├── community-seed.json   (4 entries)
 │   │       └── curseforge-seed.json  (195 CurseForge slugs)
 │   ├── gui/
+│   │   ├── context.py       ← AppContext dataclass (shared GUI state)
+│   │   ├── fonts.py         ← font-family resolution + font-set builder
 │   │   ├── theme.py         ← palettes + dark/light detection
-│   │   └── widgets.py       ← reusable Tk widgets (HoverScrollbar)
+│   │   └── widgets.py       ← reusable Tk widgets + make_button + _safe_grab
 │   └── tools/
 │       └── health_check.py  ← CLI that pings every catalog entry
 ├── tests/                   ← 109 tests

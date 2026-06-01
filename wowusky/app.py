@@ -1546,6 +1546,7 @@ from wowusky.gui.theme import (  # noqa: E402
 # ============================================================
 
 # _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
+from wowusky.gui.context import AppContext  # noqa: E402
 from wowusky.gui.fonts import (  # noqa: E402
     _font_exists, make_font_set, resolve_mono_family, resolve_sans_family)
 from wowusky.gui.widgets import (  # noqa: E402, F401
@@ -1648,6 +1649,22 @@ def run_gui():
     # ----------------------------------------------------------
     import functools as _functools
     make_button = _functools.partial(_gui_make_button, palette=C, font_sm=FONT_SM)
+
+    # ----------------------------------------------------------
+    # Shared application context — passed to future tab classes (D4+)
+    # ----------------------------------------------------------
+    ctx = AppContext(
+        palette=C,
+        theme_mode=theme_mode,
+        sans_family=sans_family,
+        mono_family=mono_family,
+        fonts=_fonts,
+        root=root,
+        make_button=make_button,
+        app_log=app_log,
+        version_cache=version_cache,
+        checking_versions=checking_versions,
+    )
 
     # ----------------------------------------------------------
     # Top header bar  (matches prototype A)
