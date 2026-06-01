@@ -68,7 +68,13 @@ from wowusky.core.toc import (
     strip_color_codes,
 )
 from wowusky.core.versions import normalise_version, version_tokens, versions_equal
-from wowusky.core.installer import build_import_entry, guess_addon_name_from_zip
+from wowusky.core.installer import (
+    append_version_history as _append_version_history,
+    build_import_entry,
+    guess_addon_name_from_zip,
+    install_addon as _core_install_addon,
+    uninstall_addon as _core_uninstall_addon,
+)
 from wowusky.core.zipper import extract_addon_zip, sha256_file
 
 
@@ -1445,22 +1451,7 @@ def list_addon_backups(addon_id):
     backups.sort(key=lambda x: x["mtime"], reverse=True)
     return backups
 
-def _append_version_history(new_entry, previous_entry=None, backup_path=None, action="install"):
-    history = []
-    if previous_entry:
-        history.extend(previous_entry.get("history", []))
-        history.append({
-            "version": previous_entry.get("version", "unknown"),
-            "source": previous_entry.get("source", "unknown"),
-            "folders": previous_entry.get("folders", []),
-            "sha256": previous_entry.get("sha256"),
-            "backup": backup_path,
-            "action": action,
-            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-        })
-    # Keep history useful but bounded.
-    new_entry["history"] = history[-50:]
-    return new_entry
+# _append_version_history is imported from wowusky.core.installer (single source of truth).
 
 def backup_addon_folders(addon_id, entry, addons_path, log=print):
     if not entry or not entry.get("folders") or not addons_path:
@@ -1658,111 +1649,29 @@ def restore_full_backup(zip_path, log=print):
 # ============================================================
 
 def install_addon(addon, addons_path, log=print, progress=None):
-    if not addons_path or not os.path.exists(addons_path):
-        log(f"  path invalid: {addons_path}")
-        return False
-
-    # Special-case: WeakAuras Companion is generated locally
-    if addon["source"] == "internal_wac":
-        log(f"⟩ generating {addon['name']}")
-        ok = generate_wac_companion(addons_path)
+    """Thin wrapper — wires profile/config state into the core install logic."""
+    def _generate_wac(ap):
+        ok = generate_wac_companion(ap)
         if ok:
             log(f"  ✓ generated with {len(load_wago().get('auras', {}))} auras\n")
         return ok
-
-    log(f"⟩ {addon['name']}")
-    app_log(f"install requested: {addon.get('id')} {addon.get('name')} profile={get_active_profile_id()}")
-    latest = get_latest_version(addon)
-    if not latest:
-        latest = "manual"
-        log("  latest: manual / provider page")
-    else:
-        log(f"  latest: {latest}")
-
-    # Dry-run must not touch the network either. The is_dry_run() checks
-    # further down only guard filesystem writes; without this early
-    # return the addon would still be downloaded in full. Returning True
-    # reflects that the (simulated) install "succeeded".
-    if is_dry_run():
-        log("  dry-run: would download and install — no network or disk access")
-        return True
-
-    try:
-        url = get_download_url(addon)
-        if not url:
-            page = addon_provider_page(addon)
-            if page:
-                log("  ↗ provider does not expose a direct ZIP; opening manual download page")
-                open_in_browser(page)
-                return False
-            log("  ✗ no download url")
-            return False
-    except Exception as e:
-        page = addon_provider_page(addon)
-        if page:
-            log(f"  ↗ direct download failed ({e}); opening provider page")
-            open_in_browser(page)
-            return False
-        log(f"  ✗ url: {e}")
-        return False
-
-    log("  ↓ downloading")
-    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-        tmp_path = tmp.name
-
-    try:
-        http_download(url, tmp_path, progress=progress)
-        file_hash = sha256_file(tmp_path)
-        log(f"  done ({os.path.getsize(tmp_path) // 1024} KB)")
-
-        installed_before = load_installed().get(addon["id"])
-        backup_path = None
-        if installed_before:
-            backup_path = backup_addon_folders(addon["id"], installed_before, addons_path, log)
-
-        log("  ◌ removing old")
-        for folder in addon["folders"]:
-            p = os.path.join(addons_path, folder)
-            if os.path.exists(p):
-                if is_dry_run():
-                    log(f"  dry-run: would remove {folder}")
-                else:
-                    shutil.rmtree(p)
-
-        log("  ▣ extracting")
-        if is_dry_run():
-            folders = addon.get("folders", [])
-        else:
-            folders = extract_zip(tmp_path, addons_path, addon, log)
-
-        # Read installed version from TOC if not set or differs
-        if folders:
-            toc = read_toc_info(os.path.join(addons_path, folders[0]))
-            interface = toc.get("interface") if toc else None
-        else:
-            interface = None
-
-        installed = load_installed()
-        new_entry = {
-            "name": addon["name"], "version": latest,
-            "folders": folders or addon["folders"],
-            "source": addon["source"],
-            "interface": interface,
-            "sha256": file_hash,
-            "profile": get_active_profile_id(),
-        }
-        installed[addon["id"]] = _append_version_history(new_entry, installed_before, backup_path=backup_path, action="install")
-        if not is_dry_run():
-            save_installed(installed)
-        log(f"  ✓ {addon['name']} {latest}\n")
-        app_log(f"install finished: {addon.get('id')} version={latest} sha256={file_hash[:12]}")
-        return True
-    except Exception as e:
-        log(f"  ✗ {e}\n")
-        return False
-    finally:
-        try: os.unlink(tmp_path)
-        except Exception: pass
+    return _core_install_addon(
+        addon, addons_path,
+        profile_id=get_active_profile_id(),
+        get_latest_version=get_latest_version,
+        get_download_url=get_download_url,
+        load_installed=load_installed,
+        save_installed=save_installed,
+        backup_addon_folders=backup_addon_folders,
+        http_download=http_download,
+        is_dry_run=is_dry_run,
+        app_log=app_log,
+        addon_provider_page=addon_provider_page,
+        open_in_browser=open_in_browser,
+        generate_wac_companion=_generate_wac,
+        log=log,
+        progress=progress,
+    )
 
 
 def extract_zip(zip_path, addons_path, addon=None, log=None):
@@ -1776,24 +1685,17 @@ def extract_zip(zip_path, addons_path, addon=None, log=None):
 
 
 def uninstall_addon(addon_id, addons_path, log=print):
-    installed = load_installed()
-    if addon_id not in installed: return False
-    entry = installed[addon_id]
-    log(f"⟩ removing {entry['name']}")
-    backup_addon_folders(addon_id, entry, addons_path, log)
-    for folder in entry["folders"]:
-        p = os.path.join(addons_path, folder)
-        if os.path.exists(p):
-            if is_dry_run():
-                log(f"  dry-run: would remove {folder}")
-            else:
-                shutil.rmtree(p)
-    if not is_dry_run():
-        del installed[addon_id]
-        save_installed(installed)
-    log("  ✓ removed\n")
-    app_log(f"removed: {addon_id} profile={get_active_profile_id()}")
-    return True
+    """Thin wrapper — wires profile/config state into the core uninstall logic."""
+    return _core_uninstall_addon(
+        addon_id, addons_path,
+        load_installed=load_installed,
+        save_installed=save_installed,
+        backup_addon_folders=backup_addon_folders,
+        is_dry_run=is_dry_run,
+        app_log=app_log,
+        profile_id=get_active_profile_id(),
+        log=log,
+    )
 
 def find_addon_by_id(aid):
     return next((a for a in ADDON_CATALOG if a["id"] == aid), None)

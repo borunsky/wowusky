@@ -4,6 +4,29 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] — 2026-06-01
+
+Install-path extraction — Etappe C2. `install_addon` and
+`uninstall_addon` move from app.py into `core/installer.py` via an
+injectable service-callback pattern. app.py retains thin wrappers that
+wire in the profile/config state. `_append_version_history` (pure) also
+moves to core.
+
+### Changed
+- `core/installer.py` gains `append_version_history`, `install_addon`,
+  and `uninstall_addon` — full orchestration logic with no GUI or
+  profile state, driven by injected callbacks. app.py wrappers delegate
+  to these via keyword arguments.
+- `app.py` — three large function bodies replaced by thin wrappers;
+  `_append_version_history` removed and imported. app.py drops from
+  ~4605 to ~4507 lines.
+
+### Added
+- `tests/test_installer.py` extended with 9 new tests covering
+  `append_version_history` (pure), `install_addon` (dry-run, no-url,
+  success, invalid-path), and `uninstall_addon` (not-installed, removes
+  folders). Total: 15 installer tests, 185 suite-wide.
+
 ## [0.5.2] — 2026-06-01
 
 ZIP-extraction consolidation — Etappe C (start of the install-path
@@ -541,6 +564,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.5.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.3
 [0.5.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.2
 [0.5.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.1
 [0.5.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.0
