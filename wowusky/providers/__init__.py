@@ -2,7 +2,8 @@
 
 from .base import AddonProvider, AddonRef
 from .curseforge import CurseForgeProvider, CurseForgeWebProvider, slug_from_ref
-from .github import GitHubProvider, pick_asset
+from .github import GitHubProvider
+from .github_fns import pick_asset
 from .tukui import TukuiProvider
 from .wago import WagoProvider
 from .wowinterface import WoWInterfaceProvider

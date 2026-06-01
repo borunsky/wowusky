@@ -4,6 +4,69 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] — 2026-06-01
+
+ZIP-extraction consolidation — Etappe C (start of the install-path
+extraction). `core/zipper.py` shipped a tested `smart_extract()` that
+nothing actually used, while the GUI install path ran its own recursive
+`extract_zip()` in app.py. Those two worlds are now one: the recursive
+extractor lives in `core/zipper.py` as the single source of truth and
+app.py delegates to it.
+
+### Changed
+- `core/zipper.py` gains `extract_addon_zip()` (the recursive,
+  TOC-seeking extractor that handles wrapper / `release/` layouts) plus
+  the `_find_toc_dirs` / `_copy_addon_dir` helpers and a `sha256_file`
+  alias.
+- `app.py` — `extract_zip()` is now a thin wrapper around
+  `extract_addon_zip()`; the duplicated `_find_toc_dirs`,
+  `_copy_addon_dir`, and `sha256_file` definitions were removed and
+  imported from `core/zipper`. app.py drops from ~4692 to ~4646 lines.
+
+### Added
+- `tests/test_zipper.py` — 5 new tests pinning `extract_addon_zip`
+  (release-subdir recursion, nested-library dropping, empty-archive
+  error) and the `sha256_file` alias.
+- `core/installer.py` — the I/O-light core of the ZIP-import path
+  (`guess_addon_name_from_zip`, `build_import_entry`). `app.py`'s
+  `import_zip_file()` now delegates to it and only keeps the
+  profile-aware `installed.json` write; the duplicated body and name
+  guesser were removed from app.py. 6 new tests in
+  `tests/test_installer.py`.
+
+## [0.5.1] — 2026-06-01
+
+Provider consolidation — Etappe B. The class-based provider API used
+by health_check now delegates to the same `*_fns` functions used by
+the GUI. There is one implementation per provider; the two worlds no
+longer diverge.
+
+### Changed
+- `github.py`, `wowinterface.py`, `tukui.py`, `wago.py` — class bodies
+  replaced by thin adapters that delegate to their `*_fns` counterpart.
+  All network/version/URL logic lives in one place.
+- `github_fns.py` — two diverging flavor-hint tables and two
+  `pick_asset` implementations merged into one canonical `pick_asset()`
+  function (parameterised on `flavor`). `_github_pick_asset()` kept as
+  a GUI-facing wrapper.
+- `github_fns.get_current_flavor` and `curseforge_fns.get_current_flavor`
+  / `get_curseforge_api_key` now return safe defaults ("retail" / env-var)
+  instead of raising `NotImplementedError` — safe to call outside the GUI.
+
+### Fixed
+- Health-check was reporting GitHub repos without a formal release or tag
+  (e.g. `dbm_classic`, `moveany`, `wim`) as broken ("no version returned").
+  They now return a `"<branch> snapshot"` version — healthy and
+  installable, consistent with what the GUI showed all along. Resolves
+  several false-positives from issue #1.
+- `wowi` entries without a downloadable version string now return
+  `"manual"` (healthy) instead of `None` (broken), matching GUI behaviour.
+
+### Added
+- `providers/github_fns.py` exports `FLAVOR_HINTS` and `pick_asset` —
+  usable directly by any future code that needs flavor-aware asset
+  selection without importing the full class.
+
 ## [0.5.0] — 2026-05-27
 
 First stage of a larger restructuring (Etappe A of v0.5). All five
@@ -478,6 +541,8 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.5.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.2
+[0.5.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.1
 [0.5.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.0
 [0.4.12]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.12
 [0.4.11]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.11

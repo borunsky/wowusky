@@ -22,8 +22,13 @@ from wowusky.core.http import get_json as http_get_json
 
 
 def get_current_flavor():
-    """Imported back from app.py at runtime — see below."""
-    raise NotImplementedError  # filled in by app.py
+    """Imported back from app.py at runtime — see below.
+
+    Falls back to "retail" when called outside the GUI (e.g. health_check).
+    app.py replaces this with a lambda at import time so the GUI always
+    gets the real flavor.
+    """
+    return "retail"
 
 
 def github_repo_for_addon(addon):
@@ -120,28 +125,44 @@ def github_version(a):
     return f"{branch} snapshot"
 
 
-def _github_pick_asset(assets):
-    assets = [x for x in assets
-              if x.get("name", "").lower().endswith(".zip")
-              and "nolib" not in x.get("name", "").lower()
-              and "source code" not in x.get("name", "").lower()]
-    if not assets:
+# Flavor → keywords seen in release-asset filenames.
+# Canonical table — merges github.py and github_fns.py definitions.
+FLAVOR_HINTS: dict[str, list[str]] = {
+    "anniversary": ["tbc", "bcc", "anniversary", "burningcrusade", "classic"],
+    "vanilla":     ["classic", "vanilla", "era", "sod"],
+    "mop_classic": ["mists", "mop", "classic"],
+    "retail":      ["mainline", "retail"],
+}
+
+
+def pick_asset(assets: list[dict], flavor: str = "") -> dict | None:
+    """Pick the best ZIP asset for *flavor* from a GitHub release asset list.
+
+    * filters to ``.zip`` files,
+    * drops ``nolib``/``no-lib`` and bare ``source code`` packages,
+    * prefers the asset whose filename matches a flavor keyword,
+    * falls back to the largest remaining ZIP.
+    """
+    zips = [a for a in assets
+            if a.get("name", "").lower().endswith(".zip")
+            and "nolib"       not in a.get("name", "").lower()
+            and "no-lib"      not in a.get("name", "").lower()
+            and "source code" not in a.get("name", "").lower()]
+    if not zips:
         return None
-    flavor = get_current_flavor()
-    flavor_hints = {
-        "anniversary": ["tbc", "bcc", "anniversary", "classic"],
-        "vanilla":     ["classic", "vanilla", "era", "sod"],
-        "mop_classic": ["mists", "mop", "classic"],
-        "retail":      ["mainline", "retail"],
-    }
-    if flavor and flavor in flavor_hints:
-        for hint in flavor_hints[flavor]:
-            matches = [a for a in assets if hint in a.get("name", "").lower()]
-            if matches:
-                matches.sort(key=lambda x: x.get("size", 0), reverse=True)
-                return matches[0]
-    assets.sort(key=lambda x: x.get("size", 0), reverse=True)
-    return assets[0]
+    hints = FLAVOR_HINTS.get(flavor, [])
+    for hint in hints:
+        matches = [a for a in zips if hint in a["name"].lower()]
+        if matches:
+            matches.sort(key=lambda a: a.get("size", 0), reverse=True)
+            return matches[0]
+    zips.sort(key=lambda a: a.get("size", 0), reverse=True)
+    return zips[0]
+
+
+def _github_pick_asset(assets: list[dict]) -> dict | None:
+    """GUI-facing wrapper: calls pick_asset with the current flavor."""
+    return pick_asset(assets, get_current_flavor() or "")
 
 
 def github_url(a):

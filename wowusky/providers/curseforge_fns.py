@@ -40,13 +40,20 @@ CF_VERSION_TYPE_HINTS = {
 
 
 def get_curseforge_api_key():
-    """Imported back from app.py at runtime — see app.py injection."""
-    raise NotImplementedError
+    """Imported back from app.py at runtime — see app.py injection.
+
+    Falls back to the env-var / empty string outside the GUI.
+    """
+    import os
+    return os.environ.get("CURSEFORGE_API_KEY", "")
 
 
 def get_current_flavor():
-    """Imported back from app.py at runtime — see app.py injection."""
-    raise NotImplementedError
+    """Imported back from app.py at runtime — see app.py injection.
+
+    Falls back to "retail" when called outside the GUI (e.g. health_check).
+    """
+    return "retail"
 
 
 def cf_slug_from_ref(ref):
