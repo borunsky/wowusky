@@ -4,6 +4,28 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] — 2026-06-01
+
+GUI extraction — Etappe D (start). Begin moving the Tk layer out of the
+`app.py` monolith into a new `wowusky/gui/` package, starting with the
+self-contained, Tk-free / closure-free pieces.
+
+### Changed
+- `wowusky/gui/theme.py` — theme palettes (`PALETTE_DARK`,
+  `PALETTE_LIGHT`), `detect_system_theme`, `get_palette`, and
+  `set_theme_mode` moved here. Reads the theme preference via
+  `core.config` directly (no circular import); stays Tk-free so it is
+  importable headless.
+- `wowusky/gui/widgets.py` — `UltraHiddenScrollbar` / `HoverScrollbar`
+  moved here.
+- `app.py` imports these back; the duplicated definitions and the unused
+  `gui/theme.py` stub are removed. app.py drops from ~4323 to ~4201 lines.
+
+### Added
+- `tests/test_gui_theme.py` — 7 headless tests covering palette key
+  parity, hex-colour validity, mode resolution (explicit dark/light,
+  auto via detection), and persistence. Total: 192 suite-wide.
+
 ## [0.5.4] — 2026-06-01
 
 CurseForge API consolidation — Etappe C3. The API call layer and
@@ -586,6 +608,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.5.5]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.5
 [0.5.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.4
 [0.5.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.3
 [0.5.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.2

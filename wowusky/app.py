@@ -1536,91 +1536,9 @@ def filter_catalog_by_flavor(addons, current_flavor):
 # Theme — mint accent returned
 # ============================================================
 
-PALETTE_DARK = {
-    # Surfaces (matches design A: Sidebar + Liste · Dark)
-    "bg":         "#0a0c0f",   # app canvas
-    "surface":    "#0e1116",   # header / sidebar / cards
-    "surface_hi": "#141821",   # hover / panel
-    "border":     "#1f2533",
-    "border_hi":  "#2b3344",
-    # Text
-    "text":       "#e7ecf3",
-    "text_dim":   "#b5bdcc",
-    "text_muted": "#7c869a",
-    # Mint accent
-    "accent":     "#5eead4",
-    "accent_fg":  "#052724",
-    "accent_hi":  "#99f6e4",
-    "accent_dim": "#134e4a",
-    # Status
-    "success":    "#5eead4",
-    "warning":    "#fbbf24",
-    "danger":     "#f43f5e",
-    # Inputs
-    "input_bg":   "#141821",
-    "input_fg":   "#e7ecf3",
-}
-
-PALETTE_LIGHT = {
-    "bg":         "#fafbfc",
-    "surface":    "#ffffff",
-    "surface_hi": "#f0f3f6",
-    "border":     "#e4e8ed",
-    "border_hi":  "#d0d7de",
-    "text":       "#1f2328",
-    "text_dim":   "#656d76",
-    "text_muted": "#8b949e",
-    "accent":     "#1e8e6e",
-    "accent_fg":  "#ffffff",
-    "accent_hi":  "#176b54",
-    "accent_dim": "#a3d9c8",
-    "success":    "#1e8e6e",
-    "warning":    "#bf8700",
-    "danger":     "#cf222e",
-    "input_bg":   "#f6f8fa",
-    "input_fg":   "#1f2328",
-}
-
-
-def detect_system_theme():
-    import subprocess
-    try:
-        r = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
-                           capture_output=True, text=True, timeout=2)
-        if r.returncode == 0:
-            v = r.stdout.strip().strip("'\"").lower()
-            if "dark" in v: return "dark"
-            if "light" in v: return "light"
-    except Exception: pass
-    try:
-        r = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
-                           capture_output=True, text=True, timeout=2)
-        if r.returncode == 0:
-            v = r.stdout.strip().strip("'\"").lower()
-            if "dark" in v: return "dark"
-    except Exception: pass
-    for cmd in ("kreadconfig5", "kreadconfig6"):
-        try:
-            r = subprocess.run([cmd, "--group", "General", "--key", "ColorScheme"],
-                               capture_output=True, text=True, timeout=2)
-            if r.returncode == 0:
-                v = r.stdout.strip().lower()
-                if "dark" in v: return "dark"
-                if v: return "light"
-        except Exception: pass
-    return "dark"
-
-
-def get_palette():
-    cfg = load_config()
-    mode = cfg.get("theme", "auto")
-    if mode == "auto":
-        mode = detect_system_theme()
-    return (PALETTE_DARK if mode == "dark" else PALETTE_LIGHT), mode
-
-
-def set_theme_mode(mode):
-    cfg = load_config(); cfg["theme"] = mode; save_config(cfg)
+# Theme palettes and detection moved to wowusky.gui.theme.
+from wowusky.gui.theme import (  # noqa: E402
+    PALETTE_DARK, PALETTE_LIGHT, detect_system_theme, get_palette, set_theme_mode)
 
 
 # ============================================================
@@ -1643,48 +1561,8 @@ def _font_exists(font_name):
         return False
 
 
-class UltraHiddenScrollbar:
-    """Scrollbar hidden by default; appears only near the right edge."""
-    def __init__(self, parent, canvas):
-        from tkinter import ttk
-        self.parent = parent
-        self.canvas = canvas
-        self.visible = False
-        self.scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=self.scrollbar.set)
-        parent.bind("<Motion>", self._on_motion, add="+")
-        canvas.bind("<Motion>", self._on_motion, add="+")
-        parent.bind("<Leave>", lambda e: self._hide(), add="+")
-
-    def _content_overflows(self):
-        try:
-            first, last = self.scrollbar.get()
-            return not (float(first) <= 0.0 and float(last) >= 1.0)
-        except Exception:
-            return True
-
-    def _on_motion(self, event):
-        if not self._content_overflows():
-            self._hide(); return
-        width = self.parent.winfo_width()
-        if event.x >= width - 14:
-            self._show()
-        else:
-            self._hide()
-
-    def _show(self):
-        if not self.visible:
-            self.scrollbar.place(relx=1.0, rely=0, relheight=1.0, anchor="ne")
-            self.visible = True
-
-    def _hide(self):
-        if self.visible:
-            self.scrollbar.place_forget()
-            self.visible = False
-
-
-# Backwards-compatible name for existing call sites.
-HoverScrollbar = UltraHiddenScrollbar
+# UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.widgets.
+from wowusky.gui.widgets import HoverScrollbar, UltraHiddenScrollbar  # noqa: E402, F401
 
 # ============================================================
 # GUI
