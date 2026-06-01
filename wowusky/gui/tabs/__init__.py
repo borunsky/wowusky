@@ -2,9 +2,11 @@
 
 Each tab is being incrementally extracted out of the historic ``run_gui()``
 closure into a small class that accepts an :class:`~wowusky.gui.context.AppContext`
-and builds its own frame.  The first to land is :class:`LogTab`.
+and builds its own frame.  :class:`LogTab` was the first; :class:`BackupsTab`
+follows the same pattern with injected action callbacks.
 """
 
+from .backups import BackupsTab
 from .log import LogTab
 
-__all__ = ["LogTab"]
+__all__ = ["BackupsTab", "LogTab"]
