@@ -6,6 +6,7 @@ palettes, reusable widgets) live here; the large ``run_gui`` builder and
 its tab closures are migrated in later stages.
 """
 
+from .fonts import make_font_set, resolve_mono_family, resolve_sans_family
 from .theme import (
     PALETTE_DARK,
     PALETTE_LIGHT,
@@ -13,7 +14,7 @@ from .theme import (
     get_palette,
     set_theme_mode,
 )
-from .widgets import HoverScrollbar, UltraHiddenScrollbar
+from .widgets import HoverScrollbar, UltraHiddenScrollbar, _safe_grab, make_button
 
 __all__ = [
     "PALETTE_DARK",
@@ -23,4 +24,9 @@ __all__ = [
     "set_theme_mode",
     "UltraHiddenScrollbar",
     "HoverScrollbar",
+    "_safe_grab",
+    "make_button",
+    "resolve_sans_family",
+    "resolve_mono_family",
+    "make_font_set",
 ]
