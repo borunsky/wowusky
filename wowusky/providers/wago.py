@@ -1,11 +1,14 @@
-"""Wago.io provider for WeakAura tracking."""
+"""Wago.io provider for WeakAura tracking.
+
+Delegates to :mod:`wowusky.providers.wago_fns` for network logic.
+"""
 
 from __future__ import annotations
 
 import re
 
 from .base import AddonRef
-from .common import HttpError, get_json
+from .wago_fns import wago_fetch_info
 
 WAGO_RE = re.compile(r'wago\.io/([A-Za-z0-9_-]+)')
 
@@ -21,10 +24,7 @@ class WagoProvider:
         return AddonRef("wago", slug, f"https://wago.io/{slug}")
 
     def latest_version(self, ref: AddonRef) -> str | None:
-        try:
-            data = get_json(f"https://data.wago.io/api/check/?id={ref.ref}")
-        except HttpError:
-            return None
+        data = wago_fetch_info(ref.ref) or {}
         v = data.get("version") or data.get("wagoVersion")
         return str(v) if v is not None else None
 

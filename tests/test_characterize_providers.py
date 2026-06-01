@@ -12,12 +12,11 @@ functions DERIVE from that response, not the network itself.
 from __future__ import annotations
 
 import wowusky.app as app
-import wowusky.providers.wowi_fns as wowi_fns
-import wowusky.providers.wago_fns as wago_fns
-import wowusky.providers.tukui_fns as tukui_fns
-import wowusky.providers.github_fns as github_fns
 import wowusky.providers.curseforge_fns as cf_fns
-
+import wowusky.providers.github_fns as github_fns
+import wowusky.providers.tukui_fns as tukui_fns
+import wowusky.providers.wago_fns as wago_fns
+import wowusky.providers.wowi_fns as wowi_fns
 
 # A representative MMOUI filedetails response (as the API returns it:
 # a single-element list of dicts).
@@ -263,7 +262,6 @@ def test_compat_mirrors_provider_into_source(monkeypatch):
 # _github_branch_exists). The B2 branch-probing fix is pinned here
 # explicitly: it must be preserved across the migration.
 import urllib.error
-
 
 # ---- github_repo_for_addon ----
 

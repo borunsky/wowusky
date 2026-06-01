@@ -4,6 +4,39 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] — 2026-06-01
+
+Provider consolidation — Etappe B. The class-based provider API used
+by health_check now delegates to the same `*_fns` functions used by
+the GUI. There is one implementation per provider; the two worlds no
+longer diverge.
+
+### Changed
+- `github.py`, `wowinterface.py`, `tukui.py`, `wago.py` — class bodies
+  replaced by thin adapters that delegate to their `*_fns` counterpart.
+  All network/version/URL logic lives in one place.
+- `github_fns.py` — two diverging flavor-hint tables and two
+  `pick_asset` implementations merged into one canonical `pick_asset()`
+  function (parameterised on `flavor`). `_github_pick_asset()` kept as
+  a GUI-facing wrapper.
+- `github_fns.get_current_flavor` and `curseforge_fns.get_current_flavor`
+  / `get_curseforge_api_key` now return safe defaults ("retail" / env-var)
+  instead of raising `NotImplementedError` — safe to call outside the GUI.
+
+### Fixed
+- Health-check was reporting GitHub repos without a formal release or tag
+  (e.g. `dbm_classic`, `moveany`, `wim`) as broken ("no version returned").
+  They now return a `"<branch> snapshot"` version — healthy and
+  installable, consistent with what the GUI showed all along. Resolves
+  several false-positives from issue #1.
+- `wowi` entries without a downloadable version string now return
+  `"manual"` (healthy) instead of `None` (broken), matching GUI behaviour.
+
+### Added
+- `providers/github_fns.py` exports `FLAVOR_HINTS` and `pick_asset` —
+  usable directly by any future code that needs flavor-aware asset
+  selection without importing the full class.
+
 ## [0.5.0] — 2026-05-27
 
 First stage of a larger restructuring (Etappe A of v0.5). All five
@@ -478,6 +511,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.5.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.1
 [0.5.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.0
 [0.4.12]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.12
 [0.4.11]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.11
