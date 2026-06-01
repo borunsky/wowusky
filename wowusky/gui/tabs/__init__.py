@@ -8,5 +8,6 @@ follows the same pattern with injected action callbacks.
 
 from .backups import BackupsTab
 from .log import LogTab
+from .weakauras import WeakAurasTab
 
-__all__ = ["BackupsTab", "LogTab"]
+__all__ = ["BackupsTab", "LogTab", "WeakAurasTab"]

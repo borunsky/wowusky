@@ -1547,7 +1547,7 @@ from wowusky.gui.theme import (  # noqa: E402
 
 # _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
 from wowusky.gui.context import AppContext  # noqa: E402
-from wowusky.gui.tabs import BackupsTab, LogTab  # noqa: E402
+from wowusky.gui.tabs import BackupsTab, LogTab, WeakAurasTab  # noqa: E402
 from wowusky.gui.fonts import (  # noqa: E402
     _font_exists, make_font_set, resolve_mono_family, resolve_sans_family)
 from wowusky.gui.widgets import (  # noqa: E402, F401
@@ -2235,61 +2235,10 @@ def run_gui():
         lambda e: installed_canvas.itemconfig(icw, width=e.width))
 
     # ----------------------------------------------------------
-    # Tab: WEAKAURAS
+    # Tab: WEAKAURAS  (wowusky.gui.tabs.WeakAurasTab)
     # ----------------------------------------------------------
-    wa_tab = tk.Frame(content, bg=C["bg"])
-    tabs["weakauras"] = wa_tab
-
-    wa_header = tk.Frame(wa_tab, bg=C["bg"])
-    wa_header.pack(fill="x", padx=10, pady=(16, 12))
-
-    wa_title_row = tk.Frame(wa_header, bg=C["bg"])
-    wa_title_row.pack(fill="x")
-
-    tk.Label(wa_title_row, text="WeakAuras",
-             bg=C["bg"], fg=C["text"],
-             font=FONT_HEAD).pack(side="left")
-    tk.Label(wa_title_row, text="  via Wago.io",
-             bg=C["bg"], fg=C["text_muted"],
-             font=FONT_SM).pack(side="left")
-
-    make_button(wa_title_row, "Generate Companion",
-                lambda: trigger_generate_wac(),
-                variant="primary").pack(side="right")
-    make_button(wa_title_row, "Check updates",
-                lambda: trigger_wago_check(),
-                variant="outline").pack(side="right", padx=(0, 8))
-    make_button(wa_title_row, "Import existing",
-                lambda: trigger_import_existing_weakauras(),
-                variant="outline").pack(side="right", padx=(0, 8))
-
-    tk.Label(wa_header,
-             text="Track auras from Wago.io. wowusky generates a WeakAurasCompanion addon so updates show up in-game.",
-             bg=C["bg"], fg=C["text_dim"],
-             font=FONT_SM, wraplength=720, justify="left").pack(anchor="w", pady=(8, 0))
-
-    # Add aura row
-    add_row = tk.Frame(wa_tab, bg=C["bg"])
-    add_row.pack(fill="x", padx=10, pady=(16, 8))
-
-    add_input_wrap = tk.Frame(add_row, bg=C["surface"])
-    add_input_wrap.pack(side="left", fill="x", expand=True, padx=(0, 8))
-
-    tk.Label(add_input_wrap, text="wago.io/",
-             bg=C["surface"], fg=C["text_muted"],
-             font=FONT_MONO, padx=12).pack(side="left")
-
-    wa_url_var = tk.StringVar()
-    tk.Entry(add_input_wrap, textvariable=wa_url_var,
-             bg=C["surface"], fg=C["text"],
-             insertbackground=C["accent"],
-             font=FONT_BODY,
-             borderwidth=0, highlightthickness=0,
-             relief="flat").pack(side="left", fill="x", expand=True,
-                                  ipady=8, padx=(0, 12))
-
     def add_wago():
-        url = wa_url_var.get().strip()
+        url = weakauras_tab_obj.url_var.get().strip()
         if not url:
             messagebox.showerror("Error", "Enter a wago.io URL or slug.")
             return
@@ -2304,31 +2253,47 @@ def run_gui():
             entry = wago_add(slug)
             if entry:
                 log_msg(f"  ✓ {entry['name']} (v{entry['version']})\n")
-                root.after(0, lambda: (wa_url_var.set(""),
-                                       render_wago()))
+                root.after(0, lambda: (weakauras_tab_obj.clear_input(),
+                                       weakauras_tab_obj.render()))
             else:
                 log_msg("  ✗ failed to fetch info\n")
 
         threading.Thread(target=task, daemon=True).start()
 
-    make_button(add_row, "Add", add_wago, variant="primary").pack(side="left")
+    def update_aura(slug, entry):
+        current_tab.set("log"); update_nav_styles(); show_tab("log")
+        def task():
+            log_msg(f"⟩ updating {entry['name']}")
+            info = wago_fetch_info(slug)
+            if info:
+                wago = load_wago()
+                wago["auras"][slug]["version"] = info.get("version") or info.get("wagoVersion") or 1
+                wago["auras"][slug].pop("latest_version", None)
+                save_wago(wago)
+                log_msg(f"  ✓ updated to v{wago['auras'][slug]['version']}")
+                log_msg("  hint: click Generate Companion to apply\n")
+                root.after(0, weakauras_tab_obj.render)
+            else:
+                log_msg("  ✗ failed\n")
+        threading.Thread(target=task, daemon=True).start()
 
-    # Wago list scroll
-    wa_scroll = tk.Frame(wa_tab, bg=C["bg"])
-    wa_scroll.pack(fill="both", expand=True, padx=10, pady=(6, 10))
+    def remove_aura(slug, entry):
+        if messagebox.askyesno("Remove", f"Stop tracking {entry['name']}?"):
+            wago_remove(slug)
+            weakauras_tab_obj.render()
 
-    wa_canvas = tk.Canvas(wa_scroll, bg=C["bg"],
-                          highlightthickness=0, borderwidth=0)
-    wa_canvas.pack(side="left", fill="both", expand=True)
-
-    HoverScrollbar(wa_scroll, wa_canvas)
-
-    wa_inner = tk.Frame(wa_canvas, bg=C["bg"])
-    wcw = wa_canvas.create_window((0, 0), window=wa_inner, anchor="nw")
-    wa_inner.bind("<Configure>",
-        lambda e: wa_canvas.configure(scrollregion=wa_canvas.bbox("all")))
-    wa_canvas.bind("<Configure>",
-        lambda e: wa_canvas.itemconfig(wcw, width=e.width))
+    weakauras_tab_obj = WeakAurasTab(
+        ctx, content,
+        load_auras=lambda: load_wago().get("auras", {}),
+        on_generate=lambda: trigger_generate_wac(),
+        on_check=lambda: trigger_wago_check(),
+        on_import=lambda: trigger_import_existing_weakauras(),
+        on_add=add_wago,
+        on_update=update_aura,
+        on_remove=remove_aura,
+        open_url=lambda u: open_in_browser(u),
+    )
+    tabs["weakauras"] = weakauras_tab_obj.frame
 
     # ----------------------------------------------------------
     # Tab: IMPORT (manual ZIP)
@@ -3107,91 +3072,6 @@ def run_gui():
 
         tk.Frame(card, bg=C["border"], height=1).pack(fill="x")
 
-    def render_wago_card(parent, slug, entry):
-        latest_ver = entry.get("latest_version")
-        current_ver = entry.get("version", 1)
-        has_update = False
-        try:
-            if latest_ver and int(latest_ver) > int(current_ver):
-                has_update = True
-        except (ValueError, TypeError):
-            pass
-
-        card = tk.Frame(parent, bg=C["bg"])
-        card.pack(fill="x")
-
-        inner = tk.Frame(card, bg=C["bg"])
-        inner.pack(fill="x", pady=14)
-
-        bar_color = C["accent"] if has_update else C["accent_dim"]
-        bar = tk.Frame(inner, bg=bar_color, width=3)
-        bar.pack(side="left", fill="y", padx=(0, 14))
-
-        text_col = tk.Frame(inner, bg=C["bg"])
-        text_col.pack(side="left", fill="both", expand=True)
-
-        title_row = tk.Frame(text_col, bg=C["bg"])
-        title_row.pack(anchor="w", fill="x")
-
-        tk.Label(title_row, text=entry.get("name", slug),
-                 bg=C["bg"], fg=C["text"],
-                 font=FONT_NAME).pack(side="left")
-
-        ver_text = f"  v{current_ver}"
-        if has_update:
-            ver_text += f"  →  v{latest_ver}"
-        tk.Label(title_row, text=ver_text,
-                 bg=C["bg"],
-                 fg=C["accent"] if has_update else C["accent_dim"],
-                 font=FONT_VER).pack(side="left")
-
-        tk.Label(text_col, text=f"wago.io/{slug}  ·  {entry.get('type', 'WeakAura')}",
-                 bg=C["bg"], fg=C["text_muted"],
-                 font=FONT_XS, anchor="w").pack(anchor="w", pady=(3, 0))
-
-        if entry.get("note"):
-            tk.Label(text_col, text=entry["note"][:120],
-                     bg=C["bg"], fg=C["text_dim"],
-                     font=FONT_SM, anchor="w",
-                     wraplength=480, justify="left").pack(anchor="w", pady=(6, 0))
-
-        btn_col = tk.Frame(inner, bg=C["bg"])
-        btn_col.pack(side="right", padx=(14, 0))
-
-        def update_aura():
-            current_tab.set("log"); update_nav_styles(); show_tab("log")
-            def task():
-                log_msg(f"⟩ updating {entry['name']}")
-                info = wago_fetch_info(slug)
-                if info:
-                    wago = load_wago()
-                    wago["auras"][slug]["version"] = info.get("version") or info.get("wagoVersion") or 1
-                    wago["auras"][slug].pop("latest_version", None)
-                    save_wago(wago)
-                    log_msg(f"  ✓ updated to v{wago['auras'][slug]['version']}")
-                    log_msg("  hint: click Generate Companion to apply\n")
-                    root.after(0, render_wago)
-                else:
-                    log_msg("  ✗ failed\n")
-            threading.Thread(target=task, daemon=True).start()
-
-        if has_update:
-            make_button(btn_col, "Update",
-                update_aura, variant="primary").pack(side="left", padx=(0, 6))
-
-        make_button(btn_col, "Open", lambda u=entry.get("url") or f"https://wago.io/{slug}": open_in_browser(u),
-                    variant="ghost").pack(side="left", padx=(0, 6))
-
-        def remove_aura():
-            if messagebox.askyesno("Remove", f"Stop tracking {entry['name']}?"):
-                wago_remove(slug)
-                render_wago()
-
-        make_button(btn_col, "Remove", remove_aura,
-                    variant="danger").pack(side="left")
-
-        tk.Frame(card, bg=C["border"], height=1).pack(fill="x")
-
     # ----------------------------------------------------------
     # Render functions
     # ----------------------------------------------------------
@@ -3330,28 +3210,7 @@ def run_gui():
         threading.Thread(target=task, daemon=True).start()
 
     def render_wago():
-        for w in wa_inner.winfo_children():
-            w.destroy()
-
-        wago = load_wago()
-        auras = wago.get("auras", {})
-
-        if not auras:
-            empty = tk.Frame(wa_inner, bg=C["bg"])
-            empty.pack(expand=True, pady=60)
-            tk.Label(empty, text="No auras tracked",
-                     bg=C["bg"], fg=C["text"], font=FONT_BODY).pack()
-            tk.Label(empty,
-                     text="Paste a wago.io URL above to start tracking",
-                     bg=C["bg"], fg=C["text_muted"],
-                     font=FONT_SM).pack(pady=(6, 0))
-            return
-
-        tk.Frame(wa_inner, bg=C["border"], height=1).pack(fill="x")
-
-        for slug, entry in sorted(auras.items(),
-                                   key=lambda kv: kv[1].get("name", "").lower()):
-            render_wago_card(wa_inner, slug, entry)
+        weakauras_tab_obj.render()
 
     # ----------------------------------------------------------
     # Triggers
@@ -3566,7 +3425,7 @@ def run_gui():
         canvas = {
             "browse":    browse_canvas,
             "installed": installed_canvas,
-            "weakauras": wa_canvas,
+            "weakauras": weakauras_tab_obj.canvas,
             "backups":   backups_tab_obj.canvas,
         }.get(tab)
         if canvas is None: return
