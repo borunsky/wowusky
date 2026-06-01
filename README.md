@@ -172,7 +172,9 @@ wowusky/
 │   │   ├── context.py       ← AppContext dataclass (shared GUI state)
 │   │   ├── fonts.py         ← font-family resolution + font-set builder
 │   │   ├── theme.py         ← palettes + dark/light detection
-│   │   └── widgets.py       ← reusable Tk widgets + make_button + _safe_grab
+│   │   ├── widgets.py       ← reusable Tk widgets + make_button + _safe_grab
+│   │   └── tabs/
+│   │       └── log.py       ← LogTab (activity-log pane)
 │   └── tools/
 │       └── health_check.py  ← CLI that pings every catalog entry
 ├── tests/                   ← 109 tests

@@ -1547,6 +1547,7 @@ from wowusky.gui.theme import (  # noqa: E402
 
 # _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
 from wowusky.gui.context import AppContext  # noqa: E402
+from wowusky.gui.tabs import LogTab  # noqa: E402
 from wowusky.gui.fonts import (  # noqa: E402
     _font_exists, make_font_set, resolve_mono_family, resolve_sans_family)
 from wowusky.gui.widgets import (  # noqa: E402, F401
@@ -1558,7 +1559,7 @@ from wowusky.gui.widgets import (  # noqa: E402, F401
 
 def run_gui():
     import tkinter as tk
-    from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
+    from tkinter import filedialog, messagebox, simpledialog, ttk
 
     C, theme_mode = get_palette()
 
@@ -1975,6 +1976,12 @@ def run_gui():
     content.pack(fill="both", expand=True)
 
     tabs = {}
+
+    # Log tab is a class (wowusky.gui.tabs.LogTab); created early so log_msg
+    # is bound before any install/update closure can call it.
+    log_tab_obj = LogTab(ctx, content)
+    tabs["log"] = log_tab_obj.frame
+    log_msg = log_tab_obj.log_msg
 
     def show_tab(key):
         for tab in tabs.values():
@@ -2660,27 +2667,8 @@ def run_gui():
     backup_canvas.bind("<Configure>", lambda e: backup_canvas.itemconfig(bkw, width=e.width))
 
     # ----------------------------------------------------------
-    # Tab: LOG
+    # Tab: LOG  (built above as wowusky.gui.tabs.LogTab)
     # ----------------------------------------------------------
-    log_tab = tk.Frame(content, bg=C["bg"])
-    tabs["log"] = log_tab
-
-    log_wrap = tk.Frame(log_tab, bg=C["surface"])
-    log_wrap.pack(fill="both", expand=True, padx=10, pady=10)
-
-    log_box = scrolledtext.ScrolledText(
-        log_wrap, bg=C["surface"], fg=C["text"],
-        font=FONT_MONO, borderwidth=0, highlightthickness=0,
-        state="disabled", wrap="word",
-        padx=16, pady=16,
-        insertbackground=C["accent"])
-    log_box.pack(fill="both", expand=True)
-
-    def log_msg(msg):
-        log_box.configure(state="normal")
-        log_box.insert("end", msg + "\n")
-        log_box.see("end")
-        log_box.configure(state="disabled")
 
     # ----------------------------------------------------------
     # Card renderers
