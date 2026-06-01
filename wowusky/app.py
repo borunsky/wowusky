@@ -1545,24 +1545,11 @@ from wowusky.gui.theme import (  # noqa: E402
 # GUI Helpers
 # ============================================================
 
-def _safe_grab(dialog, attempts=10):
-    try:
-        dialog.grab_set()
-    except Exception:
-        if attempts > 0:
-            dialog.after(50, lambda: _safe_grab(dialog, attempts - 1))
-
-
-def _font_exists(font_name):
-    try:
-        import tkinter.font as tkfont
-        return font_name in list(tkfont.families())
-    except Exception:
-        return False
-
-
-# UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.widgets.
-from wowusky.gui.widgets import HoverScrollbar, UltraHiddenScrollbar  # noqa: E402, F401
+# _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
+from wowusky.gui.fonts import (  # noqa: E402
+    _font_exists, make_font_set, resolve_mono_family, resolve_sans_family)
+from wowusky.gui.widgets import (  # noqa: E402, F401
+    HoverScrollbar, UltraHiddenScrollbar, _safe_grab, make_button as _gui_make_button)
 
 # ============================================================
 # GUI
@@ -1575,28 +1562,18 @@ def run_gui():
     C, theme_mode = get_palette()
 
     # Fonts
-    sans_family = None
-    for candidate in ("Inter", "Segoe UI", "SF Pro Text",
-                      "DejaVu Sans", "Helvetica", "TkDefaultFont"):
-        if _font_exists(candidate):
-            sans_family = candidate; break
-    if not sans_family: sans_family = "Helvetica"
-
-    mono_family = None
-    for candidate in ("JetBrains Mono", "Fira Code", "Hack",
-                      "DejaVu Sans Mono", "monospace"):
-        if _font_exists(candidate) or candidate == "monospace":
-            mono_family = candidate; break
-
-    FONT_LOGO  = (sans_family, 14, "bold")
-    FONT_HEAD  = (sans_family, 13, "bold")
-    FONT_SECTION = (sans_family, 10, "bold")
-    FONT_BODY  = (sans_family, 10)
-    FONT_SM    = (sans_family, 9)
-    FONT_XS    = (sans_family, 8)
-    FONT_NAME  = (sans_family, 11, "bold")
-    FONT_VER   = (sans_family, 9)
-    FONT_MONO  = (mono_family, 9)
+    sans_family = resolve_sans_family()
+    mono_family = resolve_mono_family()
+    _fonts = make_font_set(sans_family, mono_family)
+    FONT_LOGO    = _fonts["FONT_LOGO"]
+    FONT_HEAD    = _fonts["FONT_HEAD"]
+    FONT_SECTION = _fonts["FONT_SECTION"]
+    FONT_BODY    = _fonts["FONT_BODY"]
+    FONT_SM      = _fonts["FONT_SM"]
+    FONT_XS      = _fonts["FONT_XS"]
+    FONT_NAME    = _fonts["FONT_NAME"]
+    FONT_VER     = _fonts["FONT_VER"]
+    FONT_MONO    = _fonts["FONT_MONO"]
 
     root = tk.Tk()
     root.title(APP_NAME)
@@ -1667,37 +1644,10 @@ def run_gui():
     checking_versions = [False]
 
     # ----------------------------------------------------------
-    # Button helper — comfortable sizes
+    # Button helper — comfortable sizes (logic lives in wowusky.gui.widgets)
     # ----------------------------------------------------------
-    def make_button(parent, text, command, variant="ghost", enabled=True, compact=False):
-        styles = {
-            "primary": (C["accent"],     C["accent_fg"], C["accent_hi"]),
-            "ghost":   (C["surface"],    C["text"],      C["surface_hi"]),
-            "outline": (C["bg"],         C["text_dim"],  C["surface_hi"]),
-            "danger":  (C["surface"],    C["danger"],    C["surface_hi"]),
-            "subtle":  (C["bg"],         C["text_dim"],  C["surface"]),
-        }
-        bg, fg, hover_bg = styles.get(variant, styles["ghost"])
-
-        if not enabled:
-            bg = C["bg"]
-            fg = C["text_muted"]
-            hover_bg = bg
-
-        padx = 12 if compact else 16
-        pady = 6 if compact else 8
-
-        btn = tk.Label(parent, text=text, bg=bg, fg=fg,
-                       font=FONT_SM,
-                       cursor="hand2" if enabled else "arrow",
-                       padx=padx, pady=pady, anchor="center")
-
-        if enabled:
-            btn.bind("<Enter>", lambda e: btn.configure(bg=hover_bg))
-            btn.bind("<Leave>", lambda e: btn.configure(bg=bg))
-            btn.bind("<Button-1>", lambda e: command())
-
-        return btn
+    import functools as _functools
+    make_button = _functools.partial(_gui_make_button, palette=C, font_sm=FONT_SM)
 
     # ----------------------------------------------------------
     # Top header bar  (matches prototype A)
@@ -3780,14 +3730,12 @@ def show_path_picker(parent, on_done, first_run=False):
     from tkinter import filedialog, messagebox, ttk
 
     C, _ = get_palette()
-    sans = "Helvetica"
-    for c in ("Inter", "Segoe UI", "DejaVu Sans", "Helvetica"):
-        if _font_exists(c): sans = c; break
-
-    FONT_BODY = (sans, 10)
-    FONT_SM   = (sans, 9)
-    FONT_XS   = (sans, 8)
-    FONT_HEAD = (sans, 13, "bold")
+    sans = resolve_sans_family()
+    _f = make_font_set(sans, resolve_mono_family())
+    FONT_BODY = _f["FONT_BODY"]
+    FONT_SM   = _f["FONT_SM"]
+    FONT_XS   = _f["FONT_XS"]
+    FONT_HEAD = _f["FONT_HEAD"]
 
     dialog = tk.Toplevel(parent)
     dialog.title("Settings")
