@@ -4,6 +4,30 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] — 2026-06-01
+
+ZIP-extraction consolidation — Etappe C (start of the install-path
+extraction). `core/zipper.py` shipped a tested `smart_extract()` that
+nothing actually used, while the GUI install path ran its own recursive
+`extract_zip()` in app.py. Those two worlds are now one: the recursive
+extractor lives in `core/zipper.py` as the single source of truth and
+app.py delegates to it.
+
+### Changed
+- `core/zipper.py` gains `extract_addon_zip()` (the recursive,
+  TOC-seeking extractor that handles wrapper / `release/` layouts) plus
+  the `_find_toc_dirs` / `_copy_addon_dir` helpers and a `sha256_file`
+  alias.
+- `app.py` — `extract_zip()` is now a thin wrapper around
+  `extract_addon_zip()`; the duplicated `_find_toc_dirs`,
+  `_copy_addon_dir`, and `sha256_file` definitions were removed and
+  imported from `core/zipper`. app.py drops from ~4692 to ~4646 lines.
+
+### Added
+- `tests/test_zipper.py` — 5 new tests pinning `extract_addon_zip`
+  (release-subdir recursion, nested-library dropping, empty-archive
+  error) and the `sha256_file` alias.
+
 ## [0.5.1] — 2026-06-01
 
 Provider consolidation — Etappe B. The class-based provider API used
@@ -511,6 +535,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.5.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.2
 [0.5.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.1
 [0.5.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.0
 [0.4.12]:         https://github.com/borunsky/wowusky/releases/tag/v0.4.12

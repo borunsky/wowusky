@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from wowusky.core.zipper import sha256_of_file, smart_extract
+from wowusky.core.zipper import extract_addon_zip, sha256_file, sha256_of_file, smart_extract
 
 
 def _make_zip(zip_path: Path, files: dict[str, str]) -> None:
@@ -92,3 +92,56 @@ def test_sha256_of_file_matches_known_hash(tmp_path):
     # echo -n "hello" | sha256sum  →  2cf24dba...
     assert sha256_of_file(p) == \
         "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+
+
+def test_sha256_file_alias_matches(tmp_path):
+    """sha256_file is the GUI-facing alias and must behave identically."""
+    p = tmp_path / "x.bin"
+    p.write_bytes(b"hello")
+    assert sha256_file(p) == sha256_of_file(p)
+
+
+# --- extract_addon_zip: canonical recursive extractor (GUI install path) ---
+
+
+def test_extract_addon_zip_recurses_release_subdir(tmp_path):
+    """CurseForge-style packages bury the addon under a release/ subdir.
+
+    The recursive extractor must still find the TOC folder and place it
+    directly under AddOns — not the wrapper or the release/ dir.
+    """
+    zip_path = tmp_path / "cf.zip"
+    _make_zip(zip_path, {
+        "MyAddon-1.0/release/MyAddon/MyAddon.toc": "## Version: 1.0\n",
+        "MyAddon-1.0/release/MyAddon/core.lua":    "-- core",
+    })
+    addons = tmp_path / "AddOns"
+    addons.mkdir()
+    placed = extract_addon_zip(zip_path, addons)
+    assert placed == ["MyAddon"]
+    assert (addons / "MyAddon" / "MyAddon.toc").exists()
+    assert not (addons / "MyAddon-1.0").exists()
+
+
+def test_extract_addon_zip_drops_nested_library_folders(tmp_path):
+    """A library folder nested inside an addon that already has a TOC
+    must not be copied out as its own addon."""
+    zip_path = tmp_path / "nested.zip"
+    _make_zip(zip_path, {
+        "Big/Big.toc":              "## Version: 1\n",
+        "Big/Libs/LibStub/LibStub.toc": "## Version: 1\n",
+    })
+    addons = tmp_path / "AddOns"
+    addons.mkdir()
+    placed = extract_addon_zip(zip_path, addons)
+    assert placed == ["Big"]
+    assert not (addons / "LibStub").exists()
+
+
+def test_extract_addon_zip_raises_when_no_addon(tmp_path):
+    zip_path = tmp_path / "empty.zip"
+    _make_zip(zip_path, {"readme.txt": "nothing here"})
+    addons = tmp_path / "AddOns"
+    addons.mkdir()
+    with pytest.raises(RuntimeError):
+        extract_addon_zip(zip_path, addons)

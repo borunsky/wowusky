@@ -68,6 +68,7 @@ from wowusky.core.toc import (
     strip_color_codes,
 )
 from wowusky.core.versions import normalise_version, version_tokens, versions_equal
+from wowusky.core.zipper import extract_addon_zip, sha256_file
 
 
 def _load_addon_catalog_with_compat() -> list[dict]:
@@ -1443,12 +1444,7 @@ def provider_action_label(addon, installed=False):
     return "Install" if not installed else "Update"
 
 
-def sha256_file(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+# sha256_file is imported from wowusky.core.zipper (single source of truth).
 
 def _safe_addon_id(addon_id):
     return re.sub(r"[^a-zA-Z0-9_.-]+", "_", addon_id)
@@ -1810,56 +1806,14 @@ def install_addon(addon, addons_path, log=print, progress=None):
         except Exception: pass
 
 
-def _find_toc_dirs(root):
-    found = []
-    for path, dirs, files in os.walk(root):
-        if any(f.lower().endswith(".toc") for f in files):
-            found.append(path)
-    # Avoid copying nested library folders as individual addons when their parent has a TOC.
-    found = sorted(found, key=lambda p: (p.count(os.sep), p.lower()))
-    filtered = []
-    for p in found:
-        if not any(p.startswith(parent + os.sep) for parent in filtered):
-            filtered.append(p)
-    return filtered
+def extract_zip(zip_path, addons_path, addon=None, log=None):
+    """Thin wrapper around :func:`wowusky.core.zipper.extract_addon_zip`.
 
-
-def _copy_addon_dir(src, addons_path):
-    name = os.path.basename(src.rstrip(os.sep))
-    dst = os.path.join(addons_path, name)
-    if os.path.exists(dst):
-        shutil.rmtree(dst)
-    shutil.copytree(src, dst)
-    return name
-
-
-def extract_zip(zip_path, addons_path, addon, log):
-    """Extract ZIPs from GitHub, WoWInterface, Tukui, manual imports, and CurseForge.
-
-    The extractor searches recursively for folders containing .toc files, which makes
-    CurseForge packages with wrapper directories or release/ subdirectories work.
+    The ``addon`` / ``log`` parameters are retained for the existing GUI
+    call sites; extraction logic now lives in ``wowusky.core.zipper`` as
+    the single source of truth (shared with ``health_check`` and tests).
     """
-    with tempfile.TemporaryDirectory() as tmp:
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(tmp)
-
-        toc_dirs = _find_toc_dirs(tmp)
-        if toc_dirs:
-            installed = []
-            for src in toc_dirs:
-                installed.append(_copy_addon_dir(src, addons_path))
-            return installed
-
-        # Fallback: copy top-level directories if no TOC was found.
-        installed = []
-        for item in os.listdir(tmp):
-            src = os.path.join(tmp, item)
-            if os.path.isdir(src):
-                installed.append(_copy_addon_dir(src, addons_path))
-        if installed:
-            return installed
-
-        raise RuntimeError("ZIP does not contain any addon folders or .toc files.")
+    return extract_addon_zip(zip_path, addons_path)
 
 
 def uninstall_addon(addon_id, addons_path, log=print):
