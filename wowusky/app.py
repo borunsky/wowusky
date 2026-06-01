@@ -1547,7 +1547,7 @@ from wowusky.gui.theme import (  # noqa: E402
 
 # _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
 from wowusky.gui.context import AppContext  # noqa: E402
-from wowusky.gui.tabs import LogTab  # noqa: E402
+from wowusky.gui.tabs import BackupsTab, LogTab  # noqa: E402
 from wowusky.gui.fonts import (  # noqa: E402
     _font_exists, make_font_set, resolve_mono_family, resolve_sans_family)
 from wowusky.gui.widgets import (  # noqa: E402, F401
@@ -1989,7 +1989,7 @@ def run_gui():
         if key in tabs:
             tabs[key].pack(fill="both", expand=True)
         if key == "backups":
-            try: render_backups()
+            try: backups_tab_obj.render()
             except Exception: pass
         if key == "curseforge" and get_curseforge_api_key():
             # Show popular addons when the tab is opened and no results are visible yet.
@@ -2641,30 +2641,16 @@ def run_gui():
 
 
     # ----------------------------------------------------------
-    # Tab: BACKUPS
+    # Tab: BACKUPS  (wowusky.gui.tabs.BackupsTab)
     # ----------------------------------------------------------
-    backups_tab = tk.Frame(content, bg=C["bg"])
-    tabs["backups"] = backups_tab
-
-    backup_top = tk.Frame(backups_tab, bg=C["bg"])
-    backup_top.pack(fill="x", padx=10, pady=(16, 12))
-    tk.Label(backup_top, text="Backups", bg=C["bg"], fg=C["text"], font=FONT_HEAD).pack(side="left")
-    make_button(backup_top, "Create full backup", lambda: trigger_create_full_backup(), variant="primary").pack(side="right")
-    make_button(backup_top, "Refresh", lambda: render_backups(), variant="outline").pack(side="right", padx=(0, 8))
-
-    tk.Label(backups_tab,
-             text="Full backups include Interface/AddOns and WTF settings for the active profile. Addon-specific backups are created automatically before install/remove and can be restored per addon in Installed.",
-             bg=C["bg"], fg=C["text_dim"], font=FONT_SM, wraplength=720, justify="left").pack(anchor="w", padx=10, pady=(0, 8))
-
-    backup_scroll = tk.Frame(backups_tab, bg=C["bg"])
-    backup_scroll.pack(fill="both", expand=True, padx=10, pady=(0, 16))
-    backup_canvas = tk.Canvas(backup_scroll, bg=C["bg"], highlightthickness=0, borderwidth=0)
-    backup_canvas.pack(side="left", fill="both", expand=True)
-    HoverScrollbar(backup_scroll, backup_canvas)
-    backup_inner = tk.Frame(backup_canvas, bg=C["bg"])
-    bkw = backup_canvas.create_window((0, 0), window=backup_inner, anchor="nw")
-    backup_inner.bind("<Configure>", lambda e: backup_canvas.configure(scrollregion=backup_canvas.bbox("all")))
-    backup_canvas.bind("<Configure>", lambda e: backup_canvas.itemconfig(bkw, width=e.width))
+    backups_tab_obj = BackupsTab(
+        ctx, content,
+        list_backups=list_full_backups,
+        on_create=lambda: trigger_create_full_backup(),
+        on_restore=lambda p: trigger_restore_full_backup(p),
+        open_folder=lambda d: open_in_browser(d),
+    )
+    tabs["backups"] = backups_tab_obj.frame
 
     # ----------------------------------------------------------
     # Tab: LOG  (built above as wowusky.gui.tabs.LogTab)
@@ -3321,35 +3307,12 @@ def run_gui():
             render_installed_card(installed_inner, aid, entry)
 
 
-    def render_backups():
-        for w in backup_inner.winfo_children():
-            w.destroy()
-        items = list_full_backups()
-        if not items:
-            tk.Label(backup_inner, text="No full backups yet", bg=C["bg"], fg=C["text_muted"], font=FONT_BODY).pack(anchor="w", pady=40)
-            return
-        tk.Frame(backup_inner, bg=C["border"], height=1).pack(fill="x")
-        for item in items:
-            row = tk.Frame(backup_inner, bg=C["bg"])
-            row.pack(fill="x", pady=12)
-            txt = tk.Frame(row, bg=C["bg"])
-            txt.pack(side="left", fill="x", expand=True)
-            when = time.strftime("%Y-%m-%d %H:%M", time.localtime(item["mtime"]))
-            size = f"{item['size'] / (1024*1024):.1f} MB"
-            tk.Label(txt, text=item["name"], bg=C["bg"], fg=C["text"], font=FONT_NAME).pack(anchor="w")
-            tk.Label(txt, text=f"{when} · {size}", bg=C["bg"], fg=C["text_muted"], font=FONT_XS).pack(anchor="w", pady=(3,0))
-            actions = tk.Frame(row, bg=C["bg"])
-            actions.pack(side="right")
-            make_button(actions, "Restore", lambda p=item["path"]: trigger_restore_full_backup(p), variant="primary").pack(side="left", padx=(0, 6))
-            make_button(actions, "Open folder", lambda p=item["path"]: open_in_browser(os.path.dirname(p)), variant="ghost").pack(side="left")
-            tk.Frame(backup_inner, bg=C["border"], height=1).pack(fill="x")
-
     def trigger_create_full_backup():
         current_tab.set("log"); update_nav_styles(); show_tab("log")
         def task():
             try:
                 create_full_backup(log=log_msg)
-                root.after(0, render_backups)
+                root.after(0, backups_tab_obj.render)
             except Exception as exc:
                 log_msg(f"  ✗ backup failed: {exc}\n")
         threading.Thread(target=task, daemon=True).start()
@@ -3604,7 +3567,7 @@ def run_gui():
             "browse":    browse_canvas,
             "installed": installed_canvas,
             "weakauras": wa_canvas,
-            "backups":   backup_canvas,
+            "backups":   backups_tab_obj.canvas,
         }.get(tab)
         if canvas is None: return
         delta = -1 if (event.num == 4 or (event.delta and event.delta > 0)) else 1
@@ -3681,7 +3644,7 @@ def run_gui():
         render_browse()
         render_installed()
         render_wago()
-        try: render_backups()
+        try: backups_tab_obj.render()
         except Exception: pass
 
     # ----------------------------------------------------------
