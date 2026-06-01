@@ -1548,7 +1548,7 @@ from wowusky.gui.theme import (  # noqa: E402
 # _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
 from wowusky.gui.context import AppContext  # noqa: E402
 from wowusky.gui.tabs import (  # noqa: E402
-    BackupsTab, InstalledTab, LogTab, WeakAurasTab)
+    BackupsTab, BrowseTab, InstalledTab, LogTab, WeakAurasTab)
 from wowusky.gui.fonts import (  # noqa: E402
     _font_exists, make_font_set, resolve_mono_family, resolve_sans_family)
 from wowusky.gui.widgets import (  # noqa: E402, F401
@@ -2003,161 +2003,8 @@ def run_gui():
     # ----------------------------------------------------------
     # Tab: BROWSE
     # ----------------------------------------------------------
-    browse_tab = tk.Frame(content, bg=C["bg"])
-    tabs["browse"] = browse_tab
-
-    # Filter card — surface + border (matches prototype)
-    filter_card = tk.Frame(browse_tab, bg=C["surface"],
-                           highlightbackground=C["border"], highlightthickness=1)
-    filter_card.pack(fill="x", padx=10, pady=(14, 10))
-
-    # ── Row 1 — Search box (left, expand) + Sort dropdown (right) ────────
-    row1 = tk.Frame(filter_card, bg=C["surface"])
-    row1.pack(fill="x", padx=10, pady=(10, 8))
-
-    search_wrap = tk.Frame(row1, bg=C["input_bg"],
-                           highlightbackground=C["border"], highlightthickness=1)
-    search_wrap.pack(side="left", fill="x", expand=True, padx=(0, 8))
-    tk.Label(search_wrap, text="⌕",
-             bg=C["input_bg"], fg=C["text_muted"],
-             font=(sans_family, 12), padx=10).pack(side="left")
-    search_var = tk.StringVar()
-    tk.Entry(search_wrap, textvariable=search_var,
-             bg=C["input_bg"], fg=C["text"],
-             insertbackground=C["accent"],
-             font=FONT_BODY,
-             borderwidth=0, highlightthickness=0,
-             relief="flat").pack(side="left", fill="x", expand=True,
-                                  ipady=6, padx=(0, 10))
-
-    sort_var = tk.StringVar(value="Popular")
-    sort_dd = ttk.Combobox(row1, textvariable=sort_var,
-                           values=["Popular", "Name (A–Z)", "Recently updated"],
-                           state="readonly", font=FONT_SM, width=18)
-    sort_dd.pack(side="right", ipady=3)
-
-    # ── Row 2 — Chips for Flavor + Source + Category dropdown + count ────
-    row2 = tk.Frame(filter_card, bg=C["surface"])
-    row2.pack(fill="x", padx=10, pady=(0, 10))
-
-    # Chip helper (used by both flavor + source rows)
-    ACCENT_SOFT = "#0f3530"
-    chip_widgets = []
-
-    def make_chip(parent, text, is_active_fn, on_click_fn):
-        c = tk.Label(parent, text=text,
-                     bg=C["surface"], fg=C["text_dim"],
-                     font=(sans_family, 8, "bold"),
-                     padx=9, pady=2, cursor="hand2",
-                     highlightbackground=C["border"], highlightthickness=1)
-        def refresh():
-            on = is_active_fn()
-            c.configure(
-                bg=ACCENT_SOFT if on else C["surface"],
-                fg=C["accent"] if on else C["text_dim"],
-                highlightbackground=C["accent"] if on else C["border"],
-            )
-        c._refresh = refresh
-        c.bind("<Button-1>", lambda e: (on_click_fn(), refresh_chips(), render_browse()))
-        refresh()
-        chip_widgets.append(c)
-        return c
-
-    def refresh_chips():
-        for c in chip_widgets:
-            try: c._refresh()
-            except Exception: pass
-
-    # Flavor chips (override profile-based filter)
-    # "auto" = follow active profile; "all" = no filter; flavor key = explicit
-    flavor_filter_var = tk.StringVar(value="auto")
-    show_all_var = tk.BooleanVar(value=False)
-    def set_flavor(key):
-        flavor_filter_var.set(key)
-        show_all_var.set(key == "all")
-
-    tk.Label(row2, text="FLAVOR",
-             bg=C["surface"], fg=C["text_muted"],
-             font=(sans_family, 8, "bold")).pack(side="left", padx=(0, 8))
-    fl_chips = tk.Frame(row2, bg=C["surface"])
-    fl_chips.pack(side="left", padx=(0, 14))
-    FLAVOR_OPTS = [("Active", "auto"),
-                   ("Retail", "retail"), ("TBC", "anniversary"),
-                   ("Era", "vanilla"),   ("MoP", "mop_classic"),
-                   ("All",    "all")]
-    for label, key in FLAVOR_OPTS:
-        make_chip(fl_chips, label,
-                  (lambda k=key: flavor_filter_var.get() == k),
-                  (lambda k=key: set_flavor(k))).pack(side="left", padx=2)
-
-    # Source chips
-    SOURCE_FILTER_MAP = {
-        "GitHub":       {"github"},
-        "Tukui":        {"tukui"},
-        "WoWI":         {"wowi"},
-        "CurseForge":   {"curseforge", "curseforge_web", "curseforge_manual"},
-        "Local":        {"manual", "external"},
-        "wowusky":      {"internal_wac"},
-    }
-    source_vars = {name: tk.BooleanVar(value=True) for name in SOURCE_FILTER_MAP}
-    def selected_source_set():
-        enabled = set()
-        for name, var in source_vars.items():
-            if var.get():
-                enabled.update(SOURCE_FILTER_MAP[name])
-        return enabled
-    def toggle_source(name):
-        source_vars[name].set(not source_vars[name].get())
-
-    tk.Label(row2, text="SOURCE",
-             bg=C["surface"], fg=C["text_muted"],
-             font=(sans_family, 8, "bold")).pack(side="left", padx=(0, 8))
-    src_chips = tk.Frame(row2, bg=C["surface"])
-    src_chips.pack(side="left", padx=(0, 14))
-    for name in SOURCE_FILTER_MAP:
-        make_chip(src_chips, name,
-                  (lambda n=name: source_vars[n].get()),
-                  (lambda n=name: toggle_source(n))).pack(side="left", padx=2)
-
-    # Category dropdown (compact)
-    cat_var = tk.StringVar(value="All categories")
-    cat_dd = ttk.Combobox(row2, textvariable=cat_var,
-                          values=["All categories"] + get_categories(),
-                          state="readonly", font=FONT_SM, width=15)
-    cat_dd.pack(side="left", padx=(0, 8), ipady=2)
-
-    # Result count (right side)
-    result_count_var = tk.StringVar(value="")
-    tk.Label(row2, textvariable=result_count_var,
-             bg=C["surface"], fg=C["text_muted"],
-             font=(mono_family, 9)).pack(side="right")
-
-    # Keep legacy update_source_btn() noop so existing callers don't break
-    def update_source_btn():
-        refresh_chips(); render_browse()
-    def update_show_all_btn():
-        refresh_chips()
-
-    # Scroll area — wrapped in a "list card" with border (matches prototype)
-    list_wrap = tk.Frame(browse_tab, bg=C["surface"],
-                         highlightbackground=C["border"], highlightthickness=1)
-    list_wrap.pack(fill="both", expand=True, padx=10, pady=(0, 16))
-
-    browse_scroll = tk.Frame(list_wrap, bg=C["bg"])
-    browse_scroll.pack(fill="both", expand=True)
-
-    browse_canvas = tk.Canvas(browse_scroll, bg=C["bg"],
-                               highlightthickness=0, borderwidth=0)
-    browse_canvas.pack(side="left", fill="both", expand=True)
-
-    HoverScrollbar(browse_scroll, browse_canvas)
-
-    browse_inner = tk.Frame(browse_canvas, bg=C["bg"])
-    bcw = browse_canvas.create_window((0, 0), window=browse_inner, anchor="nw")
-    browse_inner.bind("<Configure>",
-        lambda e: browse_canvas.configure(scrollregion=browse_canvas.bbox("all")))
-    browse_canvas.bind("<Configure>",
-        lambda e: browse_canvas.itemconfig(bcw, width=e.width))
+    # Tab: BROWSE is built below (wowusky.gui.tabs.BrowseTab), after
+    # render_browse_card (its per-row renderer) is defined.
 
     # ----------------------------------------------------------
     # Tab: INSTALLED
@@ -2851,6 +2698,17 @@ def run_gui():
         # Bottom border
         tk.Frame(parent, bg=C["border"], height=1).pack(fill="x")
 
+    browse_tab_obj = BrowseTab(
+        ctx, content,
+        get_catalog=lambda: ADDON_CATALOG,
+        load_installed=load_installed,
+        get_categories=get_categories,
+        get_current_flavor=get_current_flavor,
+        filter_by_flavor=filter_catalog_by_flavor,
+        render_card=render_browse_card,
+    )
+    tabs["browse"] = browse_tab_obj.frame
+
     def show_installed_addon_manager(addon_id, entry):
         """Per-addon manager: version history, backups, rollback to specific backup."""
         dlg = tk.Toplevel(root)
@@ -2931,87 +2789,7 @@ def run_gui():
     # Render functions
     # ----------------------------------------------------------
     def render_browse():
-        for w in browse_inner.winfo_children():
-            w.destroy()
-
-        # Table column header
-        header = tk.Frame(browse_inner, bg=C["surface_hi"])
-        header.pack(fill="x")
-        header_body = tk.Frame(header, bg=C["surface_hi"])
-        header_body.pack(fill="x", padx=14, pady=8)
-        # Action column spacer
-        tk.Frame(header_body, bg=C["surface_hi"], width=90).pack(side="right")
-        tk.Label(header_body, text="SOURCE",
-                 bg=C["surface_hi"], fg=C["text_muted"],
-                 font=(sans_family, 8, "bold"),
-                 width=12, anchor="e").pack(side="right", padx=(0, 14))
-        tk.Label(header_body, text="VERSION",
-                 bg=C["surface_hi"], fg=C["text_muted"],
-                 font=(sans_family, 8, "bold"),
-                 width=20, anchor="e").pack(side="right", padx=(0, 14))
-        # Category icon column spacer (width 2 + padding 12 = ~34px)
-        tk.Frame(header_body, bg=C["surface_hi"], width=34).pack(side="left")
-        tk.Label(header_body, text="NAME",
-                 bg=C["surface_hi"], fg=C["text_muted"],
-                 font=(sans_family, 8, "bold"),
-                 anchor="w").pack(side="left")
-        tk.Frame(browse_inner, bg=C["border"], height=1).pack(fill="x")
-
-        installed = load_installed()
-        q = search_var.get().lower().strip()
-        cat = cat_var.get()
-        source_allowed = selected_source_set()
-
-        # Flavor filter (driven by chip state)
-        current_flavor = get_current_flavor()
-        fl_key = flavor_filter_var.get()
-        if fl_key == "all":
-            base = ADDON_CATALOG
-        elif fl_key == "auto":
-            base = filter_catalog_by_flavor(ADDON_CATALOG, current_flavor) if current_flavor else ADDON_CATALOG
-        else:
-            base = filter_catalog_by_flavor(ADDON_CATALOG, fl_key)
-
-        filtered = []
-        for a in base:
-            if cat != "All categories" and a["category"] != cat: continue
-            if a.get("source") not in source_allowed: continue
-            if q:
-                h = f"{a['name']} {a['description']} {a['author']} {a.get('source','')} {a.get('curseforge_slug','')}".lower()
-                if q not in h: continue
-            filtered.append(a)
-
-        # Sort
-        sk = sort_var.get()
-        if sk.startswith("Name"):
-            filtered.sort(key=lambda a: a.get("name", "").lower())
-        elif sk.startswith("Recently"):
-            filtered.sort(key=lambda a: a.get("name", "").lower())  # stable; no date in catalog
-        # Popular = catalog order (default)
-
-        # Update result count
-        try:
-            result_count_var.set(f"{len(filtered)} results")
-        except Exception:
-            pass
-
-        if not filtered:
-            empty = tk.Frame(browse_inner, bg=C["bg"])
-            empty.pack(expand=True, pady=60)
-            tk.Label(empty, text="No addons match these filters",
-                     bg=C["bg"], fg=C["text_muted"],
-                     font=FONT_BODY).pack()
-            if flavor_filter_var.get() != "all":
-                tk.Label(empty,
-                         text="Click the 'All' flavor chip to see the full catalog",
-                         bg=C["bg"], fg=C["text_muted"],
-                         font=FONT_SM).pack(pady=(6, 0))
-            return
-
-        # Flavor info header (skip — result count is in filter bar now)
-
-        for a in filtered:
-            render_browse_card(browse_inner, a, installed.get(a["id"]))
+        browse_tab_obj.render()
 
     def trigger_create_full_backup():
         current_tab.set("log"); update_nav_styles(); show_tab("log")
@@ -3228,28 +3006,12 @@ def run_gui():
         threading.Thread(target=task, daemon=True).start()
 
     # ----------------------------------------------------------
-    # Filter callbacks
-    # ----------------------------------------------------------
-    render_job = [None]
-    def schedule_render_browse(*_):
-        if render_job[0] is not None:
-            try:
-                root.after_cancel(render_job[0])
-            except Exception:
-                pass
-        render_job[0] = root.after(120, render_browse)
-
-    search_var.trace_add("write", schedule_render_browse)
-    cat_var.trace_add("write", schedule_render_browse)
-    sort_var.trace_add("write", schedule_render_browse)
-
-    # ----------------------------------------------------------
     # Mouse wheel
     # ----------------------------------------------------------
     def on_wheel(event):
         tab = current_tab.get()
         canvas = {
-            "browse":    browse_canvas,
+            "browse":    browse_tab_obj.canvas,
             "installed": installed_tab_obj.canvas,
             "weakauras": weakauras_tab_obj.canvas,
             "backups":   backups_tab_obj.canvas,

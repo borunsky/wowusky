@@ -7,8 +7,9 @@ follows the same pattern with injected action callbacks.
 """
 
 from .backups import BackupsTab
+from .browse import BrowseTab
 from .installed import InstalledTab
 from .log import LogTab
 from .weakauras import WeakAurasTab
 
-__all__ = ["BackupsTab", "InstalledTab", "LogTab", "WeakAurasTab"]
+__all__ = ["BackupsTab", "BrowseTab", "InstalledTab", "LogTab", "WeakAurasTab"]
