@@ -327,6 +327,16 @@ def get_addons_path():
     return get_active_profile().get("addons_path") or load_config().get("addons_path")
 
 
+def get_wtf_path():
+    prof = get_active_profile()
+    if prof.get("wtf_path"):
+        return prof.get("wtf_path")
+    ap = get_addons_path()
+    if ap:
+        return os.path.abspath(os.path.join(ap, "..", "..", "WTF"))
+    return ""
+
+
 def set_addons_path(p):
     data = load_profiles()
     pid = data.get("active")
