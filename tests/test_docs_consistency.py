@@ -39,9 +39,10 @@ def test_readme_app_py_line_count_matches_reality():
     readme = _read(README_MD)
 
     # Catch both "down from X → Y lines" and "(~Y lines)" forms.
-    arrow_match = re.search(r"app\.py.{0,80}?(\d{4,5})\s*lines", readme,
+    # 3-5 digits: app.py dropped below 1000 lines once run_gui moved out (G2).
+    arrow_match = re.search(r"app\.py.{0,80}?(\d{3,5})\s*lines", readme,
                             flags=re.IGNORECASE)
-    approx_match = re.search(r"~\s*(\d{4,5})\s*lines", readme)
+    approx_match = re.search(r"~\s*(\d{3,5})\s*lines", readme)
     claimed = []
     if arrow_match:
         claimed.append(int(arrow_match.group(1)))

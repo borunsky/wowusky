@@ -42,6 +42,17 @@ ignore = [
   "E701", "E702", "E722",
   "I001",
 ]
+# The main window builder, moved verbatim out of app.py (Etappe G2). It pulls
+# the shared helpers from wowusky.app via a star import, so it carries the same
+# legacy-GUI ignore set until it is decomposed further.
+"wowusky/gui/main.py" = [
+  "F401", "F403", "F405", "F841",
+  "B007", "B023", "B015", "B028", "B904", "B905",
+  "UP006", "UP007", "UP032", "UP035",
+  "SIM103", "SIM105", "SIM118",
+  "E701", "E702", "E722",
+  "I001",
+]
 "wowusky/tools/*"  = ["E402"]
 
 [lint.isort]
