@@ -312,11 +312,11 @@ from wowusky.providers.tukui_fns import tukui_url, tukui_version  # noqa: E402
 
 from wowusky.providers import github_fns as _github_fns  # noqa: E402
 _github_fns.get_current_flavor = lambda: get_current_flavor()
-from wowusky.providers.github_fns import (  # noqa: E402
+from wowusky.providers.github_fns import (  # noqa: E402, F401
     _github_branch_exists, _github_pick_asset, github_default_branch,
     github_releases, github_repo_for_addon, github_repo_url, github_tags,
     github_url, github_version)
-from wowusky.providers.wowi_fns import (  # noqa: E402
+from wowusky.providers.wowi_fns import (  # noqa: E402, F401
     wowi_info, wowi_page_url, wowi_url, wowi_version)
 
 from wowusky.providers.curseforge_fns import (  # noqa: E402
@@ -348,7 +348,7 @@ from wowusky.providers.curseforge_fns import (  # noqa: E402
     CF_FLAVOR_TEXT, CF_VERSION_TYPE_HINTS, CURSEFORGE_URL_RX,
     curseforge_api_diagnose, curseforge_download_url,
     curseforge_get_files, curseforge_json, curseforge_manual_latest,
-    curseforge_manual_url as _cf_manual_url, curseforge_mod_from_ref, curseforge_mod_summary,
+    curseforge_mod_from_ref, curseforge_mod_summary,
     curseforge_pick_file, curseforge_search, curseforge_url_from_installed,
     curseforge_version_from_installed,
     install_curseforge as _cf_install_curseforge,
@@ -356,29 +356,13 @@ from wowusky.providers.curseforge_fns import (  # noqa: E402
     CURSEFORGE_API_BASE, CURSEFORGE_GAME_ID,
 )
 
-CF_WEB_VERSION_TYPE_HINTS = {
-    # CurseForge web URLs use gameVersionTypeId. 67408 currently opens the
-    # Classic flavor listing; for TBC Anniversary we also seed the query with
-    # TBC terms so the browser starts in the correct area even when CF changes
-    # the exact flavor id again.
-    "retail": 517,
-    "ptr": 517,
-    "anniversary": 67408,
-    "vanilla": 67408,
-    "mop_classic": 73246,
-}
-
-CF_WEB_SEARCH_HINT = {
-    "anniversary": "tbc classic anniversary",
-    "vanilla": "classic era",
-    "mop_classic": "mop classic",
-    "retail": "",
-    "ptr": "",
-}
+from wowusky.core.resolver import (  # noqa: E402
+    CF_WEB_SEARCH_HINT, CF_WEB_VERSION_TYPE_HINTS, SEMI_MANAGED_SOURCES)
+from wowusky.core import resolver as _resolver  # noqa: E402
 
 
 def current_cf_web_version_type():
-    return CF_WEB_VERSION_TYPE_HINTS.get(get_current_flavor() or "retail")
+    return _resolver.cf_web_version_type(get_current_flavor())
 
 
 def _cached_json(cache_key, loader):
@@ -406,30 +390,11 @@ def retry(fn, attempts=3, delay=0.7):
 
 
 def curseforge_search_url(query=""):
-    q = (query or "").strip()
-    slug = cf_slug_from_ref(q)
-    if slug and ("/" in q or "curseforge.com" in q):
-        return "https://www.curseforge.com/wow/addons/" + urllib.parse.quote(slug)
-
-    flavor = get_current_flavor() or "retail"
-    params = {"class": "addons", "page": 1, "sortBy": "popularity"}
-    vt = current_cf_web_version_type()
-    if vt:
-        params["gameVersionTypeId"] = vt
-
-    hint = CF_WEB_SEARCH_HINT.get(flavor, "")
-    search = " ".join(x for x in (q, hint) if x).strip()
-    if search:
-        params["search"] = search
-
-    return "https://www.curseforge.com/wow/search?" + urllib.parse.urlencode(params)
+    return _resolver.curseforge_search_url(query, get_current_flavor())
 
 
 def curseforge_files_url(slug_or_url=""):
-    slug = cf_slug_from_ref(slug_or_url)
-    if slug:
-        return f"https://www.curseforge.com/wow/addons/{urllib.parse.quote(slug)}/files/all"
-    return curseforge_search_url(slug_or_url)
+    return _resolver.curseforge_files_url(slug_or_url, get_current_flavor())
 
 
 def open_in_browser(url):
@@ -493,8 +458,8 @@ def import_zip_file(zip_path, addons_path, name=None, source="manual", log=print
 
 
 def curseforge_manual_url(entry):
-    """Thin wrapper — passes flavor-aware URL builders into the core helper."""
-    return _cf_manual_url(entry, files_url_fn=curseforge_files_url, search_url_fn=curseforge_search_url)
+    """Thin wrapper — delegates to the flavor-aware resolver helper."""
+    return _resolver.curseforge_manual_url(entry, get_current_flavor())
 
 
 def install_curseforge(ref_or_mod, addons_path, log=print, progress=None, install_deps=True):
@@ -577,35 +542,12 @@ def generate_wac_companion(addons_path):
 # Provider status / manual fallbacks
 # ============================================================
 
-SEMI_MANAGED_SOURCES = {"curseforge_web", "curseforge_manual", "wowi"}
-
-
 def addon_provider_page(addon):
-    src = addon.get("source")
-    if src == "curseforge_web":
-        return curseforge_files_url(addon.get("curseforge_slug", addon.get("id", "")))
-    if src == "curseforge_manual":
-        return curseforge_manual_url(addon)
-    if src == "wowi":
-        return wowi_page_url(addon)
-    if src == "github":
-        return github_repo_url(github_repo_for_addon(addon))
-    if src == "tukui":
-        return addon.get("download_url") or addon.get("api_url")
-    return addon.get("url") or ""
+    return _resolver.addon_provider_page(addon, get_current_flavor())
 
 
 def provider_action_label(addon, installed=False):
-    src = addon.get("source")
-    if src == "curseforge_web":
-        return "Open CF"
-    if src == "curseforge_manual":
-        return "Open update"
-    if src == "wowi":
-        return "Install" if not installed else "Update"
-    if src == "github":
-        return "Install" if not installed else "Update"
-    return "Install" if not installed else "Update"
+    return _resolver.provider_action_label(addon, installed)
 
 
 # sha256_file is imported from wowusky.core.zipper (single source of truth).
