@@ -4,6 +4,20 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] — 2026-06-02
+
+Bugfix release — make the AUR/package build pass on machines with a display.
+
+### Fixed
+- Three GUI callback tests (`BackupsTab` restore, `InstalledTab` remove,
+  `WeakAurasTab` remove) used a synthetic `event_generate("<Button-1>")`
+  that is not reliably delivered to un-mapped widgets on a real X display.
+  Headless CI skipped them, so it went unnoticed — but `makepkg check()`
+  on a desktop (e.g. CachyOS via `paru`) ran them and failed, aborting the
+  build. The tests now invoke the button's bound command directly, which
+  is deterministic regardless of display state and still verifies that the
+  tab wires the correct callback into `make_button`.
+
 ## [0.6.0] — 2026-06-02
 
 GUI extraction — Etappe D abgeschlossen (D6–D9). Alle sieben Tab-Panes sind
@@ -652,6 +666,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.6.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.1
 [0.6.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.0
 [0.5.5]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.5
 [0.5.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.4

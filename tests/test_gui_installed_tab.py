@@ -30,6 +30,7 @@ def _make_ctx(root):
         import tkinter as tk
         btn = tk.Label(parent, text=text)
         if enabled:
+            btn._command = command
             btn.bind("<Button-1>", lambda e: command())
         return btn
 
@@ -93,6 +94,20 @@ def _all_label_text(widget):
             out.append(str(child.cget("text")))
         out.extend(_all_label_text(child))
     return out
+
+
+def _click(btn):
+    """Invoke a fake button's command deterministically.
+
+    Synthetic ``event_generate("<Button-1>")`` is not reliably delivered to
+    un-mapped widgets on a real X display (e.g. inside a packaging sandbox),
+    so call the stored command directly instead.
+    """
+    cmd = getattr(btn, "_command", None)
+    if cmd is not None:
+        cmd()
+    else:
+        btn.event_generate("<Button-1>")
 
 
 def _find_button(widget, text):
@@ -185,8 +200,7 @@ def test_remove_callback_receives_id():
         tab = _make_tab(root, installed={"elvui": _INSTALLED["elvui"]},
                         on_remove=lambda aid, ent: got.append(aid))
         tab.render()
-        _find_button(tab.inner, "Remove").event_generate("<Button-1>")
-        root.update_idletasks()
+        _click(_find_button(tab.inner, "Remove"))
         assert got == ["elvui"]
     finally:
         root.destroy()
