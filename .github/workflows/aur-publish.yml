@@ -1,0 +1,90 @@
+name: Publish to AUR
+
+# Pushes the updated PKGBUILD + .SRCINFO to the AUR whenever a GitHub
+# release is published. The real source checksum is computed here with
+# `updpkgsums` against the published release tarball, so the in-repo
+# PKGBUILD can keep `sha256sums=('SKIP')` as a placeholder.
+#
+# Requires one repository secret:
+#   AUR_SSH_PRIVATE_KEY — private half of the SSH key registered on the
+#   AUR account that maintains the `wowusky` package.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish without leading v (e.g. 0.6.0)"
+        required: true
+
+jobs:
+  aur-publish:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install tooling
+        run: pacman -Syu --noconfirm git openssh pacman-contrib sudo
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            V="${{ github.event.release.tag_name }}"
+          else
+            V="${{ github.event.inputs.version }}"
+          fi
+          V="${V#v}"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Create unprivileged build user
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+
+      - name: Bump pkgver, compute checksum, regenerate .SRCINFO
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          sudo -u builder env VERSION="$VERSION" bash -euo pipefail <<'EOF'
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          # Pull the published release tarball and write its real sha256.
+          updpkgsums
+          makepkg --printsrcinfo > .SRCINFO
+          echo "----- PKGBUILD -----"; cat PKGBUILD
+          echo "----- .SRCINFO -----"; cat .SRCINFO
+          EOF
+
+      - name: Configure SSH for the AUR
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/id_aur
+          chmod 600 ~/.ssh/id_aur
+          ssh-keyscan -t rsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Push to the AUR
+        env:
+          GIT_SSH_COMMAND: "ssh -i ~/.ssh/id_aur -o IdentitiesOnly=yes"
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          git config --global user.name "Kevin"
+          git config --global user.email "info@borunsky.de"
+          git config --global --add safe.directory '*'
+          git clone ssh://aur@aur.archlinux.org/wowusky.git aur-repo
+          cp PKGBUILD .SRCINFO aur-repo/
+          cd aur-repo
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then
+            echo "AUR already up to date — nothing to push."
+          else
+            git commit -m "Update to v${VERSION}"
+            git push
+          fi
