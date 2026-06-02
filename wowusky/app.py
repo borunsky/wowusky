@@ -144,16 +144,13 @@ CACHE_TTL      = 300
 HTTP_CACHE     = {}
 DOWNLOAD_QUEUE = Queue()
 
-WOW_SEARCH_PATHS = [
-    "~/.local/share/Steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
-    "~/.local/share/Steam/steamapps/compatdata/*/pfx/drive_c/Program Files/World of Warcraft",
-    "~/.steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files (x86)/World of Warcraft",
-    "~/.steam/steam/steamapps/compatdata/*/pfx/drive_c/Program Files/World of Warcraft",
-    "~/Games/world-of-warcraft/drive_c/Program Files (x86)/World of Warcraft",
-    "~/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft",
-    "~/.wine/drive_c/Program Files (x86)/World of Warcraft",
-    "~/.wine/drive_c/Program Files/World of Warcraft",
-]
+# WoW install discovery + filesystem/DB reconciliation now live in
+# wowusky.core.scan. WOW_SEARCH_PATHS / _display_path_preference /
+# scan_wow_installations are re-exported below; sync_filesystem_with_db
+# keeps a thin app.py wrapper that injects ADDON_CATALOG.
+from wowusky.core.scan import (  # noqa: E402
+    WOW_SEARCH_PATHS, _display_path_preference, scan_wow_installations)
+from wowusky.core import scan as _scan  # noqa: E402
 
 
 # Flavor compatibility map: what flavors does an addon for X also work on?
@@ -268,58 +265,6 @@ def get_compatible_flavors():
 # WoW Detection
 # ============================================================
 
-def _display_path_preference(path):
-    """Prefer the canonical Steam path under ~/.local over ~/.steam duplicates."""
-    p = os.path.expanduser(path)
-    local = os.path.expanduser("~/.local/share/Steam")
-    steam = os.path.expanduser("~/.steam/steam")
-    if p.startswith(steam):
-        candidate = local + p[len(steam):]
-        if os.path.exists(candidate):
-            return candidate
-    return p
-
-
-def scan_wow_installations():
-    """Find WoW installations and hide duplicate Steam aliases.
-
-    Steam on Linux often exposes the same compatdata tree through both
-    ~/.local/share/Steam and ~/.steam/steam.  We compare real paths and keep
-    only one entry, preferring the ~/.local/share/Steam display path.
-    """
-    found = []
-    seen = set()
-
-    for pattern in WOW_SEARCH_PATHS:
-        for wow_dir in glob.glob(os.path.expanduser(pattern)):
-            if not os.path.isdir(wow_dir):
-                continue
-
-            wow_real = os.path.realpath(wow_dir)
-
-            for flavor, (name, key, _) in WOW_FLAVORS.items():
-                fp = os.path.join(wow_dir, flavor)
-                if not os.path.isdir(fp):
-                    continue
-
-                addons_real = os.path.realpath(os.path.join(fp, "Interface", "AddOns"))
-                dedupe_key = (wow_real, flavor, addons_real)
-                if dedupe_key in seen:
-                    continue
-                seen.add(dedupe_key)
-
-                display_fp = _display_path_preference(fp)
-                found.append({
-                    "flavor": flavor,
-                    "flavor_name": name,
-                    "flavor_key": key,
-                    "addons_path": os.path.join(display_fp, "Interface", "AddOns"),
-                })
-
-    found = normalize_installations(found)
-    found.sort(key=lambda x: (0 if "/.local/share/Steam/" in x["addons_path"] else 1, x["flavor_name"], x["addons_path"]))
-    return found
-
 
 # ============================================================
 # TOC parsing
@@ -335,85 +280,15 @@ TOC_NOTES_RX     = re.compile(r'^##\s*Notes\s*:\s*(.+)$',     re.IGNORECASE | re
 read_toc_info = read_addon_toc
 # _parse_toc lives in wowusky.core.toc as parse_toc_file.
 _parse_toc = parse_toc_file
+
+
 def sync_filesystem_with_db(addons_path):
-    if not addons_path or not os.path.isdir(addons_path):
-        return
+    """Reconcile the active profile's installed DB with the AddOns folder.
 
-    installed = load_installed()
-
-    # Cleanup stale entries
-    for aid in list(installed.keys()):
-        entry = installed[aid]
-        if not entry.get("folders"): continue
-        primary = entry["folders"][0]
-        if not os.path.isdir(os.path.join(addons_path, primary)):
-            del installed[aid]
-
-    try:
-        fs_folders = [f for f in os.listdir(addons_path)
-                      if os.path.isdir(os.path.join(addons_path, f))
-                      and not f.startswith(".")]
-    except Exception:
-        return
-
-    known_folders = set()
-    for entry in installed.values():
-        for f in entry.get("folders", []):
-            known_folders.add(f)
-
-    catalog_by_folder = {}
-    catalog_by_lower = {}
-    for addon in ADDON_CATALOG:
-        for folder in addon["folders"]:
-            catalog_by_folder[folder] = addon
-            catalog_by_lower[folder.lower()] = addon
-
-    processed = set(known_folders)
-
-    for folder in sorted(fs_folders):
-        if folder in processed: continue
-        full = os.path.join(addons_path, folder)
-        toc = read_toc_info(full)
-        if not toc: continue
-
-        catalog_addon = catalog_by_folder.get(folder) or catalog_by_lower.get(folder.lower())
-        if catalog_addon and catalog_addon["id"] not in installed:
-            actual_folders = [f for f in catalog_addon["folders"]
-                              if os.path.isdir(os.path.join(addons_path, f))]
-            installed[catalog_addon["id"]] = {
-                "name": catalog_addon["name"],
-                "version": toc.get("version") or "unknown",
-                "folders": actual_folders,
-                "source": catalog_addon["source"],
-                "interface": toc.get("interface"),
-                "discovered": True,
-            }
-            for f in actual_folders:
-                processed.add(f)
-            continue
-
-        # External addon
-        related = [folder]
-        for other in fs_folders:
-            if other != folder and other.startswith(folder + "_"):
-                if other not in processed:
-                    related.append(other)
-
-        addon_id = "fs_" + folder.lower().replace(" ", "_")
-        if addon_id in installed: continue
-
-        installed[addon_id] = {
-            "name": toc.get("title") or folder,
-            "version": toc.get("version") or "unknown",
-            "folders": related,
-            "source": "external",
-            "interface": toc.get("interface"),
-            "discovered": True,
-        }
-        for f in related:
-            processed.add(f)
-
-    save_installed(installed)
+    Thin wrapper over wowusky.core.scan.sync_filesystem_with_db that injects
+    the app's loaded ADDON_CATALOG.
+    """
+    _scan.sync_filesystem_with_db(addons_path, ADDON_CATALOG)
 
 
 # ============================================================
