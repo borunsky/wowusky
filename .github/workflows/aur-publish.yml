@@ -66,13 +66,20 @@ jobs:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/id_aur
           chmod 600 ~/.ssh/id_aur
-          ssh-keyscan -t rsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+          # Fetch host keys without type restriction so known_hosts is
+          # always populated, then verify it is non-empty.
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+          echo "known_hosts lines: $(wc -l < ~/.ssh/known_hosts)"
 
       - name: Push to the AUR
         env:
-          GIT_SSH_COMMAND: "ssh -i ~/.ssh/id_aur -o IdentitiesOnly=yes"
+          GIT_SSH_COMMAND: >-
+            ssh -i $HOME/.ssh/id_aur
+            -o IdentitiesOnly=yes
+            -o UserKnownHostsFile=$HOME/.ssh/known_hosts
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           git config --global user.name "Kevin"
