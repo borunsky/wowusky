@@ -13,15 +13,22 @@ from __future__ import annotations
 import json
 
 import wowusky.app as app
+import wowusky.core.state as state
 
 
 def _isolate(monkeypatch, tmp_path):
-    """Point app.py's path constants at a fresh tmp directory."""
+    """Point the manager-state path constants at a fresh tmp directory.
+
+    The persistence logic now lives in wowusky.core.state, so the
+    constants it reads must be patched there (app.py re-exports the
+    functions but the module globals they read belong to core.state).
+    """
     data = tmp_path / "wowusky"
     data.mkdir()
-    monkeypatch.setattr(app, "CONFIG_DIR",    str(data))
-    monkeypatch.setattr(app, "CONFIG_FILE",   str(data / "config.json"))
-    monkeypatch.setattr(app, "PROFILES_FILE", str(data / "profiles.json"))
+    for mod in (app, state):
+        monkeypatch.setattr(mod, "CONFIG_DIR",    str(data), raising=False)
+        monkeypatch.setattr(mod, "CONFIG_FILE",   str(data / "config.json"), raising=False)
+        monkeypatch.setattr(mod, "PROFILES_FILE", str(data / "profiles.json"), raising=False)
     return data
 
 

@@ -12,16 +12,22 @@ create a profile in that case, not silently do nothing.
 from __future__ import annotations
 
 import wowusky.app as app
+import wowusky.core.state as state
 
 
 def _isolate(monkeypatch, tmp_path):
-    """Point app.py's path constants at a fresh tmp directory."""
+    """Point the manager-state path constants at a fresh tmp directory.
+
+    The persistence logic now lives in wowusky.core.state, so the
+    constants it reads must be patched there.
+    """
     data = tmp_path / "wowusky"
     data.mkdir(parents=True)
-    monkeypatch.setattr(app, "CONFIG_DIR",     str(data))
-    monkeypatch.setattr(app, "CONFIG_FILE",    str(data / "config.json"))
-    monkeypatch.setattr(app, "PROFILES_FILE",  str(data / "profiles.json"))
-    monkeypatch.setattr(app, "INSTALLED_DIR",  str(data / "installed"))
+    for mod in (app, state):
+        monkeypatch.setattr(mod, "CONFIG_DIR",     str(data), raising=False)
+        monkeypatch.setattr(mod, "CONFIG_FILE",    str(data / "config.json"), raising=False)
+        monkeypatch.setattr(mod, "PROFILES_FILE",  str(data / "profiles.json"), raising=False)
+        monkeypatch.setattr(mod, "INSTALLED_DIR",  str(data / "installed"), raising=False)
     # Autodetection must never interfere with these tests.
     monkeypatch.setattr(app, "scan_wow_installations", lambda: [])
     return data
