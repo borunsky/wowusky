@@ -279,6 +279,25 @@ def run_gui():
     current_tab = tk.StringVar(value="browse")
     nav_buttons = {}
 
+    # Tabs whose content refresh_all() rebuilds. Rendering every one of
+    # them eagerly on each refresh (profile switch, post-install) froze the
+    # UI for a few seconds, because each rebuilds many Tk widgets — the
+    # Browse tab alone lays out the full 241-entry catalog. We render only
+    # the visible tab now and defer the rest to the next time they're shown.
+    _dirty_tabs = set()
+
+    def _render_tab(key):
+        fn = {
+            "browse":    lambda: browse_tab_obj.render(),
+            "installed": lambda: installed_tab_obj.render(),
+            "weakauras": lambda: weakauras_tab_obj.render(),
+        }.get(key)
+        if fn is None:
+            return
+        try: fn()
+        except Exception: pass
+        _dirty_tabs.discard(key)
+
     def make_nav(parent, key, label, icon="", count_var=None):
         item = tk.Frame(parent, bg=C["surface"], cursor="hand2")
         item.pack(fill="x", padx=8, pady=1)
@@ -472,6 +491,8 @@ def run_gui():
             tab.pack_forget()
         if key in tabs:
             tabs[key].pack(fill="both", expand=True)
+        if key in _dirty_tabs:
+            _render_tab(key)
         if key == "backups":
             try: backups_tab_obj.render()
             except Exception: pass
@@ -1361,9 +1382,15 @@ def run_gui():
         try: set_profile_combo()
         except Exception: pass
         update_status_display()
-        render_browse()
-        render_installed()
-        render_wago()
+        # Render only the visible tab now; mark the rest dirty so they
+        # rebuild lazily when next shown. Keeps profile-switch and
+        # post-install refreshes from freezing on offscreen tabs.
+        active = current_tab.get()
+        for key in ("browse", "installed", "weakauras"):
+            if key == active:
+                _render_tab(key)
+            else:
+                _dirty_tabs.add(key)
         try: backups_tab_obj.render()
         except Exception: pass
 
