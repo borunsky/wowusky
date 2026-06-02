@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.5.5    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.6.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -19,7 +19,7 @@ maintained package.
 
 ### Architecture
 - **Modular layout** under `wowusky/core/`, `wowusky/providers/`,
-  `wowusky/catalog/`. app.py is down from 5179 to 3802 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
+  `wowusky/catalog/`. app.py is down from 5179 to 3385 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
   shed its duplicated `WOW_FLAVORS`, TOC helpers, HTTP helpers, and
   the inlined 241-entry catalog literal in favour of importing from
   `wowusky.core` and `wowusky.catalog`.
@@ -69,8 +69,8 @@ maintained package.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.5.5.zip
-cd wowusky-v0.5.5
+unzip wowusky-v0.6.0.zip
+cd wowusky-v0.6.0
 chmod +x install.sh
 ./install.sh
 ```
@@ -94,7 +94,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.5.5-py3-none-any.whl
+pip install dist/wowusky-0.6.0-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
@@ -141,7 +141,7 @@ wowusky/
 ├── wowusky/
 │   ├── __init__.py
 │   ├── __main__.py
-│   ├── app.py              ← Tk GUI + install orchestration (~3802 lines)
+│   ├── app.py              ← Tk GUI + install orchestration (~3385 lines)
 │   ├── core/
 │   │   ├── paths.py        ← XDG paths, per-profile locations
 │   │   ├── flavors.py      ← WoW versions + compatibility rules
@@ -177,7 +177,10 @@ wowusky/
 │   │       ├── log.py        ← LogTab (activity-log pane)
 │   │       ├── backups.py    ← BackupsTab (full-backup manager)
 │   │       ├── weakauras.py  ← WeakAurasTab (Wago.io aura tracker)
-│   │       └── installed.py  ← InstalledTab (installed-addon manager)
+│   │       ├── installed.py  ← InstalledTab (installed-addon manager)
+│   │       ├── browse.py     ← BrowseTab (catalog browser)
+│   │       ├── importzip.py  ← ImportTab (manual ZIP import)
+│   │       └── curseforge.py ← CurseForgeTab (CurseForge search)
 │   └── tools/
 │       └── health_check.py  ← CLI that pings every catalog entry
 ├── tests/                   ← 109 tests

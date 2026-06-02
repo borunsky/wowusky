@@ -1548,7 +1548,7 @@ from wowusky.gui.theme import (  # noqa: E402
 # _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
 from wowusky.gui.context import AppContext  # noqa: E402
 from wowusky.gui.tabs import (  # noqa: E402
-    BackupsTab, InstalledTab, LogTab, WeakAurasTab)
+    BackupsTab, BrowseTab, CurseForgeTab, ImportTab, InstalledTab, LogTab, WeakAurasTab)
 from wowusky.gui.fonts import (  # noqa: E402
     _font_exists, make_font_set, resolve_mono_family, resolve_sans_family)
 from wowusky.gui.widgets import (  # noqa: E402, F401
@@ -1995,169 +1995,16 @@ def run_gui():
         if key == "curseforge" and get_curseforge_api_key():
             # Show popular addons when the tab is opened and no results are visible yet.
             try:
-                if "cf_results" in locals() and not cf_results.winfo_children():
-                    cf_search_ui(initial=True)
+                if not cf_tab_obj._results_frame.winfo_children():
+                    cf_tab_obj.search(initial=True)
             except Exception:
                 pass
 
     # ----------------------------------------------------------
     # Tab: BROWSE
     # ----------------------------------------------------------
-    browse_tab = tk.Frame(content, bg=C["bg"])
-    tabs["browse"] = browse_tab
-
-    # Filter card — surface + border (matches prototype)
-    filter_card = tk.Frame(browse_tab, bg=C["surface"],
-                           highlightbackground=C["border"], highlightthickness=1)
-    filter_card.pack(fill="x", padx=10, pady=(14, 10))
-
-    # ── Row 1 — Search box (left, expand) + Sort dropdown (right) ────────
-    row1 = tk.Frame(filter_card, bg=C["surface"])
-    row1.pack(fill="x", padx=10, pady=(10, 8))
-
-    search_wrap = tk.Frame(row1, bg=C["input_bg"],
-                           highlightbackground=C["border"], highlightthickness=1)
-    search_wrap.pack(side="left", fill="x", expand=True, padx=(0, 8))
-    tk.Label(search_wrap, text="⌕",
-             bg=C["input_bg"], fg=C["text_muted"],
-             font=(sans_family, 12), padx=10).pack(side="left")
-    search_var = tk.StringVar()
-    tk.Entry(search_wrap, textvariable=search_var,
-             bg=C["input_bg"], fg=C["text"],
-             insertbackground=C["accent"],
-             font=FONT_BODY,
-             borderwidth=0, highlightthickness=0,
-             relief="flat").pack(side="left", fill="x", expand=True,
-                                  ipady=6, padx=(0, 10))
-
-    sort_var = tk.StringVar(value="Popular")
-    sort_dd = ttk.Combobox(row1, textvariable=sort_var,
-                           values=["Popular", "Name (A–Z)", "Recently updated"],
-                           state="readonly", font=FONT_SM, width=18)
-    sort_dd.pack(side="right", ipady=3)
-
-    # ── Row 2 — Chips for Flavor + Source + Category dropdown + count ────
-    row2 = tk.Frame(filter_card, bg=C["surface"])
-    row2.pack(fill="x", padx=10, pady=(0, 10))
-
-    # Chip helper (used by both flavor + source rows)
-    ACCENT_SOFT = "#0f3530"
-    chip_widgets = []
-
-    def make_chip(parent, text, is_active_fn, on_click_fn):
-        c = tk.Label(parent, text=text,
-                     bg=C["surface"], fg=C["text_dim"],
-                     font=(sans_family, 8, "bold"),
-                     padx=9, pady=2, cursor="hand2",
-                     highlightbackground=C["border"], highlightthickness=1)
-        def refresh():
-            on = is_active_fn()
-            c.configure(
-                bg=ACCENT_SOFT if on else C["surface"],
-                fg=C["accent"] if on else C["text_dim"],
-                highlightbackground=C["accent"] if on else C["border"],
-            )
-        c._refresh = refresh
-        c.bind("<Button-1>", lambda e: (on_click_fn(), refresh_chips(), render_browse()))
-        refresh()
-        chip_widgets.append(c)
-        return c
-
-    def refresh_chips():
-        for c in chip_widgets:
-            try: c._refresh()
-            except Exception: pass
-
-    # Flavor chips (override profile-based filter)
-    # "auto" = follow active profile; "all" = no filter; flavor key = explicit
-    flavor_filter_var = tk.StringVar(value="auto")
-    show_all_var = tk.BooleanVar(value=False)
-    def set_flavor(key):
-        flavor_filter_var.set(key)
-        show_all_var.set(key == "all")
-
-    tk.Label(row2, text="FLAVOR",
-             bg=C["surface"], fg=C["text_muted"],
-             font=(sans_family, 8, "bold")).pack(side="left", padx=(0, 8))
-    fl_chips = tk.Frame(row2, bg=C["surface"])
-    fl_chips.pack(side="left", padx=(0, 14))
-    FLAVOR_OPTS = [("Active", "auto"),
-                   ("Retail", "retail"), ("TBC", "anniversary"),
-                   ("Era", "vanilla"),   ("MoP", "mop_classic"),
-                   ("All",    "all")]
-    for label, key in FLAVOR_OPTS:
-        make_chip(fl_chips, label,
-                  (lambda k=key: flavor_filter_var.get() == k),
-                  (lambda k=key: set_flavor(k))).pack(side="left", padx=2)
-
-    # Source chips
-    SOURCE_FILTER_MAP = {
-        "GitHub":       {"github"},
-        "Tukui":        {"tukui"},
-        "WoWI":         {"wowi"},
-        "CurseForge":   {"curseforge", "curseforge_web", "curseforge_manual"},
-        "Local":        {"manual", "external"},
-        "wowusky":      {"internal_wac"},
-    }
-    source_vars = {name: tk.BooleanVar(value=True) for name in SOURCE_FILTER_MAP}
-    def selected_source_set():
-        enabled = set()
-        for name, var in source_vars.items():
-            if var.get():
-                enabled.update(SOURCE_FILTER_MAP[name])
-        return enabled
-    def toggle_source(name):
-        source_vars[name].set(not source_vars[name].get())
-
-    tk.Label(row2, text="SOURCE",
-             bg=C["surface"], fg=C["text_muted"],
-             font=(sans_family, 8, "bold")).pack(side="left", padx=(0, 8))
-    src_chips = tk.Frame(row2, bg=C["surface"])
-    src_chips.pack(side="left", padx=(0, 14))
-    for name in SOURCE_FILTER_MAP:
-        make_chip(src_chips, name,
-                  (lambda n=name: source_vars[n].get()),
-                  (lambda n=name: toggle_source(n))).pack(side="left", padx=2)
-
-    # Category dropdown (compact)
-    cat_var = tk.StringVar(value="All categories")
-    cat_dd = ttk.Combobox(row2, textvariable=cat_var,
-                          values=["All categories"] + get_categories(),
-                          state="readonly", font=FONT_SM, width=15)
-    cat_dd.pack(side="left", padx=(0, 8), ipady=2)
-
-    # Result count (right side)
-    result_count_var = tk.StringVar(value="")
-    tk.Label(row2, textvariable=result_count_var,
-             bg=C["surface"], fg=C["text_muted"],
-             font=(mono_family, 9)).pack(side="right")
-
-    # Keep legacy update_source_btn() noop so existing callers don't break
-    def update_source_btn():
-        refresh_chips(); render_browse()
-    def update_show_all_btn():
-        refresh_chips()
-
-    # Scroll area — wrapped in a "list card" with border (matches prototype)
-    list_wrap = tk.Frame(browse_tab, bg=C["surface"],
-                         highlightbackground=C["border"], highlightthickness=1)
-    list_wrap.pack(fill="both", expand=True, padx=10, pady=(0, 16))
-
-    browse_scroll = tk.Frame(list_wrap, bg=C["bg"])
-    browse_scroll.pack(fill="both", expand=True)
-
-    browse_canvas = tk.Canvas(browse_scroll, bg=C["bg"],
-                               highlightthickness=0, borderwidth=0)
-    browse_canvas.pack(side="left", fill="both", expand=True)
-
-    HoverScrollbar(browse_scroll, browse_canvas)
-
-    browse_inner = tk.Frame(browse_canvas, bg=C["bg"])
-    bcw = browse_canvas.create_window((0, 0), window=browse_inner, anchor="nw")
-    browse_inner.bind("<Configure>",
-        lambda e: browse_canvas.configure(scrollregion=browse_canvas.bbox("all")))
-    browse_canvas.bind("<Configure>",
-        lambda e: browse_canvas.itemconfig(bcw, width=e.width))
+    # Tab: BROWSE is built below (wowusky.gui.tabs.BrowseTab), after
+    # render_browse_card (its per-row renderer) is defined.
 
     # ----------------------------------------------------------
     # Tab: INSTALLED
@@ -2227,147 +2074,26 @@ def run_gui():
     tabs["weakauras"] = weakauras_tab_obj.frame
 
     # ----------------------------------------------------------
-    # Tab: IMPORT (manual ZIP)
+    # Tab: IMPORT  (wowusky.gui.tabs.ImportTab)
     # ----------------------------------------------------------
-    manual_tab = tk.Frame(content, bg=C["bg"])
-    tabs["manual"] = manual_tab
-
-    man_inner = tk.Frame(manual_tab, bg=C["bg"])
-    man_inner.pack(fill="both", expand=True, padx=10, pady=10)
-
-    tk.Label(man_inner, text="Import from ZIP",
-             bg=C["bg"], fg=C["text"],
-             font=FONT_HEAD).pack(anchor="w")
-    tk.Label(man_inner,
-             text="For addons not in our catalog (CurseForge, manual downloads, etc.)",
-             bg=C["bg"], fg=C["text_dim"],
-             font=FONT_BODY).pack(anchor="w", pady=(4, 20))
-
-    tk.Label(man_inner, text="ZIP file",
-             bg=C["bg"], fg=C["text_muted"],
-             font=FONT_SM, anchor="w").pack(fill="x", pady=(0, 6))
-
-    file_row = tk.Frame(man_inner, bg=C["surface"])
-    file_row.pack(fill="x", pady=(0, 16))
-
-    manual_file_var = tk.StringVar()
-    tk.Entry(file_row, textvariable=manual_file_var,
-             bg=C["surface"], fg=C["text"],
-             insertbackground=C["accent"],
-             font=FONT_BODY, borderwidth=0,
-             highlightthickness=0, relief="flat").pack(
-        side="left", fill="x", expand=True, ipady=8, padx=12)
-
-    manual_name_var = tk.StringVar()
-
-    def pick_zip():
-        path = filedialog.askopenfilename(
-            title="Select addon ZIP",
-            filetypes=[("ZIP files", "*.zip"), ("All", "*.*")],
-            initialdir=os.path.expanduser("~/Downloads"))
-        if path:
-            manual_file_var.set(path)
-            if not manual_name_var.get():
-                guess = os.path.splitext(os.path.basename(path))[0]
-                guess = re.sub(r'[-_]?\d+(\.\d+)*.*$', '', guess)
-                manual_name_var.set(guess)
-
-    make_button(file_row, "Browse…", pick_zip, variant="ghost").pack(side="right", padx=6, pady=4)
-
-    def use_latest_download_zip():
-        path = newest_download_zip()
-        if not path:
-            messagebox.showinfo("Downloads", "Keine ZIP-Datei im Downloads-Ordner gefunden.")
-            return
-        manual_file_var.set(path)
-        manual_name_var.set(guess_addon_name_from_zip(path))
-
-    make_button(file_row, "Latest", use_latest_download_zip, variant="ghost").pack(side="right", padx=(0, 2), pady=4)
-
-    tk.Label(man_inner, text="Name",
-             bg=C["bg"], fg=C["text_muted"],
-             font=FONT_SM, anchor="w").pack(fill="x", pady=(0, 6))
-
-    name_row = tk.Frame(man_inner, bg=C["surface"])
-    name_row.pack(fill="x", pady=(0, 20))
-
-    tk.Entry(name_row, textvariable=manual_name_var,
-             bg=C["surface"], fg=C["text"],
-             insertbackground=C["accent"],
-             font=FONT_BODY, borderwidth=0,
-             highlightthickness=0, relief="flat").pack(
-        fill="x", ipady=8, padx=12)
-
-    def install_manual():
-        zp = manual_file_var.get().strip()
-        name = manual_name_var.get().strip()
-        if not zp or not os.path.isfile(zp):
-            messagebox.showerror("Error", "Please select a valid ZIP file.")
-            return
-        if not name:
-            messagebox.showerror("Error", "Please enter a name.")
-            return
+    def _on_install_zip(zip_path, name, cf_ref):
         ap = get_addons_path()
         if not ap:
             messagebox.showerror("No path", "Configure WoW path first.")
             return
-
         current_tab.set("log"); update_nav_styles(); show_tab("log")
-
         def task():
             try:
-                import_zip_file(zp, ap, name=name, source="manual", log=log_msg, curseforge_slug=cf_slug_from_ref(curseforge_ref_var.get()), curseforge_url=curseforge_files_url(curseforge_ref_var.get()) if curseforge_ref_var.get().strip() else None)
+                import_zip_file(zip_path, ap, name=name, source="manual", log=log_msg,
+                                curseforge_slug=cf_slug_from_ref(cf_ref),
+                                curseforge_url=curseforge_files_url(cf_ref) if cf_ref.strip() else None)
                 root.after(0, refresh_all)
-                root.after(0, lambda: (manual_file_var.set(""), manual_name_var.set("")))
+                root.after(0, import_tab_obj.clear)
             except Exception as e:
-                err = str(e)
-                log_msg(f"  ✗ {err}\n")
-
+                log_msg(f"  ✗ {e}\n")
         threading.Thread(target=task, daemon=True).start()
 
-    import_btn_row = tk.Frame(man_inner, bg=C["bg"])
-    import_btn_row.pack(anchor="w", fill="x")
-    make_button(import_btn_row, "Import selected ZIP", install_manual,
-                variant="primary").pack(side="left")
-
-    def import_latest_download_zip():
-        path = newest_download_zip()
-        if not path:
-            messagebox.showinfo("Downloads", "Keine ZIP-Datei im Downloads-Ordner gefunden.")
-            return
-        manual_file_var.set(path)
-        manual_name_var.set(guess_addon_name_from_zip(path))
-        install_manual()
-
-    make_button(import_btn_row, "Import latest from Downloads", import_latest_download_zip,
-                variant="ghost").pack(side="left", padx=(8, 0))
-
-    tk.Frame(man_inner, bg=C["border"], height=1).pack(fill="x", pady=(28, 16))
-
-    tk.Label(man_inner, text="CurseForge",
-             bg=C["bg"], fg=C["text"],
-             font=FONT_BODY).pack(anchor="w", pady=(0, 4))
-    tk.Label(man_inner,
-             text='Ohne freigeschalteten API-Key öffnet wowusky die CurseForge-Seite im Browser. Lade dort die ZIP herunter und klicke danach auf "Import latest from Downloads".',
-             bg=C["bg"], fg=C["text_dim"],
-             font=FONT_SM, justify="left", wraplength=520).pack(anchor="w", pady=(0, 10))
-
-    cf_row = tk.Frame(man_inner, bg=C["surface"])
-    cf_row.pack(fill="x", pady=(0, 12))
-
-    curseforge_ref_var = tk.StringVar()
-    tk.Entry(cf_row, textvariable=curseforge_ref_var,
-             bg=C["surface"], fg=C["text"],
-             insertbackground=C["accent"],
-             font=FONT_BODY, borderwidth=0,
-             highlightthickness=0, relief="flat").pack(
-        side="left", fill="x", expand=True, ipady=8, padx=12)
-
-    def install_cf_from_ui():
-        ref = curseforge_ref_var.get().strip()
-        if not ref:
-            messagebox.showerror("Error", "Paste a CurseForge URL, slug, or project id.")
-            return
+    def _on_install_cf(ref):
         if not get_curseforge_api_key():
             messagebox.showinfo("CurseForge fallback",
                                 "CurseForge wird im Browser mit passendem Versionsfilter geöffnet. Lade die ZIP herunter und klicke danach auf 'Import latest from Downloads'.")
@@ -2377,74 +2103,45 @@ def run_gui():
         if not ap:
             messagebox.showerror("No path", "Configure WoW path first.")
             return
-
         current_tab.set("log"); update_nav_styles(); show_tab("log")
-
         def task():
             try:
                 install_curseforge(ref, ap, log=log_msg)
                 root.after(0, refresh_all)
-                root.after(0, lambda: curseforge_ref_var.set(""))
+                root.after(0, lambda: import_tab_obj.cf_ref_var.set(""))
             except Exception as e:
                 log_msg(f"  ✗ CurseForge: {e}\n")
-
         threading.Thread(target=task, daemon=True).start()
 
-    def open_cf_from_ui():
-        ref = curseforge_ref_var.get().strip()
-        open_in_browser(curseforge_files_url(ref) if cf_slug_from_ref(ref) else curseforge_search_url(ref))
+    import_tab_obj = ImportTab(
+        ctx, content,
+        newest_download_zip=newest_download_zip,
+        guess_name_from_zip=guess_addon_name_from_zip,
+        cf_slug_from_ref=cf_slug_from_ref,
+        cf_files_url=curseforge_files_url,
+        cf_search_url=curseforge_search_url,
+        has_cf_api_key=get_curseforge_api_key,
+        on_install_zip=_on_install_zip,
+        on_install_cf=_on_install_cf,
+        open_url=open_in_browser,
+    )
+    tabs["manual"] = import_tab_obj.frame
 
-    make_button(cf_row, "Install", install_cf_from_ui,
-                variant="primary").pack(side="right", padx=6, pady=4)
-    make_button(cf_row, "Open", open_cf_from_ui,
-                variant="ghost").pack(side="right", padx=(0, 2), pady=4)
+    def import_latest_download_zip():
+        path = newest_download_zip()
+        if not path:
+            messagebox.showinfo("Downloads", "Keine ZIP-Datei im Downloads-Ordner gefunden.")
+            return
+        import_tab_obj.file_var.set(path)
+        import_tab_obj.name_var.set(guess_addon_name_from_zip(path))
+        import_tab_obj._install()
 
     # ----------------------------------------------------------
-    # Tab: CURSEFORGE
+    # Tab: CURSEFORGE  (wowusky.gui.tabs.CurseForgeTab)
     # ----------------------------------------------------------
-    cf_tab = tk.Frame(content, bg=C["bg"])
-    tabs["curseforge"] = cf_tab
-
-    cf_outer = tk.Frame(cf_tab, bg=C["bg"])
-    cf_outer.pack(fill="both", expand=True, padx=10, pady=10)
-
-    tk.Label(cf_outer, text="CurseForge",
-             bg=C["bg"], fg=C["text"], font=FONT_HEAD).pack(anchor="w")
-    tk.Label(cf_outer,
-             text="CurseForge API-Suche mit freigeschaltetem Key. Ohne Key: Webseite mit passendem Flavor-Filter öffnen, ZIP laden, danach automatisch die neueste ZIP aus ~/Downloads importieren.",
-             bg=C["bg"], fg=C["text_dim"], font=FONT_SM,
-             wraplength=520, justify="left").pack(anchor="w", pady=(3, 8))
-
-    cf_search_row = tk.Frame(cf_outer, bg=C["surface"])
-    cf_search_row.pack(fill="x", pady=(0, 8))
-    cf_search_var = tk.StringVar()
-    tk.Entry(cf_search_row, textvariable=cf_search_var,
-             bg=C["surface"], fg=C["text"], insertbackground=C["accent"],
-             font=FONT_BODY, borderwidth=0, highlightthickness=0,
-             relief="flat").pack(side="left", fill="x", expand=True, ipady=8, padx=10)
-
-    cf_results_wrap = tk.Frame(cf_outer, bg=C["bg"])
-    cf_results_wrap.pack(fill="both", expand=True)
-    cf_canvas = tk.Canvas(cf_results_wrap, bg=C["bg"], highlightthickness=0, borderwidth=0)
-    cf_canvas.pack(side="left", fill="both", expand=True)
-    HoverScrollbar(cf_results_wrap, cf_canvas)
-    cf_results = tk.Frame(cf_canvas, bg=C["bg"])
-    cfw = cf_canvas.create_window((0, 0), window=cf_results, anchor="nw")
-    cf_results.bind("<Configure>", lambda e: cf_canvas.configure(scrollregion=cf_canvas.bbox("all")))
-    cf_canvas.bind("<Configure>", lambda e: cf_canvas.itemconfig(cfw, width=e.width))
-
-    cf_status_var = tk.StringVar(value="")
-    tk.Label(cf_outer, textvariable=cf_status_var,
-             bg=C["bg"], fg=C["text_dim"], font=FONT_XS,
-             anchor="w").pack(fill="x", pady=(6, 0))
-
-    def clear_cf_results():
-        for w in cf_results.winfo_children():
-            w.destroy()
-
-    def make_cf_card(mod):
+    def make_cf_card(parent_frame, mod):
         summary = curseforge_mod_summary(mod)
-        card = tk.Frame(cf_results, bg=C["surface"], padx=10, pady=8)
+        card = tk.Frame(parent_frame, bg=C["surface"], padx=10, pady=8)
         card.pack(fill="x", pady=(0, 8))
         tk.Label(card, text=summary["name"], bg=C["surface"], fg=C["text"],
                  font=FONT_NAME, anchor="w").pack(fill="x")
@@ -2480,60 +2177,30 @@ def run_gui():
             tk.Label(row, text=summary["url"], bg=C["surface"], fg=C["text_muted"],
                      font=FONT_XS, anchor="w").pack(side="left", fill="x", expand=True, padx=(8, 0))
 
-    def render_cf_fallback(reason=""):
-        clear_cf_results()
-        card = tk.Frame(cf_results, bg=C["surface"], padx=12, pady=10)
-        card.pack(fill="x", pady=(0, 8))
-        tk.Label(card, text="CurseForge API nicht verfuegbar",
-                 bg=C["surface"], fg=C["text"], font=FONT_NAME, anchor="w").pack(fill="x")
-        msg = reason or "Kein freigeschalteter Third-Party/Core API-Key vorhanden."
-        tk.Label(card, text=msg, bg=C["surface"], fg=C["text_dim"],
-                 font=FONT_SM, anchor="w", justify="left", wraplength=520).pack(fill="x", pady=(4, 8))
-        tk.Label(card, text="Fallback: Addon auf CurseForge im Browser oeffnen, ZIP herunterladen und im Import-Tab installieren.",
-                 bg=C["surface"], fg=C["text_muted"], font=FONT_XS,
-                 anchor="w", justify="left", wraplength=520).pack(fill="x", pady=(0, 8))
-        row = tk.Frame(card, bg=C["surface"])
-        row.pack(fill="x")
-        make_button(row, "Open CurseForge", lambda: open_in_browser(curseforge_search_url(cf_search_var.get())),
-                    variant="primary", compact=True).pack(side="left")
-        make_button(row, "Import Tab", lambda: (current_tab.set("manual"), update_nav_styles(), show_tab("manual")),
-                    variant="ghost", compact=True).pack(side="left", padx=(6, 0))
-        make_button(row, "Import latest ZIP", lambda: (current_tab.set("manual"), update_nav_styles(), show_tab("manual"), import_latest_download_zip()),
-                    variant="ghost", compact=True).pack(side="left", padx=(6, 0))
-        cf_status_var.set("Fallback aktiv: Browser + ZIP Import")
-
-    def cf_search_ui(initial=False):
-        q = cf_search_var.get().strip()
-        if not get_curseforge_api_key():
-            render_cf_fallback()
-            return
-        clear_cf_results()
-        cf_status_var.set("Searching...")
-
+    def _run_cf_search(q, on_results, on_error):
         def task():
             try:
                 results = curseforge_search(q, page_size=40)
-                def render():
-                    clear_cf_results()
-                    if not results:
-                        cf_status_var.set("Keine CurseForge-Addons gefunden.")
-                        return
-                    for mod in results:
-                        make_cf_card(mod)
-                    cf_status_var.set(f"{len(results)} Ergebnisse")
-                root.after(0, render)
+                root.after(0, lambda: on_results(results))
             except Exception as e:
                 err = str(e)
-                root.after(0, lambda err=err: render_cf_fallback(err))
+                root.after(0, lambda err=err: on_error(err))
         threading.Thread(target=task, daemon=True).start()
 
-    cf_search_var.trace_add("write", lambda *_: None)
-    make_button(cf_search_row, "Search", cf_search_ui,
-                variant="primary", compact=True).pack(side="right", padx=5, pady=4)
-    tk.Label(cf_outer,
-             text="Tipp: Ohne API-Key oeffnet Search die CurseForge-Webseite. ZIP danach im Import-Tab installieren.",
-             bg=C["bg"], fg=C["text_muted"], font=FONT_XS,
-             anchor="w", justify="left").pack(fill="x", pady=(6, 0))
+    cf_tab_obj = CurseForgeTab(
+        ctx, content,
+        has_cf_api_key=get_curseforge_api_key,
+        run_cf_search=_run_cf_search,
+        render_mod_card=make_cf_card,
+        cf_search_url=curseforge_search_url,
+        goto_import=lambda: (current_tab.set("manual"), update_nav_styles(), show_tab("manual")),
+        import_latest_zip=import_latest_download_zip,
+        open_url=open_in_browser,
+    )
+    tabs["curseforge"] = cf_tab_obj.frame
+
+    def cf_search_ui(initial=False):
+        cf_tab_obj.search(initial=initial)
 
 
     # ----------------------------------------------------------
@@ -2851,6 +2518,17 @@ def run_gui():
         # Bottom border
         tk.Frame(parent, bg=C["border"], height=1).pack(fill="x")
 
+    browse_tab_obj = BrowseTab(
+        ctx, content,
+        get_catalog=lambda: ADDON_CATALOG,
+        load_installed=load_installed,
+        get_categories=get_categories,
+        get_current_flavor=get_current_flavor,
+        filter_by_flavor=filter_catalog_by_flavor,
+        render_card=render_browse_card,
+    )
+    tabs["browse"] = browse_tab_obj.frame
+
     def show_installed_addon_manager(addon_id, entry):
         """Per-addon manager: version history, backups, rollback to specific backup."""
         dlg = tk.Toplevel(root)
@@ -2931,87 +2609,7 @@ def run_gui():
     # Render functions
     # ----------------------------------------------------------
     def render_browse():
-        for w in browse_inner.winfo_children():
-            w.destroy()
-
-        # Table column header
-        header = tk.Frame(browse_inner, bg=C["surface_hi"])
-        header.pack(fill="x")
-        header_body = tk.Frame(header, bg=C["surface_hi"])
-        header_body.pack(fill="x", padx=14, pady=8)
-        # Action column spacer
-        tk.Frame(header_body, bg=C["surface_hi"], width=90).pack(side="right")
-        tk.Label(header_body, text="SOURCE",
-                 bg=C["surface_hi"], fg=C["text_muted"],
-                 font=(sans_family, 8, "bold"),
-                 width=12, anchor="e").pack(side="right", padx=(0, 14))
-        tk.Label(header_body, text="VERSION",
-                 bg=C["surface_hi"], fg=C["text_muted"],
-                 font=(sans_family, 8, "bold"),
-                 width=20, anchor="e").pack(side="right", padx=(0, 14))
-        # Category icon column spacer (width 2 + padding 12 = ~34px)
-        tk.Frame(header_body, bg=C["surface_hi"], width=34).pack(side="left")
-        tk.Label(header_body, text="NAME",
-                 bg=C["surface_hi"], fg=C["text_muted"],
-                 font=(sans_family, 8, "bold"),
-                 anchor="w").pack(side="left")
-        tk.Frame(browse_inner, bg=C["border"], height=1).pack(fill="x")
-
-        installed = load_installed()
-        q = search_var.get().lower().strip()
-        cat = cat_var.get()
-        source_allowed = selected_source_set()
-
-        # Flavor filter (driven by chip state)
-        current_flavor = get_current_flavor()
-        fl_key = flavor_filter_var.get()
-        if fl_key == "all":
-            base = ADDON_CATALOG
-        elif fl_key == "auto":
-            base = filter_catalog_by_flavor(ADDON_CATALOG, current_flavor) if current_flavor else ADDON_CATALOG
-        else:
-            base = filter_catalog_by_flavor(ADDON_CATALOG, fl_key)
-
-        filtered = []
-        for a in base:
-            if cat != "All categories" and a["category"] != cat: continue
-            if a.get("source") not in source_allowed: continue
-            if q:
-                h = f"{a['name']} {a['description']} {a['author']} {a.get('source','')} {a.get('curseforge_slug','')}".lower()
-                if q not in h: continue
-            filtered.append(a)
-
-        # Sort
-        sk = sort_var.get()
-        if sk.startswith("Name"):
-            filtered.sort(key=lambda a: a.get("name", "").lower())
-        elif sk.startswith("Recently"):
-            filtered.sort(key=lambda a: a.get("name", "").lower())  # stable; no date in catalog
-        # Popular = catalog order (default)
-
-        # Update result count
-        try:
-            result_count_var.set(f"{len(filtered)} results")
-        except Exception:
-            pass
-
-        if not filtered:
-            empty = tk.Frame(browse_inner, bg=C["bg"])
-            empty.pack(expand=True, pady=60)
-            tk.Label(empty, text="No addons match these filters",
-                     bg=C["bg"], fg=C["text_muted"],
-                     font=FONT_BODY).pack()
-            if flavor_filter_var.get() != "all":
-                tk.Label(empty,
-                         text="Click the 'All' flavor chip to see the full catalog",
-                         bg=C["bg"], fg=C["text_muted"],
-                         font=FONT_SM).pack(pady=(6, 0))
-            return
-
-        # Flavor info header (skip — result count is in filter bar now)
-
-        for a in filtered:
-            render_browse_card(browse_inner, a, installed.get(a["id"]))
+        browse_tab_obj.render()
 
     def trigger_create_full_backup():
         current_tab.set("log"); update_nav_styles(); show_tab("log")
@@ -3228,31 +2826,16 @@ def run_gui():
         threading.Thread(target=task, daemon=True).start()
 
     # ----------------------------------------------------------
-    # Filter callbacks
-    # ----------------------------------------------------------
-    render_job = [None]
-    def schedule_render_browse(*_):
-        if render_job[0] is not None:
-            try:
-                root.after_cancel(render_job[0])
-            except Exception:
-                pass
-        render_job[0] = root.after(120, render_browse)
-
-    search_var.trace_add("write", schedule_render_browse)
-    cat_var.trace_add("write", schedule_render_browse)
-    sort_var.trace_add("write", schedule_render_browse)
-
-    # ----------------------------------------------------------
     # Mouse wheel
     # ----------------------------------------------------------
     def on_wheel(event):
         tab = current_tab.get()
         canvas = {
-            "browse":    browse_canvas,
-            "installed": installed_tab_obj.canvas,
-            "weakauras": weakauras_tab_obj.canvas,
-            "backups":   backups_tab_obj.canvas,
+            "browse":      browse_tab_obj.canvas,
+            "installed":   installed_tab_obj.canvas,
+            "weakauras":   weakauras_tab_obj.canvas,
+            "backups":     backups_tab_obj.canvas,
+            "curseforge":  cf_tab_obj.canvas,
         }.get(tab)
         if canvas is None: return
         delta = -1 if (event.num == 4 or (event.delta and event.delta > 0)) else 1
