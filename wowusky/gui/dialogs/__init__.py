@@ -6,6 +6,7 @@ Like the tab classes, each dialog is extracted out of the historic
 config / profile / provider operations it performs.
 """
 
+from .addon_details import AddonDetailsDialog
 from .settings import SettingsDialog
 
-__all__ = ["SettingsDialog"]
+__all__ = ["AddonDetailsDialog", "SettingsDialog"]
