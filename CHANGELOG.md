@@ -4,6 +4,44 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] — 2026-06-02
+
+Refactor release — Etappe F. The remaining business logic moves out of
+`app.py` into dedicated `wowusky/core/` modules, continuing the journey
+toward `app.py < 500 lines`. No user-facing behaviour changes; this is a
+pure internal restructuring backed by new unit tests.
+
+### Changed
+- **Manager-state persistence → `core/state.py`** (F1): config, profiles,
+  per-profile installed DB, the tracked-Wago store, plus path/flavor
+  inference and the dict-based profile model. `app.py` re-exports these so
+  every existing call site keeps working. `get_wtf_path()` now lives here.
+- **Install discovery + DB reconcile → `core/scan.py`** (F2):
+  `scan_wow_installations()` (Steam/Wine/Lutris globbing with duplicate
+  alias dedupe) and `sync_filesystem_with_db()` (drop stale entries, adopt
+  on-disk folders). The catalog is injected as a parameter so the module
+  stays decoupled from how `app.py` loads it.
+- **Backup / rollback → `core/backup.py`** (F3): `backup_addon_folders`,
+  `list_addon_backups`, `latest_backup_for_addon`, `rollback_addon`,
+  `rollback_addon_to_backup`, and the full-profile backup operations
+  (`create_full_backup`, `restore_full_backup`, `list_full_backups`,
+  `full_backup_dir`). `app.py` imports them back as thin re-exports.
+- **Wago tracking + WeakAuras → `core/wago.py`** (F4): the tracking list
+  helpers (`wago_add`, `wago_remove`, `wago_check_updates`, `wago_search`),
+  the SavedVariables scanner (`find_weakauras_savedvariables`,
+  `extract_wago_slugs_from_text`,
+  `import_existing_weakauras_from_savedvariables`) and the
+  WeakAurasCompanion generator. `generate_wac_companion` now takes the TOC
+  `interface` and `app_version` as parameters; `app.py` keeps a thin
+  wrapper that resolves the active flavor's interface.
+- **`app.py` is down from 2616 to 2182 lines.**
+
+### Added
+- New test modules: `tests/test_backup_ops.py` (16 tests for the
+  profile-aware backup/rollback/full-backup path) and `tests/test_wago.py`
+  (15 tests for the tracking list, slug extraction, SavedVariables import
+  and companion generation). The suite grows to **264 tests** (49 Tk-gated).
+
 ## [0.6.2] — 2026-06-02
 
 Bugfix release — stop a GUI test from blocking the package build with a
@@ -681,6 +719,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.6.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.3
 [0.6.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.2
 [0.6.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.1
 [0.6.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.0
