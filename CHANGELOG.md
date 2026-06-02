@@ -4,6 +4,21 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] — 2026-06-02
+
+Bugfix release — stop a GUI test from blocking the package build with a
+modal dialog.
+
+### Fixed
+- During `makepkg check()` on a machine with a display, the ImportTab test
+  `test_import_tab_install_skips_when_no_file` reached
+  `ImportTab._install()` with no file selected, which popped a real
+  `messagebox.showerror("Please select a valid ZIP file.")` modal that
+  blocked the build indefinitely (the build hung waiting for an "OK"
+  click). A new `tests/conftest.py` autouse fixture now stubs all
+  `tkinter.messagebox` dialogs (and auto-confirms prompts) across the whole
+  suite, so tests stay non-interactive whether or not a display is present.
+
 ## [0.6.1] — 2026-06-02
 
 Bugfix release — make the AUR/package build pass on machines with a display.
@@ -666,6 +681,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.6.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.2
 [0.6.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.1
 [0.6.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.0
 [0.5.5]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.5
