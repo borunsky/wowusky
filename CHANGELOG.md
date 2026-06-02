@@ -4,6 +4,31 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-06-02
+
+GUI extraction — Etappe D abgeschlossen (D6–D9). Alle sieben Tab-Panes sind
+jetzt eigenständige Klassen in `wowusky/gui/tabs/`. `app.py` schrumpft von
+5179 auf 3385 Zeilen; die Testsuite wächst auf 248 Tests (37 Tk-gated, die
+auf headless CI sauber überspringen).
+
+### Added
+- `WeakAurasTab`, `InstalledTab`, `BrowseTab`, `ImportTab`, `CurseForgeTab`
+  (`gui/tabs/`) — jede Klasse nimmt `ctx: AppContext` + keyword-only
+  Callbacks, baut ihr eigenes `.frame`, besitzt UI-State (StringVars,
+  Chip-State, Debounce-Timer) und delegiert Threading/Install/Navigation
+  an injizierte Callables.
+- Neue Tests: `test_gui_browse_tab.py` (8), `test_gui_import_tab.py` (8) —
+  zusätzlich zu den früheren `test_gui_weakauras_tab.py` und
+  `test_gui_installed_tab.py`.
+
+### Changed
+- `render_browse_card` und `make_cf_card` bleiben als injizierte
+  `render_card` / `render_mod_card` Callbacks in `app.py` (abhängig von
+  `DOWNLOAD_QUEUE`, `trigger_install`, `version_cache` und
+  Navigations-Closures).
+- Mouse-Wheel-Handler kennt jetzt alle Tab-Canvas-Objekte inklusive
+  CurseForge.
+
 ## [0.5.5] — 2026-06-01
 
 GUI extraction — Etappe D (D1–D5). Move the Tk layer out of the `app.py`
@@ -627,6 +652,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.6.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.0
 [0.5.5]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.5
 [0.5.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.4
 [0.5.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.5.3

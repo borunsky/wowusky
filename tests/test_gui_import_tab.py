@@ -95,7 +95,8 @@ def test_import_tab_clear_resets_fields():
 def test_import_tab_install_calls_on_install_zip():
     root = _make_root()
     try:
-        import tempfile, os
+        import os
+        import tempfile
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
             tmp = f.name
         try:
