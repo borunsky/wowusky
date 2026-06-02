@@ -1547,7 +1547,7 @@ from wowusky.gui.theme import (  # noqa: E402
 
 # _safe_grab / _font_exists / UltraHiddenScrollbar / HoverScrollbar moved to wowusky.gui.
 from wowusky.gui.context import AppContext  # noqa: E402
-from wowusky.gui.dialogs import SettingsDialog  # noqa: E402
+from wowusky.gui.dialogs import AddonDetailsDialog, SettingsDialog  # noqa: E402
 from wowusky.gui.tabs import (  # noqa: E402
     BackupsTab, BrowseTab, CurseForgeTab, ImportTab, InstalledTab, LogTab, WeakAurasTab)
 from wowusky.gui.fonts import (  # noqa: E402
@@ -2365,46 +2365,15 @@ def run_gui():
         threading.Thread(target=task, daemon=True).start()
 
     def show_addon_details(addon):
-        dlg = tk.Toplevel(root)
-        dlg.title(addon.get("name", "Addon"))
-        dlg.configure(bg=C["bg"])
-        dlg.geometry("560x520")
-        dlg.minsize(420, 360)
-        dlg.transient(root)
-        _safe_grab(dlg)
-        head = tk.Frame(dlg, bg=C["bg"])
-        head.pack(fill="x", padx=16, pady=(16, 8))
-        tk.Label(head, text=addon.get("name", "Addon"), bg=C["bg"], fg=C["text"], font=FONT_HEAD).pack(anchor="w")
-        tk.Label(head, text=f"{addon.get('author','')} · {addon.get('category','')} · {SOURCE_LABEL.get(addon.get('source'), addon.get('source',''))}", bg=C["bg"], fg=C["text_muted"], font=FONT_SM).pack(anchor="w", pady=(4,0))
-        tk.Label(dlg, text=addon.get("description", ""), bg=C["bg"], fg=C["text_dim"], font=FONT_SM, wraplength=500, justify="left").pack(anchor="w", fill="x", padx=16, pady=(0, 14))
-        btns = tk.Frame(dlg, bg=C["bg"])
-        btns.pack(fill="x", padx=16, pady=(0, 12))
-        make_button(btns, "Install latest", lambda a=addon: (dlg.destroy(), trigger_install(a)), variant="primary").pack(side="left", padx=(0,8))
-        page = provider_page_url(addon)
-        if page:
-            make_button(btns, "Open page", lambda url=page: open_in_browser(url), variant="outline").pack(side="left", padx=(0,8))
-        tk.Label(dlg, text="Available versions", bg=C["bg"], fg=C["text"], font=FONT_SECTION).pack(anchor="w", padx=16)
-        list_wrap = tk.Frame(dlg, bg=C["surface"])
-        list_wrap.pack(fill="both", expand=True, padx=16, pady=(8, 16))
-        loading = tk.Label(list_wrap, text="Loading version choices…", bg=C["surface"], fg=C["text_muted"], font=FONT_SM)
-        loading.pack(padx=12, pady=12, anchor="w")
-        def fill_versions():
-            choices = []
-            if addon.get("source") == "github":
-                choices = github_version_choices(addon)
-            def ui():
-                for w in list_wrap.winfo_children(): w.destroy()
-                if not choices:
-                    msg = "Direct version selection is only available when the provider exposes downloadable ZIP versions. For CurseForge/WoWInterface use Open page + ZIP import."
-                    tk.Label(list_wrap, text=msg, bg=C["surface"], fg=C["text_dim"], font=FONT_SM, wraplength=480, justify="left").pack(anchor="w", padx=12, pady=12)
-                    return
-                for ch in choices:
-                    row = tk.Frame(list_wrap, bg=C["surface"])
-                    row.pack(fill="x", padx=8, pady=4)
-                    tk.Label(row, text=ch["label"], bg=C["surface"], fg=C["text"], font=FONT_SM, anchor="w").pack(side="left", fill="x", expand=True)
-                    make_button(row, "Install", lambda c=ch: (dlg.destroy(), install_direct_zip_for_addon(addon, c["url"], c["label"])), variant="primary", compact=True).pack(side="right")
-            root.after(0, ui)
-        threading.Thread(target=fill_versions, daemon=True).start()
+        AddonDetailsDialog(
+            ctx, root, addon,
+            source_label=SOURCE_LABEL,
+            provider_page_url=provider_page_url,
+            github_version_choices=github_version_choices,
+            on_install=trigger_install,
+            on_install_version=install_direct_zip_for_addon,
+            open_url=open_in_browser,
+        )
 
     # ----------------------------------------------------------
     # Source pill colors + category icon colors (match design A)
