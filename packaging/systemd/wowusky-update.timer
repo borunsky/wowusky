@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily wowusky addon update check
+Documentation=https://github.com/borunsky/wowusky
+
+[Timer]
+# Run daily, shortly after login/boot if a run was missed.
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

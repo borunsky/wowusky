@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.7.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.8.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,33 +15,36 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.7.0
+## What's new in v0.8.0
 
-Feature release — automatic dependency resolution. Installing a catalog
-addon now pulls in any catalog entries it depends on, in the right order,
-before installing the addon itself. Existing profiles, installed lists and
-backups are untouched.
+Feature release — CLI surface. wowusky can now be driven entirely from
+the terminal without opening the GUI.
 
 ### Added
-- **Catalog dependency resolver** (`wowusky/core/depends.py`): catalog
-  entries may declare `"depends": ["id", ...]`. On install, wowusky
-  resolves the transitive dependency graph against the loaded catalog and
-  installs every missing dependency first (dependencies before dependents).
-  Already-installed dependencies are skipped, cycles are handled safely,
-  and dependency ids missing from the catalog are logged and skipped.
-- Real dependency data wired into the shipped catalog: LittleWigs → BigWigs,
-  the Details plugins (Tiny Threat, Compare2, Streamer) → Details!, BigWigs
-  Voice → BigWigs, LittleWigs (CurseForge) → BigWigs (CurseForge).
-
-### Changed
-- `install_addon` (orchestrator) gained an `install_deps` flag (default
-  `True`) and installs resolved dependencies before the target. The
-  single-addon core path is unchanged.
-- Manifest loader now normalises a `depends` field (defaults to `[]`).
+- **CLI surface** (`wowusky/cli.py`): `wowusky <command>` dispatch on
+  `sys.argv`. When arguments are present the GUI is bypassed entirely.
+- Commands: `install`, `uninstall`, `update`, `status`, `search`,
+  `orphans`, `import`, `backup create|list|restore`, `rollback`,
+  `weakauras` (alias `wa`), `profile list|switch`, `set curseforge-key`,
+  `version`, and `help [<command>]`.
+- `install` and `update` support `-n/--dry-run` and `--no-deps`.
+- **Automatic full backup** before every command that touches the WoW
+  install (AddOns + WTF). Skipped for read-only/offline commands and via
+  the global `--no-backup` flag.
+- **Full-profile backup/restore** and **per-addon rollback** from the CLI.
+- **WeakAuras/Wago.io** management from the CLI: track, untrack, check
+  updates, import from SavedVariables, search, regenerate WeakAurasCompanion.
+- **`help` command** with a full reference plus per-command detail
+  (`wowusky help <command>`) showing syntax, options and examples.
+- **`-q/--quiet`** and **`--json`** global flags (machine-readable output
+  for `status`/`search`/`orphans`/`backup list`/`weakauras list`).
+- **`update --all-profiles`** to update every profile in one run.
+- **`completion bash|zsh`** to generate shell completion scripts.
+- **systemd user timer** (`packaging/systemd/`) for daily update checks.
+- Plain/schlichte output: aligned columns, `✓`/`✗`/`↑` markers, no colours.
 
 ### Internal
-- New tests: `tests/test_depends.py` (resolver unit tests + orchestrator
-  install-order wiring + real-catalog dependency assertions).
+- New tests: `tests/test_cli.py` (56 tests).
 <!-- WHATS-NEW:END -->
 
 ---
@@ -51,8 +54,8 @@ backups are untouched.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.7.0.zip
-cd wowusky-v0.7.0
+unzip wowusky-v0.8.0.zip
+cd wowusky-v0.8.0
 chmod +x install.sh
 ./install.sh
 ```
@@ -76,7 +79,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.7.0-py3-none-any.whl
+pip install dist/wowusky-0.8.0-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
@@ -124,6 +127,7 @@ wowusky/
 │   ├── __init__.py
 │   ├── __main__.py
 │   ├── app.py              ← install orchestration + provider/core wiring (~493 lines)
+│   ├── cli.py              ← CLI surface (install/update/status/search/…)
 │   ├── core/
 │   │   ├── paths.py        ← XDG paths, per-profile locations
 │   │   ├── flavors.py      ← WoW versions + compatibility rules
@@ -173,7 +177,7 @@ wowusky/
 │   │       └── curseforge.py ← CurseForgeTab (CurseForge search)
 │   └── tools/
 │       └── health_check.py  ← CLI that pings every catalog entry
-├── tests/                   ← 109 tests
+├── tests/                   ← 349 tests
 ├── packaging/
 │   ├── wowusky.desktop
 │   └── wowusky.svg
@@ -243,9 +247,12 @@ The v0.4 refactor was the prerequisite. Now planned:
 - ~~**v0.7.0** — dependency resolver: catalog entries declare
   `"depends": [...]` and wowusky installs them automatically, in order,
   before the addon itself.~~ ✅ done
-- **Next** — CLI surface: `wowusky install elvui`, `wowusky list --updates`,
-  `wowusky profile switch retail`.
-- **Later** — optional systemd-user-service for daily update checks.
+- ~~**v0.8.0** — CLI surface: `wowusky install elvui`, `wowusky update`,
+  `wowusky profile switch retail`, `wowusky set curseforge-key <key>`,
+  `--json`/`--quiet`, shell completion, and a systemd user timer for daily
+  update checks.~~ ✅ done
+- **Next** — TBD. See [issues](https://github.com/borunsky/wowusky/issues)
+  or open one with a request.
 
 See [CHANGELOG.md](CHANGELOG.md) for what landed in each release and
 [CONTRIBUTING.md](CONTRIBUTING.md) if you'd like to send a patch.
