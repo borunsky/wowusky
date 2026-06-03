@@ -76,30 +76,10 @@ from wowusky.core.installer import (
 from wowusky.core.zipper import extract_addon_zip, sha256_file
 
 
-def _load_addon_catalog_with_compat() -> list[dict]:
-    """Load the manifest catalog and adapt it to the legacy shape used by
-    this file's GUI code.
-
-    The old inline catalog used ``source`` and provider-specific fields
-    (``api_url``, ``download_url``, ``repo``, ``wowi_id``). The new
-    manifest schema uses ``provider`` and the same field names. We
-    forward both spellings so neither side has to change in lockstep.
-    """
-    out: list[dict] = []
-    for a in _load_manifest_catalog():
-        entry = dict(a)
-        # provider ↔ source duality
-        if "source" not in entry:
-            entry["source"] = entry.get("provider", "")
-        # Reconstruct tukui api_url/download_url if missing
-        if entry["source"] == "tukui" and "api_url" not in entry:
-            slug = entry.get("slug") or entry["id"]
-            entry.setdefault("api_url",
-                             f"https://api.tukui.org/v1/addon/{slug}")
-            entry.setdefault("download_url",
-                             f"https://api.tukui.org/v1/download/dev/{slug}/main")
-        out.append(entry)
-    return out
+# The catalog loader, install/provider orchestration facade and flavor
+# helpers now live in wowusky.orchestrator (Etappe H). They are imported
+# back below as a re-export surface for the GUI (wowusky.gui.main pulls
+# them via `from wowusky.app import *`) and for the tests.
 
 
 # ============================================================
@@ -142,6 +122,42 @@ CACHE_TTL      = 300
 HTTP_CACHE     = {}
 DOWNLOAD_QUEUE = Queue()
 
+# Install / provider orchestration facade (Etappe H). These were defined
+# inline in app.py; they now live in wowusky.orchestrator, which depends
+# only on wowusky.core / providers / catalog (never on app.py), so this
+# import carries no cycle. Re-exported here so the GUI's star import and
+# the tests keep seeing them as app.* attributes.
+from wowusky.orchestrator import (  # noqa: E402, F401
+    ADDON_CATALOG,
+    SOURCES,
+    _load_addon_catalog_with_compat,
+    addon_provider_page,
+    app_log,
+    curseforge_files_url,
+    curseforge_manual_url,
+    curseforge_search_url,
+    downloads_dir,
+    extract_zip,
+    filter_catalog_by_flavor,
+    find_addon_by_id,
+    generate_wac_companion,
+    get_categories,
+    get_current_flavor,
+    get_download_url,
+    get_latest_version,
+    install_addon,
+    install_curseforge,
+    install_curseforge_dependencies,
+    import_zip_file,
+    internal_wac_url,
+    internal_wac_version,
+    newest_download_zip,
+    open_in_browser,
+    provider_action_label,
+    scan_download_zips,
+    uninstall_addon,
+)
+
 # WoW install discovery + filesystem/DB reconciliation now live in
 # wowusky.core.scan. WOW_SEARCH_PATHS / _display_path_preference /
 # scan_wow_installations are re-exported below; sync_filesystem_with_db
@@ -162,9 +178,8 @@ from wowusky.core import scan as _scan  # noqa: E402
 #   "retail", "mainline"
 # ============================================================
 
-# ADDON_CATALOG is now loaded from manifest files via wowusky.catalog.
-# See wowusky/catalog/manifests/builtin.json
-ADDON_CATALOG = _load_addon_catalog_with_compat()
+# ADDON_CATALOG is loaded in wowusky.orchestrator (manifest files via
+# wowusky.catalog) and re-exported above.
 
 
 # Extra CurseForge-web catalog entries. These are shown in Browse and use the
@@ -189,25 +204,8 @@ ADDON_CATALOG = _load_addon_catalog_with_compat()
 # Config I/O
 # ============================================================
 
-def _setup_file_logging():
-    ensure_config_dir()
-    logger = logging.getLogger(APP_NAME)
-    if logger.handlers:
-        return logger
-    logger.setLevel(logging.INFO)
-    path = os.path.join(LOG_DIR, time.strftime("wowusky-%Y-%m-%d.log"))
-    handler = RotatingFileHandler(path, maxBytes=512 * 1024, backupCount=7, encoding="utf-8")
-    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-    logger.addHandler(handler)
-    return logger
-
-LOGGER = None
-
-def app_log(message, level="info"):
-    global LOGGER
-    if LOGGER is None:
-        LOGGER = _setup_file_logging()
-    getattr(LOGGER, level, LOGGER.info)(str(message))
+# _setup_file_logging / app_log moved to wowusky.orchestrator (app_log is
+# re-exported above for reset_manager_state and the GUI).
 
 def reset_manager_state():
     """Reset only wowusky's own state for testing.
@@ -240,23 +238,7 @@ def reset_manager_state():
     ensure_config_dir()
     return removed
 
-def get_current_flavor():
-    """Returns flavor key (anniversary, vanilla, etc.) of active profile."""
-    prof = get_active_profile()
-    if prof.get("flavor") and prof.get("flavor") != "custom":
-        return prof.get("flavor")
-    p = get_addons_path()
-    if not p: return None
-    for flv_dir, (name, key, _) in WOW_FLAVORS.items():
-        if flv_dir in p:
-            return key
-    return None
-
-def get_compatible_flavors():
-    """List of flavor tags an addon needs to declare to show for current flavor."""
-    cur = get_current_flavor()
-    if not cur: return None
-    return FLAVOR_COMPATIBILITY.get(cur, [cur])
+# get_current_flavor moved to wowusky.orchestrator (re-exported above).
 
 
 # ============================================================
@@ -308,8 +290,8 @@ http_download = _ws_http.download
 
 from wowusky.providers.tukui_fns import tukui_url, tukui_version  # noqa: E402
 
-from wowusky.providers import github_fns as _github_fns  # noqa: E402
-_github_fns.get_current_flavor = lambda: get_current_flavor()
+from wowusky.providers import github_fns as _github_fns  # noqa: E402, F401
+# Provider flavor/API-key monkeypatching is done in wowusky.orchestrator.
 from wowusky.providers.github_fns import (  # noqa: E402, F401
     _github_branch_exists, _github_pick_asset, github_default_branch,
     github_releases, github_repo_for_addon, github_repo_url, github_tags,
@@ -321,17 +303,9 @@ from wowusky.providers.curseforge_fns import (  # noqa: E402
     _cf_file_versions, cf_slug_from_ref, curseforge_file_matches_flavor,
     curseforge_headers, curseforge_web_url, curseforge_web_version)
 
-from wowusky.providers import curseforge_fns as _cf_fns  # noqa: E402
-_cf_fns.get_current_flavor = lambda: get_current_flavor()
-_cf_fns.get_curseforge_api_key = lambda: get_curseforge_api_key()
+from wowusky.providers import curseforge_fns as _cf_fns  # noqa: E402, F401
 
-def internal_wac_version(a):
-    """WeakAurasCompanion is generated locally — version = number of auras."""
-    wago = load_wago()
-    return f"{len(wago.get('auras', {}))} auras"
-
-def internal_wac_url(a):
-    return None  # never downloaded
+# internal_wac_version / internal_wac_url moved to wowusky.orchestrator.
 
 
 # ============================================================
@@ -359,145 +333,10 @@ from wowusky.core.resolver import (  # noqa: E402
 from wowusky.core import resolver as _resolver  # noqa: E402
 
 
-def current_cf_web_version_type():
-    return _resolver.cf_web_version_type(get_current_flavor())
-
-
-def _cached_json(cache_key, loader):
-    now = time.time()
-    item = HTTP_CACHE.get(cache_key)
-    if item and now - item[0] < CACHE_TTL:
-        return item[1]
-    data = loader()
-    HTTP_CACHE[cache_key] = (now, data)
-    return data
-
-
-def retry(fn, attempts=3, delay=0.7):
-    last = None
-    for _ in range(attempts):
-        try:
-            return fn()
-        except Exception as e:
-            last = e
-            time.sleep(delay)
-    raise last
-
-
-# curseforge_json and curseforge_api_diagnose imported from curseforge_fns.
-
-
-def curseforge_search_url(query=""):
-    return _resolver.curseforge_search_url(query, get_current_flavor())
-
-
-def curseforge_files_url(slug_or_url=""):
-    return _resolver.curseforge_files_url(slug_or_url, get_current_flavor())
-
-
-def open_in_browser(url):
-    if not url:
-        return False
-    try:
-        webbrowser.open(url)
-        return True
-    except Exception:
-        return False
-
-
-def downloads_dir():
-    cfg = os.environ.get("XDG_DOWNLOAD_DIR")
-    if cfg:
-        return os.path.expanduser(cfg)
-    return os.path.expanduser("~/Downloads")
-
-
-def scan_download_zips(limit=25):
-    d = downloads_dir()
-    if not os.path.isdir(d):
-        return []
-    files = []
-    for name in os.listdir(d):
-        if name.lower().endswith(".zip"):
-            path = os.path.join(d, name)
-            try:
-                files.append((os.path.getmtime(path), path))
-            except OSError:
-                pass
-    files.sort(reverse=True)
-    return [p for _, p in files[:limit]]
-
-
-def newest_download_zip():
-    zips = scan_download_zips(limit=1)
-    return zips[0] if zips else ""
-
-
-def import_zip_file(zip_path, addons_path, name=None, source="manual", log=print, curseforge_slug=None, curseforge_url=None):
-    """Import a manual / CurseForge ZIP and record it in the active profile.
-
-    Extraction and entry-building live in ``wowusky.core.installer``; this
-    wrapper only adds the profile-aware ``installed.json`` write.
-    """
-    addon_id, entry = build_import_entry(
-        zip_path, addons_path, name=name, source=source,
-        curseforge_slug=curseforge_slug, curseforge_url=curseforge_url, log=log,
-    )
-    inst = load_installed()
-    inst[addon_id] = entry
-    save_installed(inst)
-    return addon_id
-
-
-# curseforge_manual_latest, curseforge_manual_url, curseforge_search,
-# curseforge_mod_from_ref, curseforge_get_files, curseforge_pick_file,
-# curseforge_download_url, curseforge_mod_summary, curseforge_version_from_installed,
-# curseforge_url_from_installed imported from curseforge_fns.
-
-
-def curseforge_manual_url(entry):
-    """Thin wrapper — delegates to the flavor-aware resolver helper."""
-    return _resolver.curseforge_manual_url(entry, get_current_flavor())
-
-
-def install_curseforge(ref_or_mod, addons_path, log=print, progress=None, install_deps=True):
-    """Thin wrapper — wires profile I/O into the core CurseForge install."""
-    return _cf_install_curseforge(
-        ref_or_mod, addons_path,
-        http_download=http_download,
-        load_installed=load_installed,
-        save_installed=save_installed,
-        log=log, progress=progress, install_deps=install_deps,
-    )
-
-
-def install_curseforge_dependencies(file_data, addons_path, log=print, seen=None):
-    """Thin wrapper — wires profile I/O into the dependency installer."""
-    return _cf_install_deps(
-        file_data, addons_path,
-        http_download=http_download,
-        load_installed=load_installed,
-        save_installed=save_installed,
-        log=log, seen=seen,
-    )
-
-
-SOURCES = {
-    "tukui":        (tukui_version, tukui_url),
-    "github":       (github_version, github_url),
-    "wowi":         (wowi_version, wowi_url),
-    "internal_wac": (internal_wac_version, internal_wac_url),
-    "curseforge":   (lambda a: curseforge_version_from_installed(a), lambda a: curseforge_url_from_installed(a)),
-    "curseforge_web": (lambda a: "manual", lambda a: ""),
-    "curseforge_manual": (lambda a: curseforge_manual_latest(a), lambda a: curseforge_manual_url(a)),
-}
-
-def get_latest_version(a):
-    try: return SOURCES[a["source"]][0](a)
-    except Exception: return None
-
-def get_download_url(a):
-    return SOURCES[a["source"]][1](a)
+# curseforge_json / curseforge_api_diagnose are imported from curseforge_fns.
+# The CurseForge web-URL facades, Downloads helpers, manual ZIP import,
+# CurseForge install wrappers and the SOURCES version/URL dispatch all moved
+# to wowusky.orchestrator (re-exported above).
 
 
 # ============================================================
@@ -521,31 +360,8 @@ from wowusky.core.wago import (  # noqa: E402
     wago_remove,
     wago_search,
 )
-from wowusky.core.wago import generate_wac_companion as _core_generate_wac  # noqa: E402
-
-
-def generate_wac_companion(addons_path):
-    """Thin wrapper — resolves the active flavor's TOC interface, then
-    delegates to :func:`wowusky.core.wago.generate_wac_companion`."""
-    interface = 120001  # default retail
-    flavor = get_current_flavor()
-    for _flv_dir, (_n, k, iface) in WOW_FLAVORS.items():
-        if k == flavor:
-            interface = iface
-            break
-    return _core_generate_wac(addons_path, interface=interface, app_version=__version__)
-
-
-# ============================================================
-# Provider status / manual fallbacks
-# ============================================================
-
-def addon_provider_page(addon):
-    return _resolver.addon_provider_page(addon, get_current_flavor())
-
-
-def provider_action_label(addon, installed=False):
-    return _resolver.provider_action_label(addon, installed)
+# generate_wac_companion, addon_provider_page and provider_action_label moved
+# to wowusky.orchestrator (re-exported above).
 
 
 # sha256_file is imported from wowusky.core.zipper (single source of truth).
@@ -563,76 +379,9 @@ from wowusky.core.backup import (  # noqa: E402
     rollback_addon_to_backup,
 )
 
-# ============================================================
-# Install / Uninstall
-# ============================================================
-
-def install_addon(addon, addons_path, log=print, progress=None):
-    """Thin wrapper — wires profile/config state into the core install logic."""
-    def _generate_wac(ap):
-        ok = generate_wac_companion(ap)
-        if ok:
-            log(f"  ✓ generated with {len(load_wago().get('auras', {}))} auras\n")
-        return ok
-    return _core_install_addon(
-        addon, addons_path,
-        profile_id=get_active_profile_id(),
-        get_latest_version=get_latest_version,
-        get_download_url=get_download_url,
-        load_installed=load_installed,
-        save_installed=save_installed,
-        backup_addon_folders=backup_addon_folders,
-        http_download=http_download,
-        is_dry_run=is_dry_run,
-        app_log=app_log,
-        addon_provider_page=addon_provider_page,
-        open_in_browser=open_in_browser,
-        generate_wac_companion=_generate_wac,
-        log=log,
-        progress=progress,
-    )
-
-
-def extract_zip(zip_path, addons_path, addon=None, log=None):
-    """Thin wrapper around :func:`wowusky.core.zipper.extract_addon_zip`.
-
-    The ``addon`` / ``log`` parameters are retained for the existing GUI
-    call sites; extraction logic now lives in ``wowusky.core.zipper`` as
-    the single source of truth (shared with ``health_check`` and tests).
-    """
-    return extract_addon_zip(zip_path, addons_path)
-
-
-def uninstall_addon(addon_id, addons_path, log=print):
-    """Thin wrapper — wires profile/config state into the core uninstall logic."""
-    return _core_uninstall_addon(
-        addon_id, addons_path,
-        load_installed=load_installed,
-        save_installed=save_installed,
-        backup_addon_folders=backup_addon_folders,
-        is_dry_run=is_dry_run,
-        app_log=app_log,
-        profile_id=get_active_profile_id(),
-        log=log,
-    )
-
-def find_addon_by_id(aid):
-    return next((a for a in ADDON_CATALOG if a["id"] == aid), None)
-
-def get_categories():
-    return sorted({a["category"] for a in ADDON_CATALOG})
-
-
-def filter_catalog_by_flavor(addons, current_flavor):
-    """Filter catalog to only show addons compatible with current flavor.
-
-    Uses the shared :func:`wowusky.core.flavors.is_compatible` helper so
-    the rules match what the GUI displays elsewhere.
-    """
-    if not current_flavor:
-        return addons
-    return [a for a in addons
-            if is_compatible(a.get("flavors", ["all"]), current_flavor)]
+# install_addon / extract_zip / uninstall_addon and the catalog queries
+# (find_addon_by_id, get_categories, filter_catalog_by_flavor) moved to
+# wowusky.orchestrator (re-exported above).
 
 
 # ============================================================

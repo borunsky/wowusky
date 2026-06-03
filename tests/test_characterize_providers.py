@@ -199,22 +199,20 @@ def test_tukui_url_returns_download_url_field():
     assert app.tukui_url(entry) == entry["download_url"]
 
 
-def test_compat_reconstructs_tukui_urls_when_missing(monkeypatch):
+def test_compat_reconstructs_tukui_urls_when_missing():
     """_load_addon_catalog_with_compat must synthesise api_url and
     download_url for a tukui entry that lacks them, using the slug."""
     fake_manifest = [
         {"id": "elvui", "provider": "tukui", "slug": "elvui", "name": "ElvUI"},
     ]
-    monkeypatch.setattr(app, "_load_manifest_catalog", lambda: fake_manifest)
-
-    catalog = app._load_addon_catalog_with_compat()
+    catalog = app._load_addon_catalog_with_compat(lambda: fake_manifest)
     entry = catalog[0]
     assert entry["api_url"] == "https://api.tukui.org/v1/addon/elvui"
     assert entry["download_url"] == \
         "https://api.tukui.org/v1/download/dev/elvui/main"
 
 
-def test_compat_keeps_existing_tukui_urls(monkeypatch):
+def test_compat_keeps_existing_tukui_urls():
     """If a manifest already provides the URLs, they must NOT be
     overwritten — setdefault only fills what is missing."""
     fake_manifest = [
@@ -224,34 +222,28 @@ def test_compat_keeps_existing_tukui_urls(monkeypatch):
             "download_url": "https://custom.example/dl",
         },
     ]
-    monkeypatch.setattr(app, "_load_manifest_catalog", lambda: fake_manifest)
-
-    entry = app._load_addon_catalog_with_compat()[0]
+    entry = app._load_addon_catalog_with_compat(lambda: fake_manifest)[0]
     assert entry["api_url"] == "https://custom.example/api"
     assert entry["download_url"] == "https://custom.example/dl"
 
 
-def test_compat_falls_back_to_id_when_no_slug(monkeypatch):
+def test_compat_falls_back_to_id_when_no_slug():
     """Reconstruction uses 'slug', but falls back to 'id' when slug
     is absent."""
     fake_manifest = [
         {"id": "tukui", "provider": "tukui", "name": "Tukui"},
     ]
-    monkeypatch.setattr(app, "_load_manifest_catalog", lambda: fake_manifest)
-
-    entry = app._load_addon_catalog_with_compat()[0]
+    entry = app._load_addon_catalog_with_compat(lambda: fake_manifest)[0]
     assert entry["api_url"] == "https://api.tukui.org/v1/addon/tukui"
 
 
-def test_compat_mirrors_provider_into_source(monkeypatch):
+def test_compat_mirrors_provider_into_source():
     """The provider↔source duality: an entry with only 'provider'
     must get a matching 'source' field."""
     fake_manifest = [
         {"id": "x", "provider": "github", "name": "X"},
     ]
-    monkeypatch.setattr(app, "_load_manifest_catalog", lambda: fake_manifest)
-
-    entry = app._load_addon_catalog_with_compat()[0]
+    entry = app._load_addon_catalog_with_compat(lambda: fake_manifest)[0]
     assert entry["source"] == "github"
 
 # ── GitHub ────────────────────────────────────────────────────────────
