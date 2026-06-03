@@ -59,6 +59,74 @@ def _app_ping(params: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Catalog
+# ---------------------------------------------------------------------------
+
+# Map internal provider ids to the UI's source pill classes.
+_PROVIDER_SOURCE = {
+    "curseforge_web": "curse",
+    "github": "github",
+    "wowi": "wowi",
+    "tukui": "tukui",
+    "internal_wac": "wowusky",
+}
+
+
+def _entry_to_addon(entry: dict[str, Any]) -> dict[str, Any]:
+    """Project a catalog manifest entry onto the shape the UI expects."""
+    name = entry.get("name", entry.get("id", "?"))
+    provider = entry.get("provider", "")
+    return {
+        "id": entry.get("id"),
+        "name": name,
+        "author": entry.get("author", "Unknown"),
+        "category": entry.get("category", "Other"),
+        "description": entry.get("description", ""),
+        "source": _PROVIDER_SOURCE.get(provider, "local"),
+        "glyph": (name[:1] or "?").upper(),
+        "flavors": entry.get("flavors", []),
+        "folders": entry.get("folders", []),
+        "depends": entry.get("depends", []),
+    }
+
+
+@method("catalog.search")
+def _catalog_search(params: dict[str, Any]) -> dict[str, Any]:
+    """Filter the bundled manifest catalog by query + category.
+
+    params: {query?: str, category?: str, limit?: int}
+    returns: {total: int, count: int, categories: [str], items: [addon]}
+    """
+    from wowusky.catalog import load_catalog
+
+    catalog = load_catalog()
+    query = str(params.get("query", "")).strip().lower()
+    category = params.get("category") or "All"
+    limit = int(params.get("limit", 200))
+
+    categories = sorted({e.get("category", "Other") for e in catalog})
+
+    items: list[dict[str, Any]] = []
+    for entry in catalog:
+        if category != "All" and entry.get("category") != category:
+            continue
+        if query:
+            hay = f"{entry.get('name', '')} {entry.get('description', '')}".lower()
+            if query not in hay:
+                continue
+        items.append(_entry_to_addon(entry))
+
+    total = len(items)
+    items.sort(key=lambda a: a["name"].lower())
+    return {
+        "total": len(catalog),
+        "count": total,
+        "categories": ["All", *categories],
+        "items": items[:limit],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Dispatch loop
 # ---------------------------------------------------------------------------
 

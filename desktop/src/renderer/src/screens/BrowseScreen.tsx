@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
-import { MOCK_ADDONS, CATEGORIES, sourceLabel, type Addon } from "./browseData";
+import { useState, useEffect, useRef } from "react";
+import { bridge } from "../api";
+import { sourceLabel, rarityFor, type Addon, type SearchResult } from "./browseData";
+import { DetailPanel } from "./DetailPanel";
 
 type View = "list" | "grid";
 
@@ -43,31 +45,45 @@ export function BrowseScreen(): JSX.Element {
   });
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
+  const [result, setResult] = useState<SearchResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Addon | null>(null);
 
   function setViewPersist(v: View) {
     setView(v);
     localStorage.setItem("wowusky:browseView", v);
   }
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return MOCK_ADDONS.filter((a) => {
-      if (category !== "All" && a.category !== category) return false;
-      if (q && !a.name.toLowerCase().includes(q) && !a.description.toLowerCase().includes(q)) {
-        return false;
-      }
-      return true;
-    });
+  // Debounced catalog search via the Python bridge.
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    setLoading(true);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      bridge
+        .call<SearchResult>("catalog.search", { query, category })
+        .then((r) => { setResult(r); setError(null); })
+        .catch((e) => setError(String(e)))
+        .finally(() => setLoading(false));
+    }, 160);
+    return () => clearTimeout(debounceRef.current);
   }, [query, category]);
+
+  const items = result?.items ?? [];
+  const categories = result?.categories ?? ["All"];
 
   return (
     <div className="page">
       <div className="page-head">
         <div className="page-title">
           Browse
-          <span className="badge-count">{results.length}</span>
+          <span className="badge-count">{result ? result.count : "…"}</span>
         </div>
-        <div className="page-sub">Discover and install addons from all sources</div>
+        <div className="page-sub">
+          Discover and install addons from all sources
+          {result && ` · ${result.total} in catalog`}
+        </div>
       </div>
 
       <div className="toolbar">
@@ -103,7 +119,7 @@ export function BrowseScreen(): JSX.Element {
         <div className="filters">
           <div className="filtergroup">
             <span className="glabel">Category</span>
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button
                 key={c}
                 className={`chip${category === c ? " on" : ""}`}
@@ -118,7 +134,18 @@ export function BrowseScreen(): JSX.Element {
 
       <div className="page-body scroll">
         <div className="page-pad">
-          {results.length === 0 ? (
+          {error ? (
+            <div className="empty">
+              <div className="eicon">!</div>
+              <h3>Catalog unavailable</h3>
+              <p>{error}</p>
+            </div>
+          ) : loading && !result ? (
+            <div className="empty">
+              <div className="spin" />
+              <p>Loading catalog…</p>
+            </div>
+          ) : items.length === 0 ? (
             <div className="empty">
               <div className="eicon">
                 <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
@@ -131,14 +158,15 @@ export function BrowseScreen(): JSX.Element {
             </div>
           ) : view === "list" ? (
             <div className="alist">
-              {results.map((a) => (
+              {items.map((a) => (
                 <div
                   key={a.id}
-                  className="acard"
-                  style={{ "--rar": `var(--badge-${a.rarity})` } as React.CSSProperties}
+                  className={`acard${selected?.id === a.id ? " sel" : ""}`}
+                  style={{ "--rar": `var(--badge-${rarityFor(a)})` } as React.CSSProperties}
+                  onClick={() => setSelected(a)}
                 >
                   <div className="thumb">
-                    <MonoBadge glyph={a.glyph} rarity={a.rarity} />
+                    <MonoBadge glyph={a.glyph} rarity={rarityFor(a)} />
                   </div>
                   <div className="main">
                     <div className="titlerow">
@@ -149,12 +177,9 @@ export function BrowseScreen(): JSX.Element {
                     <div className="meta">
                       <SourcePill source={a.source} />
                       <span className="m">{a.author}</span>
-                      <span className="m">↓ {a.downloads}</span>
-                      <span className="m">{a.updated}</span>
                     </div>
                   </div>
-                  <div className="right">
-                    <span className="ver-mono">{a.version}</span>
+                  <div className="right" onClick={(e) => e.stopPropagation()}>
                     <InstallButton installed={a.installed} />
                   </div>
                 </div>
@@ -162,9 +187,13 @@ export function BrowseScreen(): JSX.Element {
             </div>
           ) : (
             <div className="agrid">
-              {results.map((a) => (
-                <div key={a.id} className="gcard">
-                  <div className={`gcover cov-${a.rarity}`}>
+              {items.map((a) => (
+                <div
+                  key={a.id}
+                  className={`gcard${selected?.id === a.id ? " sel" : ""}`}
+                  onClick={() => setSelected(a)}
+                >
+                  <div className={`gcover cov-${rarityFor(a)}`}>
                     <span className="glyph">{a.glyph}</span>
                     <div className="src">
                       <SourcePill source={a.source} />
@@ -177,11 +206,12 @@ export function BrowseScreen(): JSX.Element {
                     </div>
                     <div className="gdesc">{a.description}</div>
                     <div className="gfoot">
-                      <div className="gstats">
-                        <span className="s">↓ {a.downloads}</span>
-                        <span className="s">{a.updated}</span>
-                      </div>
-                      <InstallButton installed={a.installed} />
+                      <span className="gstats">
+                        <span className="s">{a.category}</span>
+                      </span>
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <InstallButton installed={a.installed} />
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -190,6 +220,8 @@ export function BrowseScreen(): JSX.Element {
           )}
         </div>
       </div>
+
+      <DetailPanel addon={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

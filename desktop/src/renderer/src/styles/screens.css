@@ -82,6 +82,7 @@
 .cov-a { background: radial-gradient(120% 130% at 20% 0%, color-mix(in oklab,var(--badge-a),#000 55%), color-mix(in oklab,var(--badge-a),#000 82%)); }
 .cov-b { background: radial-gradient(120% 130% at 20% 0%, color-mix(in oklab,var(--badge-b),#000 50%), color-mix(in oklab,var(--badge-b),#000 80%)); }
 .cov-m { background: radial-gradient(120% 130% at 20% 0%, color-mix(in oklab,var(--badge-m),#000 50%), color-mix(in oklab,var(--badge-m),#000 80%)); }
+.cov-q { background: radial-gradient(120% 130% at 20% 0%, color-mix(in oklab,var(--badge-q),#000 50%), color-mix(in oklab,var(--badge-q),#000 80%)); }
 
 /* DETAIL side panel — slide-over overlay; width snaps (robust), content slides */
 .detail { position: absolute; top: 0; right: 0; bottom: 0; width: 0; z-index: 20; border-left: 1px solid var(--border); background: var(--panel); display: flex; flex-direction: column; overflow: hidden; }
