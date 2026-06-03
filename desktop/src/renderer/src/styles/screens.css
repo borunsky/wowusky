@@ -23,7 +23,7 @@
 .sortsel:hover { border-color: var(--border-2); }
 .sortsel .chev { margin-left: auto; color: var(--text-faint); }
 .filters { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.filtergroup { display: flex; align-items: center; gap: 7px; }
+.filtergroup { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; row-gap: 8px; }
 .filtergroup .glabel { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; color: var(--text-faint); text-transform: uppercase; margin-right: 2px; }
 .filter-div { width: 1px; height: 22px; background: var(--border); margin: 0 3px; }
 
