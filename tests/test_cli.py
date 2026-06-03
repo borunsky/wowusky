@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from unittest.mock import ANY, MagicMock, call, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, call
 
 from wowusky.cli import build_parser, run_cli
-
 
 # ---------------------------------------------------------------------------
 # Parser smoke tests
@@ -208,3 +208,160 @@ def test_set_curseforge_key_empty_clears(capsys):
     mock_set.assert_called_once_with("")
     out = capsys.readouterr().out
     assert "removed" in out
+
+
+# ---------------------------------------------------------------------------
+# backup
+# ---------------------------------------------------------------------------
+
+def test_backup_parses_subcommands():
+    p = build_parser()
+    assert p.parse_args(["backup", "create"]).backup_cmd == "create"
+    assert p.parse_args(["backup", "list"]).backup_cmd == "list"
+    args = p.parse_args(["backup", "restore", "0"])
+    assert args.backup_cmd == "restore"
+    assert args.backup == "0"
+
+
+def test_backup_list_empty(capsys):
+    with patch("wowusky.core.backup.list_full_backups", return_value=[]):
+        run_cli(["backup", "list", "--no-backup"])
+    out = capsys.readouterr().out
+    assert "No full backups" in out
+
+
+def test_backup_list_shows_index(capsys):
+    fake = [{"path": "/b/x.zip", "name": "x.zip", "mtime": 1_700_000_000, "size": 2048}]
+    with patch("wowusky.core.backup.list_full_backups", return_value=fake):
+        run_cli(["backup", "list", "--no-backup"])
+    out = capsys.readouterr().out
+    assert "[0]" in out and "x.zip" in out
+
+
+def test_backup_create_calls_core(capsys):
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.backup.create_full_backup", return_value="/b/new.zip") as mock_create:
+        run_cli(["backup", "create", "--no-backup"])
+    mock_create.assert_called_once()
+    assert "new.zip" in capsys.readouterr().out
+
+
+def test_backup_restore_resolves_index(capsys):
+    fake = [{"path": "/b/new.zip", "name": "new.zip", "mtime": 1, "size": 1}]
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.backup.list_full_backups", return_value=fake), \
+         patch("wowusky.core.backup.restore_full_backup", return_value=True) as mock_restore:
+        run_cli(["backup", "restore", "0", "--no-backup"])
+    mock_restore.assert_called_once_with("/b/new.zip", log=ANY)
+
+
+def test_backup_restore_unknown_selector_exits():
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.backup.list_full_backups", return_value=[]):
+        with pytest.raises(SystemExit):
+            run_cli(["backup", "restore", "99", "--no-backup"])
+
+
+# ---------------------------------------------------------------------------
+# rollback
+# ---------------------------------------------------------------------------
+
+def test_rollback_list_flag_lists(capsys):
+    fake = [{"path": "/b/elvui-1.zip", "name": "elvui-1.zip", "mtime": 1, "size": 10, "version": "13.0"}]
+    with patch("wowusky.core.backup.list_addon_backups", return_value=fake):
+        run_cli(["rollback", "elvui", "--list", "--no-backup"])
+    out = capsys.readouterr().out
+    assert "elvui-1.zip" in out and "[0]" in out
+
+
+def test_rollback_default_restores_latest():
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.backup.rollback_addon", return_value=True) as mock_rb:
+        run_cli(["rollback", "elvui", "--no-backup"])
+    mock_rb.assert_called_once()
+    assert mock_rb.call_args[0][0] == "elvui"
+
+
+def test_rollback_specific_backup():
+    fake = [{"path": "/b/a.zip", "name": "a.zip", "mtime": 1, "size": 1, "version": "1"},
+            {"path": "/b/b.zip", "name": "b.zip", "mtime": 0, "size": 1, "version": "1"}]
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.backup.list_addon_backups", return_value=fake), \
+         patch("wowusky.core.backup.rollback_addon_to_backup", return_value=True) as mock_rb:
+        run_cli(["rollback", "elvui", "1", "--no-backup"])
+    mock_rb.assert_called_once_with("elvui", "/b/b.zip", "/fake/AddOns", log=ANY)
+
+
+# ---------------------------------------------------------------------------
+# weakauras
+# ---------------------------------------------------------------------------
+
+def test_weakauras_list_empty(capsys):
+    with patch("wowusky.core.state.load_wago", return_value={"auras": {}}):
+        run_cli(["weakauras", "list", "--no-backup"])
+    assert "No tracked WeakAuras" in capsys.readouterr().out
+
+
+def test_weakauras_list_shows_auras(capsys):
+    auras = {"auras": {"abc": {"name": "MyAura", "version": 3, "latest_version": 4}}}
+    with patch("wowusky.core.state.load_wago", return_value=auras):
+        run_cli(["weakauras", "list", "--no-backup"])
+    out = capsys.readouterr().out
+    assert "MyAura" in out and "↑" in out
+
+
+def test_weakauras_add_calls_core(capsys):
+    with patch("wowusky.core.wago.wago_add", return_value={"name": "X", "version": 1}) as mock_add:
+        run_cli(["weakauras", "add", "abc123", "--no-backup"])
+    mock_add.assert_called_once()
+    assert "tracking" in capsys.readouterr().out
+
+
+def test_weakauras_remove_not_tracked(capsys):
+    with patch("wowusky.core.wago.wago_remove", return_value=False):
+        run_cli(["weakauras", "remove", "nope", "--no-backup"])
+    assert "not tracked" in capsys.readouterr().out
+
+
+def test_wa_alias_normalises_to_weakauras():
+    p = build_parser()
+    args = p.parse_args(["wa", "list"])
+    assert args.command == "wa"  # raw
+    # run_cli normalises; verify dispatch works without error
+    with patch("wowusky.core.state.load_wago", return_value={"auras": {}}):
+        run_cli(["wa", "list", "--no-backup"])
+
+
+# ---------------------------------------------------------------------------
+# auto-backup
+# ---------------------------------------------------------------------------
+
+def test_no_backup_flag_skips_autobackup():
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.orchestrator.find_addon_by_id", return_value=None), \
+         patch("wowusky.core.backup.create_full_backup") as mock_bk:
+        run_cli(["install", "x", "--no-backup"])
+    mock_bk.assert_not_called()
+
+
+def test_autobackup_runs_before_install():
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.state.get_addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.orchestrator.find_addon_by_id", return_value=None), \
+         patch("wowusky.core.backup.create_full_backup", return_value="/b/x.zip") as mock_bk:
+        run_cli(["install", "x"])
+    mock_bk.assert_called_once()
+
+
+def test_autobackup_skipped_for_search():
+    with patch("wowusky.cli._catalog", return_value=[]), \
+         patch("wowusky.core.backup.create_full_backup") as mock_bk:
+        run_cli(["search", "raid"])
+    mock_bk.assert_not_called()
+
+
+def test_autobackup_skipped_for_status():
+    with patch("wowusky.cli._installed", return_value={}), \
+         patch("wowusky.core.backup.create_full_backup") as mock_bk:
+        run_cli(["status"])
+    mock_bk.assert_not_called()

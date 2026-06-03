@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -42,7 +40,7 @@ def _installed() -> dict:
 
 
 def _fmt_row(cols: list[str], widths: list[int]) -> str:
-    return "  ".join(c.ljust(w) for c, w in zip(cols, widths))
+    return "  ".join(c.ljust(w) for c, w in zip(cols, widths, strict=False))
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +259,236 @@ def cmd_set(args: argparse.Namespace) -> None:
         _die(f"Unknown setting '{args.setting}'. Available settings: curseforge-key")
 
 
+def _fmt_size(n: float) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.0f}{unit}" if unit == "B" else f"{n:.1f}{unit}"
+        n /= 1024.0
+    return f"{n:.1f}GB"
+
+
+def _fmt_time(mtime: float) -> str:
+    import time
+    return time.strftime("%Y-%m-%d %H:%M", time.localtime(mtime))
+
+
+# ---------------------------------------------------------------------------
+# Backup (full profile)
+# ---------------------------------------------------------------------------
+
+def cmd_backup(args: argparse.Namespace) -> None:
+    sub = getattr(args, "backup_cmd", None) or "list"
+    if sub == "create":
+        _backup_create(args)
+    elif sub == "restore":
+        _backup_restore(args)
+    else:
+        _backup_list(args)
+
+
+def _backup_create(args: argparse.Namespace) -> None:
+    from wowusky.core.backup import create_full_backup
+    _addons_path()  # validate a profile is configured
+    try:
+        path = create_full_backup(log=print)
+        print(f"  ✓ {path}")
+    except Exception as exc:
+        _die(str(exc))
+
+
+def _backup_list(args: argparse.Namespace) -> None:
+    from wowusky.core.backup import list_full_backups
+    backups = list_full_backups()
+    if not backups:
+        print("No full backups for the active profile.")
+        return
+    print(f"{len(backups)} full backup(s) (newest first):\n")
+    for i, b in enumerate(backups):
+        print(f"  [{i}] {b['name']}  {_fmt_time(b['mtime'])}  {_fmt_size(b['size'])}")
+
+
+def _resolve_full_backup(selector: str) -> str | None:
+    """Resolve a backup selector (index, name, or path) to a ZIP path."""
+    import os
+
+    from wowusky.core.backup import list_full_backups
+    if os.path.isfile(selector):
+        return selector
+    backups = list_full_backups()
+    if selector.isdigit():
+        idx = int(selector)
+        if 0 <= idx < len(backups):
+            return backups[idx]["path"]
+        return None
+    for b in backups:
+        if b["name"] == selector:
+            return b["path"]
+    return None
+
+
+def _backup_restore(args: argparse.Namespace) -> None:
+    from wowusky.core.backup import restore_full_backup
+    _addons_path()
+    path = _resolve_full_backup(args.backup)
+    if path is None:
+        _die(f"Backup '{args.backup}' not found. Use 'backup list' to see available backups.")
+    try:
+        restore_full_backup(path, log=print)
+    except Exception as exc:
+        _die(str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Rollback (per-addon backup)
+# ---------------------------------------------------------------------------
+
+def cmd_rollback(args: argparse.Namespace) -> None:
+    from wowusky.core.backup import (
+        list_addon_backups,
+        rollback_addon,
+        rollback_addon_to_backup,
+    )
+    addon_id = args.addon_id
+
+    if args.list:
+        backups = list_addon_backups(addon_id)
+        if not backups:
+            print(f"No backups for '{addon_id}'.")
+            return
+        print(f"{len(backups)} backup(s) for {addon_id} (newest first):\n")
+        for i, b in enumerate(backups):
+            print(f"  [{i}] {b['name']}  v{b['version']}  {_fmt_time(b['mtime'])}  {_fmt_size(b['size'])}")
+        return
+
+    ap = _addons_path()
+    if args.backup:
+        path = _resolve_addon_backup(addon_id, args.backup)
+        if path is None:
+            _die(f"Backup '{args.backup}' not found for '{addon_id}'. "
+                 f"Use 'rollback {addon_id} --list' to see available backups.")
+        ok = rollback_addon_to_backup(addon_id, path, ap, log=print)
+    else:
+        ok = rollback_addon(addon_id, ap, log=print)
+    if not ok:
+        sys.exit(1)
+
+
+def _resolve_addon_backup(addon_id: str, selector: str) -> str | None:
+    import os
+
+    from wowusky.core.backup import list_addon_backups
+    if os.path.isfile(selector):
+        return selector
+    backups = list_addon_backups(addon_id)
+    if selector.isdigit():
+        idx = int(selector)
+        if 0 <= idx < len(backups):
+            return backups[idx]["path"]
+        return None
+    for b in backups:
+        if b["name"] == selector:
+            return b["path"]
+    return None
+
+
+# ---------------------------------------------------------------------------
+# WeakAuras (Wago.io tracking)
+# ---------------------------------------------------------------------------
+
+def cmd_weakauras(args: argparse.Namespace) -> None:
+    sub = getattr(args, "wa_cmd", None) or "list"
+    dispatch = {
+        "list": _wa_list,
+        "add": _wa_add,
+        "remove": _wa_remove,
+        "update": _wa_update,
+        "import": _wa_import,
+        "search": _wa_search,
+        "companion": _wa_companion,
+    }
+    dispatch[sub](args)
+
+
+def _wa_list(args: argparse.Namespace) -> None:
+    from wowusky.core.state import load_wago
+    auras = (load_wago() or {}).get("auras", {})
+    if not auras:
+        print("No tracked WeakAuras. Add one with 'weakauras add <slug>'.")
+        return
+    rows = []
+    for slug, e in sorted(auras.items()):
+        ver = str(e.get("version", "?"))
+        latest = e.get("latest_version")
+        flag = "↑" if latest is not None and str(latest) != ver else " "
+        rows.append((flag, slug, e.get("name") or slug, ver, str(latest) if latest is not None else "-"))
+    w_slug = max(len(r[1]) for r in rows)
+    w_name = max(len(r[2]) for r in rows)
+    for flag, slug, name, ver, latest in rows:
+        print(f"  {flag} {slug.ljust(w_slug)}  {name.ljust(w_name)}  v{ver} -> v{latest}")
+
+
+def _wa_add(args: argparse.Namespace) -> None:
+    from wowusky.core.wago import wago_add
+    entry = wago_add(args.slug, name=args.name, note=args.note)
+    print(f"  ✓ tracking {entry.get('name') or args.slug} (v{entry.get('version')})")
+
+
+def _wa_remove(args: argparse.Namespace) -> None:
+    from wowusky.core.wago import wago_remove
+    if wago_remove(args.slug):
+        print(f"  ✓ stopped tracking {args.slug}")
+    else:
+        print(f"  ✗ {args.slug}: not tracked")
+
+
+def _wa_update(args: argparse.Namespace) -> None:
+    from wowusky.core.wago import wago_check_updates
+    updates = wago_check_updates()
+    if not updates:
+        print("All tracked WeakAuras are up to date.")
+        return
+    print(f"{len(updates)} aura(s) have updates available:")
+    for slug in updates:
+        print(f"  ↑ {slug}")
+    print("\nUpdates are applied in WoW via WeakAurasCompanion; "
+          "run 'weakauras companion' to regenerate it.")
+
+
+def _wa_import(args: argparse.Namespace) -> None:
+    from wowusky.core.wago import import_existing_weakauras_from_savedvariables
+    result = import_existing_weakauras_from_savedvariables(log=print)
+    print(f"  ✓ imported {result.get('added', 0)} new, "
+          f"{result.get('existing', 0)} already tracked, "
+          f"{result.get('failed', 0)} failed")
+
+
+def _wa_search(args: argparse.Namespace) -> None:
+    results = None
+    from wowusky.core.wago import wago_search
+    data = wago_search(args.query, limit=20)
+    if isinstance(data, dict):
+        results = data.get("data") or data.get("results")
+    elif isinstance(data, list):
+        results = data
+    if not results:
+        print(f"No results for '{args.query}'.")
+        return
+    for r in results:
+        slug = r.get("slug") or r.get("_id") or "?"
+        name = r.get("name") or ""
+        print(f"  {slug}  {name}")
+
+
+def _wa_companion(args: argparse.Namespace) -> None:
+    from wowusky.orchestrator import generate_wac_companion
+    ap = _addons_path()
+    try:
+        generate_wac_companion(ap)
+        print("  ✓ WeakAurasCompanion regenerated.")
+    except Exception as exc:
+        _die(str(exc))
+
+
 def cmd_version(args: argparse.Namespace) -> None:
     from wowusky import __version__
     print(f"wowusky {__version__}")
@@ -371,6 +599,57 @@ def cmd_help(args: argparse.Namespace) -> None:
                 ("wowusky set curseforge-key",               "Remove the stored key."),
             ],
         },
+        "backup": {
+            "syntax":   "wowusky backup create\n"
+                        "  wowusky backup list\n"
+                        "  wowusky backup restore <index|name|path>",
+            "desc":     "Manage full profile backups (Interface/AddOns + WTF settings).\n"
+                        "  'restore' overwrites the current AddOns and WTF with the backup's contents.",
+            "flags":    [],
+            "examples": [
+                ("wowusky backup create",      "Create a full profile backup now."),
+                ("wowusky backup list",        "List backups with their index."),
+                ("wowusky backup restore 0",   "Restore the newest backup (index 0)."),
+                ("wowusky backup restore wowusky-full-retail-20260603-120000.zip", "Restore by name."),
+            ],
+        },
+        "rollback": {
+            "syntax":   "wowusky rollback <addon-id> [<index|name>]\n"
+                        "  wowusky rollback <addon-id> --list",
+            "desc":     "Restore a single addon from its automatic per-addon backups.\n"
+                        "  Without a selector, restores the most recent backup for that addon.",
+            "flags": [
+                ("--list",          "List available backups for the addon instead of restoring."),
+                ("--backup <sel>",  "Restore a specific backup by index, name, or path."),
+            ],
+            "examples": [
+                ("wowusky rollback elvui",            "Restore ElvUI's newest backup."),
+                ("wowusky rollback elvui --list",     "List ElvUI's backups."),
+                ("wowusky rollback elvui --backup 2", "Restore ElvUI backup at index 2."),
+            ],
+        },
+        "weakauras": {
+            "syntax":   "wowusky weakauras list|update|import|companion\n"
+                        "  wowusky weakauras add <slug> [--name N] [--note T]\n"
+                        "  wowusky weakauras remove <slug>\n"
+                        "  wowusky weakauras search <query>",
+            "desc":     "Track Wago.io WeakAuras and generate the WeakAurasCompanion addon.\n"
+                        "  list       Show tracked auras (↑ = update available).\n"
+                        "  add        Start tracking an aura by its Wago slug.\n"
+                        "  remove     Stop tracking an aura.\n"
+                        "  update     Check Wago.io for newer versions.\n"
+                        "  import     Import auras already present in your WeakAuras SavedVariables.\n"
+                        "  search     Search Wago.io for auras.\n"
+                        "  companion  Regenerate the WeakAurasCompanion addon in your AddOns folder.",
+            "flags":    [],
+            "examples": [
+                ("wowusky weakauras list",            "List tracked auras."),
+                ("wowusky weakauras add abcDEF123",   "Track an aura by slug."),
+                ("wowusky weakauras update",          "Check for aura updates."),
+                ("wowusky weakauras import",          "Import from SavedVariables."),
+                ("wowusky weakauras companion",       "Regenerate WeakAurasCompanion."),
+            ],
+        },
         "version": {
             "syntax":   "wowusky version",
             "desc":     "Print the installed wowusky version and exit.",
@@ -413,6 +692,9 @@ def cmd_help(args: argparse.Namespace) -> None:
         ("search    <query>",            "Search the catalog by name, id or description"),
         ("orphans",                      "List installed addons absent from the catalog"),
         ("import    [file.zip]",         "Import a ZIP (defaults to newest in ~/Downloads)"),
+        ("backup    create|list|restore", "Manage full profile backups (AddOns + WTF)"),
+        ("rollback  <id> [sel]",         "Restore a single addon from its backups"),
+        ("weakauras list|add|update|…",  "Track Wago.io WeakAuras + companion"),
         ("profile   list|switch <name>", "Manage WoW installation profiles"),
         ("set       curseforge-key [v]", "Configure wowusky settings"),
         ("version",                      "Print version and exit"),
@@ -426,6 +708,12 @@ def cmd_help(args: argparse.Namespace) -> None:
     print("Flags available on install / update:")
     print("  -n, --dry-run   Show what would happen without making changes.")
     print("  --no-deps       Skip automatic catalog dependency installation.")
+    print()
+    print("Global flags:")
+    print("  --no-backup     Skip the automatic full backup taken before the command runs.")
+    print()
+    print("Auto-backup: a full profile backup runs automatically before every command")
+    print("that touches your WoW install. Use --no-backup to skip it for one run.")
     print()
     print("Examples:")
     examples = [
@@ -450,48 +738,97 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="wowusky",
         description="Minimalist World of Warcraft addon manager.",
+        add_help=True,
     )
+    # Global flags, shared with every subcommand via `parents=` so they may
+    # appear either before or after the subcommand name.
+    g = argparse.ArgumentParser(add_help=False)
+    g.add_argument("--no-backup", action="store_true",
+                   help="Skip the automatic full backup taken before the command runs.")
+    p.add_argument("--no-backup", action="store_true", help=argparse.SUPPRESS)
+
     sub = p.add_subparsers(dest="command", metavar="<command>")
 
     # install
-    sp = sub.add_parser("install", help="Install one or more catalog addons by id.")
+    sp = sub.add_parser("install", parents=[g], help="Install one or more catalog addons by id.")
     sp.add_argument("addon_id", nargs="+", metavar="id")
     sp.add_argument("-n", "--dry-run", action="store_true", help="Show what would be installed.")
     sp.add_argument("--no-deps", action="store_true", help="Skip automatic dependency installation.")
     sp.set_defaults(func=cmd_install)
 
     # uninstall
-    sp = sub.add_parser("uninstall", help="Uninstall one or more addons by id.")
+    sp = sub.add_parser("uninstall", parents=[g], help="Uninstall one or more addons by id.")
     sp.add_argument("addon_id", nargs="+", metavar="id")
     sp.set_defaults(func=cmd_uninstall)
 
     # update
-    sp = sub.add_parser("update", help="Update installed addons (all if no ids given).")
+    sp = sub.add_parser("update", parents=[g], help="Update installed addons (all if no ids given).")
     sp.add_argument("addon_id", nargs="*", metavar="id")
     sp.add_argument("-n", "--dry-run", action="store_true", help="Show what would be updated.")
     sp.add_argument("--no-deps", action="store_true", help="Skip automatic dependency updates.")
     sp.set_defaults(func=cmd_update)
 
     # status
-    sp = sub.add_parser("status", help="Show installed addons and available updates.")
+    sp = sub.add_parser("status", parents=[g], help="Show installed addons and available updates.")
     sp.set_defaults(func=cmd_status)
 
     # search
-    sp = sub.add_parser("search", help="Search the catalog by name, id or description.")
+    sp = sub.add_parser("search", parents=[g], help="Search the catalog by name, id or description.")
     sp.add_argument("query", metavar="query")
     sp.set_defaults(func=cmd_search)
 
     # orphans
-    sp = sub.add_parser("orphans", help="List installed addons not present in the catalog.")
+    sp = sub.add_parser("orphans", parents=[g], help="List installed addons not present in the catalog.")
     sp.set_defaults(func=cmd_orphans)
 
     # import
-    sp = sub.add_parser("import", help="Import a ZIP file (defaults to newest in ~/Downloads).")
+    sp = sub.add_parser("import", parents=[g], help="Import a ZIP file (defaults to newest in ~/Downloads).")
     sp.add_argument("file", nargs="?", default=None, metavar="file.zip")
     sp.set_defaults(func=cmd_import)
 
+    # backup
+    sp_bk = sub.add_parser("backup", parents=[g], help="Manage full profile backups.")
+    bk_sub = sp_bk.add_subparsers(dest="backup_cmd", metavar="<subcommand>")
+    bk_sub.add_parser("create", parents=[g], help="Create a full profile backup now.").set_defaults(func=cmd_backup)
+    bk_sub.add_parser("list", parents=[g], help="List full profile backups.").set_defaults(func=cmd_backup)
+    sp_bk2 = bk_sub.add_parser("restore", parents=[g], help="Restore a full profile backup.")
+    sp_bk2.add_argument("backup", metavar="index|name|path")
+    sp_bk2.set_defaults(func=cmd_backup)
+    sp_bk.set_defaults(func=cmd_backup)
+
+    # rollback
+    sp = sub.add_parser("rollback", parents=[g], help="Restore a single addon from its backups.")
+    sp.add_argument("addon_id", metavar="addon-id")
+    sp.add_argument("backup", nargs="?", default=None, metavar="index|name",
+                    help="Backup selector. Defaults to the newest backup.")
+    sp.add_argument("--list", action="store_true", help="List the addon's backups instead of restoring.")
+    sp.add_argument("--backup", dest="backup", metavar="sel",
+                    help="Restore a specific backup by index, name, or path.")
+    sp.set_defaults(func=cmd_rollback)
+
+    # weakauras
+    sp_wa = sub.add_parser("weakauras", parents=[g], aliases=["wa"],
+                           help="Track Wago.io WeakAuras + companion.")
+    wa_sub = sp_wa.add_subparsers(dest="wa_cmd", metavar="<subcommand>")
+    wa_sub.add_parser("list", parents=[g], help="List tracked auras.").set_defaults(func=cmd_weakauras)
+    sp_wa2 = wa_sub.add_parser("add", parents=[g], help="Track an aura by its Wago slug.")
+    sp_wa2.add_argument("slug", metavar="slug")
+    sp_wa2.add_argument("--name", default=None, help="Override the display name.")
+    sp_wa2.add_argument("--note", default=None, help="Attach a note.")
+    sp_wa2.set_defaults(func=cmd_weakauras)
+    sp_wa3 = wa_sub.add_parser("remove", parents=[g], help="Stop tracking an aura.")
+    sp_wa3.add_argument("slug", metavar="slug")
+    sp_wa3.set_defaults(func=cmd_weakauras)
+    wa_sub.add_parser("update", parents=[g], help="Check Wago.io for newer versions.").set_defaults(func=cmd_weakauras)
+    wa_sub.add_parser("import", parents=[g], help="Import auras from SavedVariables.").set_defaults(func=cmd_weakauras)
+    wa_sub.add_parser("companion", parents=[g], help="Regenerate WeakAurasCompanion.").set_defaults(func=cmd_weakauras)
+    sp_wa4 = wa_sub.add_parser("search", parents=[g], help="Search Wago.io for auras.")
+    sp_wa4.add_argument("query", metavar="query")
+    sp_wa4.set_defaults(func=cmd_weakauras)
+    sp_wa.set_defaults(func=cmd_weakauras)
+
     # profile
-    sp_prof = sub.add_parser("profile", help="Manage WoW profiles.")
+    sp_prof = sub.add_parser("profile", parents=[g], help="Manage WoW profiles.")
     prof_sub = sp_prof.add_subparsers(dest="profile_cmd", metavar="<subcommand>")
 
     sp2 = prof_sub.add_parser("list", help="List all configured profiles.")
@@ -507,7 +844,7 @@ def build_parser() -> argparse.ArgumentParser:
     ))
 
     # set
-    sp = sub.add_parser("set", help="Configure wowusky settings.")
+    sp = sub.add_parser("set", parents=[g], help="Configure wowusky settings.")
     sp.add_argument("setting", metavar="setting", choices=["curseforge-key"],
                     help="Setting name. Available: curseforge-key")
     sp.add_argument("value", metavar="value", nargs="?", default="",
@@ -526,10 +863,51 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+# Commands that never touch the WoW install (no profile needed, no data at
+# risk), so the automatic backup is pointless and is skipped for them.
+_NO_BACKUP_COMMANDS = {"version", "help", "search", "set", None}
+
+
+def _maybe_auto_backup(args: argparse.Namespace) -> None:
+    """Run a full profile backup before the command, unless skipped.
+
+    Skipped when --no-backup is given, for informational/offline commands,
+    or when no profile/addons path is configured yet.
+    """
+    if getattr(args, "no_backup", False):
+        return
+    command = getattr(args, "command", None)
+    if command in _NO_BACKUP_COMMANDS:
+        return
+    # Listing-only operations don't risk data, but we still honour the
+    # "backup before every run" choice for anything that can mutate the
+    # install. 'status'/'orphans'/'*list' are read-only — skip those too.
+    if command in ("status", "orphans"):
+        return
+    if getattr(args, "backup_cmd", None) == "list" or getattr(args, "wa_cmd", None) in ("list", "search"):
+        return
+    if getattr(args, "profile_cmd", None) == "list":
+        return
+    if getattr(args, "list", False):  # rollback --list
+        return
+    from wowusky.core.state import get_addons_path
+    if not get_addons_path():
+        return
+    from wowusky.core.backup import create_full_backup
+    try:
+        create_full_backup(log=lambda m: print(f"  {m.strip()}" if m.strip().startswith("✓") else m))
+    except Exception as exc:
+        print(f"  ⚠ auto-backup skipped: {exc}")
+
+
 def run_cli(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     if not hasattr(args, "func"):
         cmd_help(args)
         sys.exit(0)
+    # Normalise the 'wa' alias so help/lookup see the canonical name.
+    if getattr(args, "command", None) == "wa":
+        args.command = "weakauras"
+    _maybe_auto_backup(args)
     args.func(args)

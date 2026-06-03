@@ -23,18 +23,23 @@ the terminal without opening the GUI.
 ### Added
 - **CLI surface** (`wowusky/cli.py`): `wowusky <command>` dispatch on
   `sys.argv`. When arguments are present the GUI is bypassed entirely.
-- Commands: `install <id>...`, `uninstall <id>...`, `update [<id>...]`,
-  `status`, `search <query>`, `orphans`, `import [file.zip]`,
-  `profile list`, `profile switch <name|id>`,
-  `set curseforge-key <key>`, `version`.
-- `install` and `update` support `-n/--dry-run` (show plan, no changes)
-  and `--no-deps` (skip automatic dependency installation).
-- Plain/schlichte output: aligned columns with `ljust`, `✓`/`✗`/`↑`
-  markers, no colours or external dependencies.
+- Commands: `install`, `uninstall`, `update`, `status`, `search`,
+  `orphans`, `import`, `backup create|list|restore`, `rollback`,
+  `weakauras` (alias `wa`), `profile list|switch`, `set curseforge-key`,
+  `version`, and `help [<command>]`.
+- `install` and `update` support `-n/--dry-run` and `--no-deps`.
+- **Automatic full backup** before every command that touches the WoW
+  install (AddOns + WTF). Skipped for read-only/offline commands and via
+  the global `--no-backup` flag.
+- **Full-profile backup/restore** and **per-addon rollback** from the CLI.
+- **WeakAuras/Wago.io** management from the CLI: track, untrack, check
+  updates, import from SavedVariables, search, regenerate WeakAurasCompanion.
+- **`help` command** with a full reference plus per-command detail
+  (`wowusky help <command>`) showing syntax, options and examples.
+- Plain/schlichte output: aligned columns, `✓`/`✗`/`↑` markers, no colours.
 
 ### Internal
-- New tests: `tests/test_cli.py` (19 tests covering parser, search,
-  install dry-run, orphans, set curseforge-key, version).
+- New tests: `tests/test_cli.py` (41 tests).
 <!-- WHATS-NEW:END -->
 
 ---
@@ -167,7 +172,7 @@ wowusky/
 │   │       └── curseforge.py ← CurseForgeTab (CurseForge search)
 │   └── tools/
 │       └── health_check.py  ← CLI that pings every catalog entry
-├── tests/                   ← 128 tests
+├── tests/                   ← 334 tests
 ├── packaging/
 │   ├── wowusky.desktop
 │   └── wowusky.svg
