@@ -4,6 +4,34 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-06-03
+
+Feature release — automatic dependency resolution. Installing a catalog
+addon now pulls in any catalog entries it depends on, in the right order,
+before installing the addon itself. Existing profiles, installed lists and
+backups are untouched.
+
+### Added
+- **Catalog dependency resolver** (`wowusky/core/depends.py`): catalog
+  entries may declare `"depends": ["id", ...]`. On install, wowusky
+  resolves the transitive dependency graph against the loaded catalog and
+  installs every missing dependency first (dependencies before dependents).
+  Already-installed dependencies are skipped, cycles are handled safely,
+  and dependency ids missing from the catalog are logged and skipped.
+- Real dependency data wired into the shipped catalog: LittleWigs → BigWigs,
+  the Details plugins (Tiny Threat, Compare2, Streamer) → Details!, BigWigs
+  Voice → BigWigs, LittleWigs (CurseForge) → BigWigs (CurseForge).
+
+### Changed
+- `install_addon` (orchestrator) gained an `install_deps` flag (default
+  `True`) and installs resolved dependencies before the target. The
+  single-addon core path is unchanged.
+- Manifest loader now normalises a `depends` field (defaults to `[]`).
+
+### Internal
+- New tests: `tests/test_depends.py` (resolver unit tests + orchestrator
+  install-order wiring + real-catalog dependency assertions).
+
 ## [0.6.4] — 2026-06-03
 
 Refactor + responsiveness release. Completes the journey toward
@@ -760,6 +788,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.7.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.7.0
 [0.6.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.4
 [0.6.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.3
 [0.6.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.2

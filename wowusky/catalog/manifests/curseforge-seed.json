@@ -121,7 +121,10 @@
       ],
       "description": "Dungeon modules for BigWigs.",
       "provider": "curseforge_web",
-      "curseforge_slug": "little-wigs"
+      "curseforge_slug": "little-wigs",
+      "depends": [
+        "bigwigs_cf"
+      ]
     },
     {
       "id": "plater_cf",
@@ -631,7 +634,10 @@
       ],
       "description": "Threat plugin for Details.",
       "provider": "curseforge_web",
-      "curseforge_slug": "details-damage-meter-plugin-tiny-threat"
+      "curseforge_slug": "details-damage-meter-plugin-tiny-threat",
+      "depends": [
+        "details_cf"
+      ]
     },
     {
       "id": "details_compare2_cf",
@@ -646,7 +652,10 @@
       ],
       "description": "Comparison plugin for Details.",
       "provider": "curseforge_web",
-      "curseforge_slug": "details-damage-meter-compare-2-0"
+      "curseforge_slug": "details-damage-meter-compare-2-0",
+      "depends": [
+        "details_cf"
+      ]
     },
     {
       "id": "details_streamer_cf",
@@ -661,7 +670,10 @@
       ],
       "description": "Streamer plugin for Details.",
       "provider": "curseforge_web",
-      "curseforge_slug": "details-streamer"
+      "curseforge_slug": "details-streamer",
+      "depends": [
+        "details_cf"
+      ]
     },
     {
       "id": "method_raid_tools_cf",
@@ -2866,7 +2878,10 @@
       ],
       "description": "Voice pack support for BigWigs.",
       "provider": "curseforge_web",
-      "curseforge_slug": "bigwigs-voice"
+      "curseforge_slug": "bigwigs-voice",
+      "depends": [
+        "bigwigs_cf"
+      ]
     },
     {
       "id": "boss_banner_cf",
