@@ -81,7 +81,9 @@ export function BackupsScreen(): JSX.Element {
   useEffect(reload, []);
 
   const realEmpty = !!result && result.full_count === 0 && result.addon_count === 0;
-  const isDemo = SHOW_DEMO && realEmpty;
+  // Show demo data when the profile has none yet, or when the bridge call
+  // failed (e.g. a stale bridge after a renderer-only HMR reload).
+  const isDemo = SHOW_DEMO && (realEmpty || (!!error && !result));
   const view = isDemo ? DEMO_BACKUPS : result;
   const empty = realEmpty && !isDemo;
 
@@ -98,7 +100,7 @@ export function BackupsScreen(): JSX.Element {
 
       <div className="page-body scroll">
         <div className="page-pad">
-          {error ? (
+          {error && !isDemo ? (
             <div className="empty">
               <div className="eicon">!</div>
               <h3>Could not load backups</h3>
