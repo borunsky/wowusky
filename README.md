@@ -23,28 +23,44 @@ the terminal without opening the GUI.
 ### Added
 - **CLI surface** (`wowusky/cli.py`): `wowusky <command>` dispatch on
   `sys.argv`. When arguments are present the GUI is bypassed entirely.
-- Commands: `install`, `uninstall`, `update`, `status`, `search`,
-  `orphans`, `import`, `backup create|list|restore`, `rollback`,
-  `weakauras` (alias `wa`), `profile list|switch`, `set curseforge-key`,
-  `version`, and `help [<command>]`.
-- `install` and `update` support `-n/--dry-run` and `--no-deps`.
+- Commands: `install <id>...`, `uninstall <id>...`, `update [<id>...]`,
+  `status`, `search <query>`, `orphans`, `import [file.zip]`,
+  `backup create|list|restore`, `rollback <id> [sel]`,
+  `weakauras list|add|remove|update|import|search|companion` (alias `wa`),
+  `profile list`, `profile switch <name|id>`,
+  `set curseforge-key <key>`, `version`, `help [<command>]`.
+- `install` and `update` support `-n/--dry-run` (show plan, no changes)
+  and `--no-deps` (skip automatic dependency installation).
 - **Automatic full backup** before every command that touches the WoW
   install (AddOns + WTF). Skipped for read-only/offline commands and via
   the global `--no-backup` flag.
-- **Full-profile backup/restore** and **per-addon rollback** from the CLI.
-- **WeakAuras/Wago.io** management from the CLI: track, untrack, check
-  updates, import from SavedVariables, search, regenerate WeakAurasCompanion.
-- **`help` command** with a full reference plus per-command detail
+- **Full-profile backup/restore** from the CLI: `backup create`,
+  `backup list`, `backup restore <index|name|path>`.
+- **Per-addon rollback** from the CLI: `rollback <id>` restores an addon's
+  newest backup; `rollback <id> --list` lists them; `--backup <sel>` picks
+  a specific one.
+- **WeakAuras/Wago.io** management from the CLI: track, untrack, check for
+  updates, import from SavedVariables, search Wago.io, and regenerate the
+  WeakAurasCompanion addon.
+- **`help` command** with a full command reference plus per-command detail
   (`wowusky help <command>`) showing syntax, options and examples.
-- **`-q/--quiet`** and **`--json`** global flags (machine-readable output
-  for `status`/`search`/`orphans`/`backup list`/`weakauras list`).
-- **`update --all-profiles`** to update every profile in one run.
-- **`completion bash|zsh`** to generate shell completion scripts.
-- **systemd user timer** (`packaging/systemd/`) for daily update checks.
-- Plain/schlichte output: aligned columns, `✓`/`✗`/`↑` markers, no colours.
+- **`-q/--quiet`** global flag: suppresses progress/info output (keeps
+  warnings, errors and explicit results) — handy for cron jobs.
+- **`--json`** global flag: machine-readable JSON output for `status`,
+  `search`, `orphans`, `backup list` and `weakauras list`. Implies quiet.
+- **`update --all-profiles`**: update every configured profile in turn,
+  each with its own automatic backup, restoring the active profile after.
+- **`completion bash|zsh`**: print a shell completion script to stdout
+  (no external dependency).
+- **systemd user timer** (`packaging/systemd/`): `wowusky-update.service`
+  + `.timer` run `wowusky update --all-profiles --quiet` daily.
+- Plain/schlichte output: aligned columns with `ljust`, `✓`/`✗`/`↑`
+  markers, no colours or external dependencies.
 
 ### Internal
-- New tests: `tests/test_cli.py` (56 tests).
+- New tests: `tests/test_cli.py` (56 tests covering parser, search,
+  install dry-run, orphans, help, backup, rollback, weakauras, auto-backup,
+  quiet, json, update --all-profiles, completion, and `set curseforge-key`).
 <!-- WHATS-NEW:END -->
 
 ---
