@@ -1,0 +1,104 @@
+name: README version sync
+
+# Keeps the README banner, install snippets and the "What's new" block in sync
+# with the top CHANGELOG.md entry whenever a release is published.
+# Can also be triggered manually from Actions → "Run workflow".
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync README from CHANGELOG
+        run: |
+          python3 - <<'PYEOF'
+          import re, pathlib, sys
+
+          ROOT      = pathlib.Path(".")
+          CHANGELOG = ROOT / "CHANGELOG.md"
+          README    = ROOT / "README.md"
+
+          START    = "<!-- WHATS-NEW:START -->"
+          END      = "<!-- WHATS-NEW:END -->"
+          GEN_NOTE = (
+              "<!-- This section is generated from the latest CHANGELOG.md entry by\n"
+              "     .github/workflows/readme-version-sync.yml on each published release.\n"
+              "     Edit CHANGELOG.md, not the text between these markers. -->"
+          )
+
+          cl = CHANGELOG.read_text(encoding="utf-8")
+          m = re.search(r"^## \[(\d+\.\d+\.\d+)\][^\n]*\n", cl, re.MULTILINE)
+          if not m:
+              sys.exit("ERROR: no '## [X.Y.Z]' entry found in CHANGELOG.md")
+          version = m.group(1)
+          rest = cl[m.end():]
+          nxt  = re.search(r"^## \[", rest, re.MULTILINE)
+          body = (rest[:nxt.start()] if nxt else rest).strip("\n")
+
+          whats_new = f"{START}\n{GEN_NOTE}\n## What's new in v{version}\n\n{body}\n{END}"
+
+          readme = README.read_text(encoding="utf-8")
+
+          # If markers are missing, replace the first "## What's new" heading block.
+          if START not in readme:
+              # Insert markers around whatever "## What's new" section exists,
+              # or append at the end of the intro block (before "## Install").
+              readme = re.sub(
+                  r"(## What[''`]?s new[^\n]*\n.*?)(?=\n---|\n## )",
+                  lambda mo: whats_new + "\n",
+                  readme,
+                  count=1,
+                  flags=re.DOTALL,
+              )
+              if START not in readme:
+                  # Fallback: insert before the first "---" separator
+                  readme = readme.replace("\n---\n", f"\n{whats_new}\n\n---\n", 1)
+
+          # Regenerate the WHATS-NEW block.
+          block_re = re.compile(re.escape(START) + r".*?" + re.escape(END), re.DOTALL)
+          readme = block_re.sub(whats_new, readme)
+
+          # Sync version strings in banner + install snippets.
+          for pat, repl in [
+              (r"(◆ wowusky v)\d+\.\d+\.\d+",              rf"\g<1>{version}"),
+              (r"(wowusky v)\d+\.\d+\.\d+",                 rf"\g<1>{version}"),
+              (r"(wowusky-v)\d+\.\d+\.\d+",                 rf"\g<1>{version}"),
+              (r"(wowusky-)\d+\.\d+\.\d+(-py3-none-any\.whl)", rf"\g<1>{version}\g<2>"),
+          ]:
+              readme = re.sub(pat, repl, readme)
+
+          README.write_text(readme, encoding="utf-8")
+          print(f"README.md synced to v{version}.")
+          PYEOF
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "README already in sync; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: sync README to v$(python3 -c "
+          import re, pathlib
+          m = re.search(r'## \[(\d+\.\d+\.\d+)\]', pathlib.Path('CHANGELOG.md').read_text())
+          print(m.group(1) if m else 'unknown')
+          ")"
+          git push origin main

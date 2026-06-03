@@ -65,7 +65,7 @@ jobs:
           python -m pip install dist/*.whl
           python -c "import wowusky; print('wowusky', wowusky.__version__)"
           python -c "from wowusky.catalog import load_catalog; print('catalog:', len(load_catalog()))"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v4
         with:
           name: wowusky-dist
           path: dist/
