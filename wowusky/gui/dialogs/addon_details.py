@@ -151,4 +151,13 @@ class AddonDetailsDialog:
                                   self._on_install_version(addon, c["url"], c["label"])),
                     variant="primary", compact=True).pack(side="right")
 
-        ctx.root.after(0, ui)
+        # The dialog may have been closed (or the whole app torn down) while
+        # this background thread was running. Scheduling onto a dead Tk root
+        # raises RuntimeError ("main thread is not in main loop") / TclError,
+        # so only dispatch when the root is still alive.
+        try:
+            if not ctx.root.winfo_exists():
+                return
+            ctx.root.after(0, ui)
+        except (RuntimeError, tk.TclError):
+            pass
