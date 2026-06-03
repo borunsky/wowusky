@@ -7,15 +7,31 @@ All output is plain text — no colours, no progress bars.
 from __future__ import annotations
 
 import argparse
+import json as _json
 import sys
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+# Set from the global --quiet flag in run_cli. When true, decorative and
+# progress output is suppressed; warnings/errors and explicit results stay.
+_QUIET = False
+
+
 def _die(msg: str) -> None:
     print(f"error: {msg}", file=sys.stderr)
     sys.exit(1)
+
+
+def _say(msg: str = "") -> None:
+    """Print informational output unless --quiet is in effect."""
+    if not _QUIET:
+        print(msg)
+
+
+def _print_json(data) -> None:
+    print(_json.dumps(data, indent=2, ensure_ascii=False))
 
 
 def _addons_path() -> str:
@@ -53,17 +69,18 @@ def cmd_install(args: argparse.Namespace) -> None:
     install_deps = not args.no_deps
     dry = getattr(args, "dry_run", False)
 
+    log = (lambda m: None) if _QUIET else print
     for addon_id in args.addon_id:
         addon = find_addon_by_id(addon_id)
         if addon is None:
             print(f"  ✗ {addon_id}: not found in catalog")
             continue
         if dry:
-            print(f"  (dry-run) would install {addon['name']}")
+            _say(f"  (dry-run) would install {addon['name']}")
             continue
         try:
-            install_addon(addon, ap, log=print, install_deps=install_deps)
-            print(f"  ✓ {addon['name']} installed")
+            install_addon(addon, ap, log=log, install_deps=install_deps)
+            _say(f"  ✓ {addon['name']} installed")
         except Exception as exc:
             print(f"  ✗ {addon['name']}: {exc}")
 
@@ -72,20 +89,32 @@ def cmd_uninstall(args: argparse.Namespace) -> None:
     from wowusky.orchestrator import uninstall_addon
     ap = _addons_path()
 
+    log = (lambda m: None) if _QUIET else print
     for addon_id in args.addon_id:
         try:
-            uninstall_addon(addon_id, ap, log=print)
-            print(f"  ✓ {addon_id} uninstalled")
+            uninstall_addon(addon_id, ap, log=log)
+            _say(f"  ✓ {addon_id} uninstalled")
         except Exception as exc:
             print(f"  ✗ {addon_id}: {exc}")
 
 
 def cmd_update(args: argparse.Namespace) -> None:
+    if getattr(args, "all_profiles", False):
+        if args.addon_id:
+            _die("--all-profiles cannot be combined with explicit addon ids.")
+        _update_all_profiles(args)
+        return
+    _update_one_profile(args)
+
+
+def _update_one_profile(args: argparse.Namespace) -> int:
+    """Update the active profile. Returns the number of addons updated."""
     from wowusky.orchestrator import find_addon_by_id, get_latest_version, install_addon
     ap = _addons_path()
     installed = _installed()
     dry = getattr(args, "dry_run", False)
     install_deps = not getattr(args, "no_deps", False)
+    log = (lambda m: None) if _QUIET else print
 
     targets: list[dict] = []
     if args.addon_id:
@@ -113,32 +142,65 @@ def cmd_update(args: argparse.Namespace) -> None:
             latest = None
         if latest and current and latest == current:
             if args.addon_id:
-                print(f"  = {addon['name']} {current} (up to date)")
+                _say(f"  = {addon['name']} {current} (up to date)")
             continue
         if dry:
             ver_info = f"{current} -> {latest}" if latest else current
-            print(f"  (dry-run) would update {addon['name']} {ver_info}")
+            _say(f"  (dry-run) would update {addon['name']} {ver_info}")
             continue
         try:
-            install_addon(addon, ap, log=print, install_deps=install_deps)
-            print(f"  ✓ {addon['name']} updated")
+            install_addon(addon, ap, log=log, install_deps=install_deps)
+            _say(f"  ✓ {addon['name']} updated")
             updated += 1
         except Exception as exc:
             print(f"  ✗ {addon['name']}: {exc}")
 
     if not args.addon_id:
-        print(f"\n{updated} addon(s) updated.")
+        _say(f"\n{updated} addon(s) updated.")
+    return updated
+
+
+def _update_all_profiles(args: argparse.Namespace) -> None:
+    """Update every configured profile, restoring the active one afterwards."""
+    from wowusky.core.state import (
+        get_active_profile_id,
+        load_profiles,
+        set_active_profile,
+    )
+    data = load_profiles()
+    profiles = data.get("profiles", {})
+    if not profiles:
+        print("No profiles configured.")
+        return
+    original = get_active_profile_id()
+    total = 0
+    try:
+        for pid, prof in profiles.items():
+            name = prof.get("name") or pid
+            set_active_profile(pid)
+            _say(f"⟩ profile: {name}")
+            # Each profile takes its own auto-backup before mutating.
+            _maybe_auto_backup(args)
+            total += _update_one_profile(args)
+    finally:
+        set_active_profile(original)
+    _say(f"\n{total} addon(s) updated across {len(profiles)} profile(s).")
 
 
 def cmd_status(args: argparse.Namespace) -> None:
     from wowusky.orchestrator import find_addon_by_id, get_latest_version
     installed = _installed()
+    as_json = getattr(args, "json", False)
 
     if not installed:
-        print("No addons installed.")
+        if as_json:
+            _print_json([])
+        else:
+            print("No addons installed.")
         return
 
     rows: list[tuple[str, str, str, str]] = []
+    json_rows: list[dict] = []
     for aid, entry in sorted(installed.items()):
         name = entry.get("name") or aid
         current = entry.get("version") or "?"
@@ -153,6 +215,18 @@ def cmd_status(args: argparse.Namespace) -> None:
             latest = "-"
             flag = " "
         rows.append((flag, aid, name, current, latest))
+        json_rows.append({
+            "id": aid,
+            "name": name,
+            "installed": current,
+            "latest": latest,
+            "update_available": flag == "↑",
+            "in_catalog": addon is not None,
+        })
+
+    if as_json:
+        _print_json(json_rows)
+        return
 
     w_id = max(len(r[1]) for r in rows)
     w_name = max(len(r[2]) for r in rows)
@@ -166,6 +240,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 def cmd_search(args: argparse.Namespace) -> None:
     query = args.query.lower()
+    as_json = getattr(args, "json", False)
     catalog = _catalog()
     results = [
         a for a in catalog
@@ -173,6 +248,18 @@ def cmd_search(args: argparse.Namespace) -> None:
         or query in a.get("name", "").lower()
         or query in a.get("description", "").lower()
     ]
+    if as_json:
+        _print_json([
+            {
+                "id": a["id"],
+                "name": a.get("name", ""),
+                "provider": a.get("provider") or a.get("source") or "",
+                "category": a.get("category", ""),
+                "description": a.get("description", ""),
+            }
+            for a in sorted(results, key=lambda x: x["id"])
+        ])
+        return
     if not results:
         print(f"No results for '{args.query}'.")
         return
@@ -189,7 +276,14 @@ def cmd_search(args: argparse.Namespace) -> None:
 def cmd_orphans(args: argparse.Namespace) -> None:
     from wowusky.orchestrator import find_addon_by_id
     installed = _installed()
+    as_json = getattr(args, "json", False)
     orphans = [aid for aid in installed if find_addon_by_id(aid) is None]
+    if as_json:
+        _print_json([
+            {"id": aid, "name": installed[aid].get("name") or aid}
+            for aid in sorted(orphans)
+        ])
+        return
     if not orphans:
         print("No orphaned addons found.")
         return
@@ -299,6 +393,13 @@ def _backup_create(args: argparse.Namespace) -> None:
 def _backup_list(args: argparse.Namespace) -> None:
     from wowusky.core.backup import list_full_backups
     backups = list_full_backups()
+    if getattr(args, "json", False):
+        _print_json([
+            {"index": i, "name": b["name"], "path": b["path"],
+             "mtime": b["mtime"], "size": b["size"]}
+            for i, b in enumerate(backups)
+        ])
+        return
     if not backups:
         print("No full backups for the active profile.")
         return
@@ -412,6 +513,19 @@ def cmd_weakauras(args: argparse.Namespace) -> None:
 def _wa_list(args: argparse.Namespace) -> None:
     from wowusky.core.state import load_wago
     auras = (load_wago() or {}).get("auras", {})
+    if getattr(args, "json", False):
+        _print_json([
+            {
+                "slug": slug,
+                "name": e.get("name") or slug,
+                "version": e.get("version"),
+                "latest_version": e.get("latest_version"),
+                "update_available": (e.get("latest_version") is not None
+                                     and str(e.get("latest_version")) != str(e.get("version"))),
+            }
+            for slug, e in sorted(auras.items())
+        ])
+        return
     if not auras:
         print("No tracked WeakAuras. Add one with 'weakauras add <slug>'.")
         return
@@ -494,6 +608,66 @@ def cmd_version(args: argparse.Namespace) -> None:
     print(f"wowusky {__version__}")
 
 
+# ---------------------------------------------------------------------------
+# Shell completion
+# ---------------------------------------------------------------------------
+
+_BASH_COMPLETION = r"""# wowusky bash completion — generated by `wowusky completion bash`.
+# Install:  wowusky completion bash > ~/.local/share/bash-completion/completions/wowusky
+_wowusky_completion() {
+    local cur prev
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    local commands="install uninstall update status search orphans import \
+backup rollback weakauras wa profile set version help completion"
+    if [ "$COMP_CWORD" -eq 1 ]; then
+        COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+        return
+    fi
+    case "${COMP_WORDS[1]}" in
+        backup)        COMPREPLY=( $(compgen -W "create list restore" -- "$cur") );;
+        profile)       COMPREPLY=( $(compgen -W "list switch" -- "$cur") );;
+        weakauras|wa)  COMPREPLY=( $(compgen -W "list add remove update import search companion" -- "$cur") );;
+        set)           COMPREPLY=( $(compgen -W "curseforge-key" -- "$cur") );;
+        completion)    COMPREPLY=( $(compgen -W "bash zsh" -- "$cur") );;
+        help)          COMPREPLY=( $(compgen -W "$commands" -- "$cur") );;
+    esac
+}
+complete -F _wowusky_completion wowusky
+"""
+
+_ZSH_COMPLETION = r"""#compdef wowusky
+# wowusky zsh completion — generated by `wowusky completion zsh`.
+# Install:  wowusky completion zsh > "${fpath[1]}/_wowusky"  (then restart zsh)
+_wowusky() {
+    local -a commands
+    commands=(install uninstall update status search orphans import \
+backup rollback weakauras wa profile set version help completion)
+    if (( CURRENT == 2 )); then
+        _describe 'command' commands
+        return
+    fi
+    case $words[2] in
+        backup)       _values 'subcommand' create list restore;;
+        profile)      _values 'subcommand' list switch;;
+        weakauras|wa) _values 'subcommand' list add remove update import search companion;;
+        set)          _values 'setting' curseforge-key;;
+        completion)   _values 'shell' bash zsh;;
+    esac
+}
+_wowusky "$@"
+"""
+
+
+def cmd_completion(args: argparse.Namespace) -> None:
+    if args.shell == "bash":
+        print(_BASH_COMPLETION)
+    elif args.shell == "zsh":
+        print(_ZSH_COMPLETION)
+    else:
+        _die(f"Unsupported shell '{args.shell}'. Supported: bash, zsh")
+
+
 def cmd_help(args: argparse.Namespace) -> None:
     from wowusky import __version__
     topic = getattr(args, "topic", None)
@@ -523,16 +697,19 @@ def cmd_help(args: argparse.Namespace) -> None:
             ],
         },
         "update": {
-            "syntax":   "wowusky update [<id>...] [-n] [--no-deps]",
+            "syntax":   "wowusky update [<id>...] [-n] [--no-deps] [--all-profiles]",
             "desc":     "Update installed addons. Without ids, updates every installed catalog addon.",
             "flags": [
-                ("-n, --dry-run", "Show what would be updated without making changes."),
-                ("--no-deps",     "Skip dependency updates."),
+                ("-n, --dry-run",   "Show what would be updated without making changes."),
+                ("--no-deps",       "Skip dependency updates."),
+                ("--all-profiles",  "Update every configured profile, not just the active one."),
             ],
             "examples": [
-                ("wowusky update",             "Update all installed addons."),
-                ("wowusky update elvui",       "Update only ElvUI."),
-                ("wowusky update -n",          "Preview available updates."),
+                ("wowusky update",                "Update all installed addons."),
+                ("wowusky update elvui",          "Update only ElvUI."),
+                ("wowusky update -n",             "Preview available updates."),
+                ("wowusky update --all-profiles", "Update every profile in turn."),
+                ("wowusky update -q",             "Update quietly (for cron jobs)."),
             ],
         },
         "status": {
@@ -650,6 +827,18 @@ def cmd_help(args: argparse.Namespace) -> None:
                 ("wowusky weakauras companion",       "Regenerate WeakAurasCompanion."),
             ],
         },
+        "completion": {
+            "syntax":   "wowusky completion bash\n"
+                        "  wowusky completion zsh",
+            "desc":     "Print a shell completion script to stdout.\n"
+                        "  bash:  wowusky completion bash > ~/.local/share/bash-completion/completions/wowusky\n"
+                        "  zsh:   wowusky completion zsh  > \"${fpath[1]}/_wowusky\"  (then restart zsh)",
+            "flags":    [],
+            "examples": [
+                ("wowusky completion bash", "Print the bash completion script."),
+                ("wowusky completion zsh",  "Print the zsh completion script."),
+            ],
+        },
         "version": {
             "syntax":   "wowusky version",
             "desc":     "Print the installed wowusky version and exit.",
@@ -697,6 +886,7 @@ def cmd_help(args: argparse.Namespace) -> None:
         ("weakauras list|add|update|…",  "Track Wago.io WeakAuras + companion"),
         ("profile   list|switch <name>", "Manage WoW installation profiles"),
         ("set       curseforge-key [v]", "Configure wowusky settings"),
+        ("completion bash|zsh",          "Print a shell completion script"),
         ("version",                      "Print version and exit"),
         ("help      [<command>]",        "Show this help, or detailed help for one command"),
     ]
@@ -708,9 +898,12 @@ def cmd_help(args: argparse.Namespace) -> None:
     print("Flags available on install / update:")
     print("  -n, --dry-run   Show what would happen without making changes.")
     print("  --no-deps       Skip automatic catalog dependency installation.")
+    print("  --all-profiles  (update only) Update every configured profile.")
     print()
     print("Global flags:")
     print("  --no-backup     Skip the automatic full backup taken before the command runs.")
+    print("  -q, --quiet     Suppress progress/info output; keep warnings, errors, results.")
+    print("  --json          Machine-readable JSON output (status, search, orphans, list).")
     print()
     print("Auto-backup: a full profile backup runs automatically before every command")
     print("that touches your WoW install. Use --no-backup to skip it for one run.")
@@ -745,7 +938,13 @@ def build_parser() -> argparse.ArgumentParser:
     g = argparse.ArgumentParser(add_help=False)
     g.add_argument("--no-backup", action="store_true",
                    help="Skip the automatic full backup taken before the command runs.")
+    g.add_argument("-q", "--quiet", action="store_true",
+                   help="Suppress progress/info output; keep warnings, errors and results.")
+    g.add_argument("--json", action="store_true",
+                   help="Machine-readable JSON output (status, search, orphans, backup/wa list).")
     p.add_argument("--no-backup", action="store_true", help=argparse.SUPPRESS)
+    p.add_argument("-q", "--quiet", action="store_true", help=argparse.SUPPRESS)
+    p.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
 
     sub = p.add_subparsers(dest="command", metavar="<command>")
 
@@ -766,6 +965,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("addon_id", nargs="*", metavar="id")
     sp.add_argument("-n", "--dry-run", action="store_true", help="Show what would be updated.")
     sp.add_argument("--no-deps", action="store_true", help="Skip automatic dependency updates.")
+    sp.add_argument("--all-profiles", action="store_true",
+                    help="Update every configured profile, not just the active one.")
     sp.set_defaults(func=cmd_update)
 
     # status
@@ -860,12 +1061,18 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("topic", nargs="?", default=None, metavar="command")
     sp.set_defaults(func=cmd_help)
 
+    # completion
+    sp = sub.add_parser("completion", help="Print a shell completion script (bash or zsh).")
+    sp.add_argument("shell", choices=["bash", "zsh"], metavar="shell",
+                    help="Shell to generate completion for: bash or zsh.")
+    sp.set_defaults(func=cmd_completion)
+
     return p
 
 
 # Commands that never touch the WoW install (no profile needed, no data at
 # risk), so the automatic backup is pointless and is skipped for them.
-_NO_BACKUP_COMMANDS = {"version", "help", "search", "set", None}
+_NO_BACKUP_COMMANDS = {"version", "help", "search", "set", "completion", None}
 
 
 def _maybe_auto_backup(args: argparse.Namespace) -> None:
@@ -894,18 +1101,28 @@ def _maybe_auto_backup(args: argparse.Namespace) -> None:
     if not get_addons_path():
         return
     from wowusky.core.backup import create_full_backup
+    quiet_log = _QUIET or getattr(args, "json", False)
     try:
-        create_full_backup(log=lambda m: print(f"  {m.strip()}" if m.strip().startswith("✓") else m))
+        if quiet_log:
+            create_full_backup(log=lambda m: None)
+        else:
+            create_full_backup(
+                log=lambda m: print(f"  {m.strip()}" if m.strip().startswith("✓") else m)
+            )
     except Exception as exc:
-        print(f"  ⚠ auto-backup skipped: {exc}")
+        if not quiet_log:
+            print(f"  ⚠ auto-backup skipped: {exc}")
 
 
 def run_cli(argv: list[str] | None = None) -> None:
+    global _QUIET
     parser = build_parser()
     args = parser.parse_args(argv)
     if not hasattr(args, "func"):
         cmd_help(args)
         sys.exit(0)
+    # --json implies quiet so the JSON payload is the only thing on stdout.
+    _QUIET = bool(getattr(args, "quiet", False) or getattr(args, "json", False))
     # Normalise the 'wa' alias so help/lookup see the canonical name.
     if getattr(args, "command", None) == "wa":
         args.command = "weakauras"

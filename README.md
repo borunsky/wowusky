@@ -36,10 +36,15 @@ the terminal without opening the GUI.
   updates, import from SavedVariables, search, regenerate WeakAurasCompanion.
 - **`help` command** with a full reference plus per-command detail
   (`wowusky help <command>`) showing syntax, options and examples.
+- **`-q/--quiet`** and **`--json`** global flags (machine-readable output
+  for `status`/`search`/`orphans`/`backup list`/`weakauras list`).
+- **`update --all-profiles`** to update every profile in one run.
+- **`completion bash|zsh`** to generate shell completion scripts.
+- **systemd user timer** (`packaging/systemd/`) for daily update checks.
 - Plain/schlichte output: aligned columns, `✓`/`✗`/`↑` markers, no colours.
 
 ### Internal
-- New tests: `tests/test_cli.py` (41 tests).
+- New tests: `tests/test_cli.py` (56 tests).
 <!-- WHATS-NEW:END -->
 
 ---
@@ -172,7 +177,7 @@ wowusky/
 │   │       └── curseforge.py ← CurseForgeTab (CurseForge search)
 │   └── tools/
 │       └── health_check.py  ← CLI that pings every catalog entry
-├── tests/                   ← 334 tests
+├── tests/                   ← 349 tests
 ├── packaging/
 │   ├── wowusky.desktop
 │   └── wowusky.svg
@@ -243,8 +248,11 @@ The v0.4 refactor was the prerequisite. Now planned:
   `"depends": [...]` and wowusky installs them automatically, in order,
   before the addon itself.~~ ✅ done
 - ~~**v0.8.0** — CLI surface: `wowusky install elvui`, `wowusky update`,
-  `wowusky profile switch retail`, `wowusky set curseforge-key <key>`.~~ ✅ done
-- **Next** — optional systemd-user-service for daily update checks.
+  `wowusky profile switch retail`, `wowusky set curseforge-key <key>`,
+  `--json`/`--quiet`, shell completion, and a systemd user timer for daily
+  update checks.~~ ✅ done
+- **Next** — TBD. See [issues](https://github.com/borunsky/wowusky/issues)
+  or open one with a request.
 
 See [CHANGELOG.md](CHANGELOG.md) for what landed in each release and
 [CONTRIBUTING.md](CONTRIBUTING.md) if you'd like to send a patch.

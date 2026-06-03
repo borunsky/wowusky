@@ -1,0 +1,14 @@
+[Unit]
+Description=wowusky addon update check
+Documentation=https://github.com/borunsky/wowusky
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Update every configured profile quietly. wowusky takes an automatic full
+# backup before touching each profile; pass --no-backup to skip that.
+ExecStart=%h/.local/bin/wowusky update --all-profiles --quiet
+# Fall back to `python -m wowusky` if the launcher is not on PATH:
+#   ExecStart=/usr/bin/python -m wowusky update --all-profiles --quiet
+Nice=10

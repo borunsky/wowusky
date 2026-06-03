@@ -33,13 +33,23 @@ the terminal without opening the GUI.
   WeakAurasCompanion addon.
 - **`help` command** with a full command reference plus per-command detail
   (`wowusky help <command>`) showing syntax, options and examples.
+- **`-q/--quiet`** global flag: suppresses progress/info output (keeps
+  warnings, errors and explicit results) — handy for cron jobs.
+- **`--json`** global flag: machine-readable JSON output for `status`,
+  `search`, `orphans`, `backup list` and `weakauras list`. Implies quiet.
+- **`update --all-profiles`**: update every configured profile in turn,
+  each with its own automatic backup, restoring the active profile after.
+- **`completion bash|zsh`**: print a shell completion script to stdout
+  (no external dependency).
+- **systemd user timer** (`packaging/systemd/`): `wowusky-update.service`
+  + `.timer` run `wowusky update --all-profiles --quiet` daily.
 - Plain/schlichte output: aligned columns with `ljust`, `✓`/`✗`/`↑`
   markers, no colours or external dependencies.
 
 ### Internal
-- New tests: `tests/test_cli.py` (41 tests covering parser, search,
+- New tests: `tests/test_cli.py` (56 tests covering parser, search,
   install dry-run, orphans, help, backup, rollback, weakauras, auto-backup,
-  and `set curseforge-key`).
+  quiet, json, update --all-profiles, completion, and `set curseforge-key`).
 
 ## [0.7.0] — 2026-06-03
 

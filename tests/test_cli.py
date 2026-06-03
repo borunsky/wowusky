@@ -365,3 +365,143 @@ def test_autobackup_skipped_for_status():
          patch("wowusky.core.backup.create_full_backup") as mock_bk:
         run_cli(["status"])
     mock_bk.assert_not_called()
+
+
+def test_autobackup_skipped_for_completion():
+    with patch("wowusky.core.backup.create_full_backup") as mock_bk:
+        run_cli(["completion", "bash"])
+    mock_bk.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# --quiet
+# ---------------------------------------------------------------------------
+
+def test_quiet_suppresses_install_success(capsys):
+    fake_addon = FAKE_CATALOG[0]
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.state.get_addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.backup.create_full_backup", return_value="/b/x.zip"), \
+         patch("wowusky.orchestrator.find_addon_by_id", return_value=fake_addon), \
+         patch("wowusky.orchestrator.install_addon"):
+        run_cli(["install", "bigwigs", "-q"])
+    out = capsys.readouterr().out
+    assert "installed" not in out  # success line suppressed
+
+
+def test_quiet_keeps_errors(capsys):
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.state.get_addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.backup.create_full_backup", return_value="/b/x.zip"), \
+         patch("wowusky.orchestrator.find_addon_by_id", return_value=None):
+        run_cli(["install", "nope", "-q"])
+    out = capsys.readouterr().out
+    assert "not found in catalog" in out  # error kept even when quiet
+
+
+def test_quiet_silences_autobackup(capsys):
+    with patch("wowusky.cli._addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.state.get_addons_path", return_value="/fake/AddOns"), \
+         patch("wowusky.core.backup.create_full_backup", return_value="/b/x.zip") as mock_bk, \
+         patch("wowusky.orchestrator.find_addon_by_id", return_value=None):
+        run_cli(["install", "nope", "-q"])
+    # backup still runs, but its log callback is the no-op
+    mock_bk.assert_called_once()
+    log_cb = mock_bk.call_args.kwargs["log"]
+    assert log_cb("anything") is None
+
+
+# ---------------------------------------------------------------------------
+# --json
+# ---------------------------------------------------------------------------
+
+def test_status_json_empty(capsys):
+    with patch("wowusky.cli._installed", return_value={}):
+        run_cli(["status", "--json"])
+    import json
+    assert json.loads(capsys.readouterr().out) == []
+
+
+def test_status_json_rows(capsys):
+    installed = {"bigwigs": {"name": "BigWigs", "version": "1.0"}}
+    with patch("wowusky.cli._installed", return_value=installed), \
+         patch("wowusky.orchestrator.find_addon_by_id", return_value=FAKE_CATALOG[0]), \
+         patch("wowusky.orchestrator.get_latest_version", return_value="2.0"):
+        run_cli(["status", "--json"])
+    import json
+    data = json.loads(capsys.readouterr().out)
+    assert data[0]["id"] == "bigwigs"
+    assert data[0]["update_available"] is True
+
+
+def test_search_json(capsys):
+    with patch("wowusky.cli._catalog", return_value=FAKE_CATALOG):
+        run_cli(["search", "elvui", "--json"])
+    import json
+    data = json.loads(capsys.readouterr().out)
+    assert any(r["id"] == "elvui" for r in data)
+
+
+def test_orphans_json(capsys):
+    with patch("wowusky.cli._installed", return_value={"x": {"name": "X"}}), \
+         patch("wowusky.orchestrator.find_addon_by_id", return_value=None):
+        run_cli(["orphans", "--json"])
+    import json
+    data = json.loads(capsys.readouterr().out)
+    assert data == [{"id": "x", "name": "X"}]
+
+
+def test_json_skips_autobackup():
+    with patch("wowusky.cli._catalog", return_value=FAKE_CATALOG), \
+         patch("wowusky.core.backup.create_full_backup") as mock_bk:
+        run_cli(["search", "elvui", "--json"])
+    mock_bk.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# update --all-profiles
+# ---------------------------------------------------------------------------
+
+def test_update_all_profiles_flag_parses():
+    p = build_parser()
+    args = p.parse_args(["update", "--all-profiles"])
+    assert args.all_profiles is True
+
+
+def test_update_all_profiles_iterates_and_restores():
+    profiles = {"retail": {"name": "Retail"}, "tbc": {"name": "TBC"}}
+    switched = []
+    with patch("wowusky.core.state.load_profiles", return_value={"profiles": profiles}), \
+         patch("wowusky.core.state.get_active_profile_id", return_value="retail"), \
+         patch("wowusky.core.state.set_active_profile", side_effect=lambda p: switched.append(p)), \
+         patch("wowusky.cli._maybe_auto_backup"), \
+         patch("wowusky.cli._update_one_profile", return_value=1) as mock_upd:
+        run_cli(["update", "--all-profiles", "--no-backup"])
+    assert mock_upd.call_count == 2
+    assert switched[-1] == "retail"  # active profile restored last
+
+
+def test_update_all_profiles_rejects_ids():
+    with pytest.raises(SystemExit):
+        run_cli(["update", "elvui", "--all-profiles", "--no-backup"])
+
+
+# ---------------------------------------------------------------------------
+# completion
+# ---------------------------------------------------------------------------
+
+def test_completion_bash(capsys):
+    run_cli(["completion", "bash"])
+    out = capsys.readouterr().out
+    assert "complete -F _wowusky_completion wowusky" in out
+
+
+def test_completion_zsh(capsys):
+    run_cli(["completion", "zsh"])
+    out = capsys.readouterr().out
+    assert "#compdef wowusky" in out
+
+
+def test_completion_rejects_unknown_shell():
+    with pytest.raises(SystemExit):
+        run_cli(["completion", "fish"])

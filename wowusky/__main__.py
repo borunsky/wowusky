@@ -33,7 +33,7 @@ _ensure_package_on_path()
 _CLI_COMMANDS = {
     "install", "uninstall", "update", "status",
     "search", "orphans", "import", "profile", "set", "version", "help",
-    "backup", "rollback", "weakauras", "wa",
+    "backup", "rollback", "weakauras", "wa", "completion",
     "--help", "-h", "--version",
 }
 
