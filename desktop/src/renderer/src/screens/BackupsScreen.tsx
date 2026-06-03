@@ -21,6 +21,22 @@ interface BackupsResult {
   addon_count: number;
 }
 
+// Dev-only placeholder data, shown when the profile has no backups yet so the
+// layout can be eyeballed. Flip to false to disable.
+const SHOW_DEMO = true;
+const _now = Date.now() / 1000;
+const DEMO_BACKUPS: BackupsResult = {
+  full_count: 1,
+  addon_count: 2,
+  full: [
+    { path: "demo-full", name: "wowusky-full-20260603-2230.zip", mtime: _now - 3600, size: 48_300_000 },
+  ],
+  addons: [
+    { path: "demo-elvui", addon_id: "elvui", addon_name: "ElvUI", name: "elvui-13.78.zip", mtime: _now - 7200, size: 4_200_000, version: "13.78" },
+    { path: "demo-details", addon_id: "details", addon_name: "Details! Damage Meter", name: "details-11.1.5.zip", mtime: _now - 86_400, size: 2_700_000, version: "11.1.5" },
+  ],
+};
+
 function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -64,14 +80,18 @@ export function BackupsScreen(): JSX.Element {
   }
   useEffect(reload, []);
 
-  const empty = result && result.full_count === 0 && result.addon_count === 0;
+  const realEmpty = !!result && result.full_count === 0 && result.addon_count === 0;
+  const isDemo = SHOW_DEMO && realEmpty;
+  const view = isDemo ? DEMO_BACKUPS : result;
+  const empty = realEmpty && !isDemo;
 
   return (
     <div className="page">
       <div className="page-head">
         <div className="page-title">
           Backups
-          {result && <span className="badge-count">{result.full_count + result.addon_count}</span>}
+          {view && <span className="badge-count">{view.full_count + view.addon_count}</span>}
+          {isDemo && <span className="cat">demo data</span>}
         </div>
         <div className="page-sub">Snapshots of your addons and full installations</div>
       </div>
@@ -102,14 +122,14 @@ export function BackupsScreen(): JSX.Element {
             </div>
           ) : (
             <>
-              {result!.full.length > 0 && (
+              {view!.full.length > 0 && (
                 <>
                   <div className="section-h">
                     <span className="t">Full installations</span>
-                    <span className="c">{result!.full_count}</span>
+                    <span className="c">{view!.full_count}</span>
                   </div>
                   <div className="backup-list">
-                    {result!.full.map((b) => (
+                    {view!.full.map((b) => (
                       <BackupCard
                         key={b.path}
                         title={b.name}
@@ -126,14 +146,14 @@ export function BackupsScreen(): JSX.Element {
                 </>
               )}
 
-              {result!.addons.length > 0 && (
+              {view!.addons.length > 0 && (
                 <>
                   <div className="section-h" style={{ marginTop: 18 }}>
                     <span className="t">Per-addon snapshots</span>
-                    <span className="c">{result!.addon_count}</span>
+                    <span className="c">{view!.addon_count}</span>
                   </div>
                   <div className="backup-list">
-                    {result!.addons.map((b) => (
+                    {view!.addons.map((b) => (
                       <BackupCard
                         key={b.path}
                         title={b.addon_name}

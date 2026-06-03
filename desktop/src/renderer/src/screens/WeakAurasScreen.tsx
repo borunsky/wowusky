@@ -15,6 +15,28 @@ interface WaResult {
   items: Aura[];
 }
 
+// Dev-only placeholder data, shown when the profile has no tracked auras yet
+// so the layout can be eyeballed. Flip to false to disable.
+const SHOW_DEMO = true;
+const DEMO_AURAS: Aura[] = [
+  {
+    slug: "demo-rotation",
+    name: "Demo · Rotation Helper",
+    version: 14,
+    type: "WeakAura",
+    note: "Sample aura — tracks cooldowns and suggests the next ability.",
+    url: "https://wago.io/",
+  },
+  {
+    slug: "demo-raidframes",
+    name: "Demo · Raid Cooldowns",
+    version: 3,
+    type: "WeakAura Group",
+    note: "Sample group — displays raid-wide defensive cooldown timers.",
+    url: "https://wago.io/",
+  },
+];
+
 export function WeakAurasScreen(): JSX.Element {
   const [result, setResult] = useState<WaResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,14 +52,17 @@ export function WeakAurasScreen(): JSX.Element {
   }
   useEffect(reload, []);
 
-  const items = result?.items ?? [];
+  const real = result?.items ?? [];
+  const isDemo = SHOW_DEMO && result !== null && real.length === 0;
+  const items = isDemo ? DEMO_AURAS : real;
 
   return (
     <div className="page">
       <div className="page-head">
         <div className="page-title">
           WeakAuras
-          <span className="badge-count">{result ? result.count : "…"}</span>
+          <span className="badge-count">{result ? items.length : "…"}</span>
+          {isDemo && <span className="cat">demo data</span>}
         </div>
         <div className="page-sub">Tracked Wago auras synced via the WeakAuras Companion</div>
       </div>
@@ -82,7 +107,7 @@ export function WeakAurasScreen(): JSX.Element {
                   </div>
                   {a.note && <div className="gdesc">{a.note}</div>}
                   <div className="wa-foot">
-                    <span className="wa-sync">tracked</span>
+                    <span className={`wa-sync${isDemo ? " behind" : ""}`}>{isDemo ? "demo" : "tracked"}</span>
                     <a
                       className="btn btn-sm btn-ghost"
                       href={a.url}
