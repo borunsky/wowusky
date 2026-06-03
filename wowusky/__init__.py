@@ -1,4 +1,4 @@
 """wowusky — minimalist World of Warcraft addon manager for Linux."""
 
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 APP_NAME    = "wowusky"
