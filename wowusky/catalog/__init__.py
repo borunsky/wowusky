@@ -26,7 +26,8 @@ A manifest file looks like::
           "category": "Buffs",
           "flavors": ["all"],
           "folders": ["WeakAuras", "WeakAurasOptions"],
-          "description": "..."
+          "description": "...",
+          "depends": ["other-addon-id"]
         }
       ]
     }
@@ -54,6 +55,7 @@ def _normalise_addon(raw: dict) -> dict:
     out.setdefault("category", "Other")
     out.setdefault("author", "")
     out.setdefault("description", "")
+    out.setdefault("depends", [])
     if "provider" not in out and "source" in out:
         out["provider"] = out["source"]
     return out

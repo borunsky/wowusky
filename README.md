@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.6.4    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.7.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,46 +15,33 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.6.4
+## What's new in v0.7.0
 
-Refactor + responsiveness release. Completes the journey toward
-`app.py < 500 lines` (Etappes G & H) and removes the UI freezes that came
-with the previous extraction passes. No catalog or install-behaviour
-changes; existing profiles, installed lists and backups are untouched.
+Feature release — automatic dependency resolution. Installing a catalog
+addon now pulls in any catalog entries it depends on, in the right order,
+before installing the addon itself. Existing profiles, installed lists and
+backups are untouched.
+
+### Added
+- **Catalog dependency resolver** (`wowusky/core/depends.py`): catalog
+  entries may declare `"depends": ["id", ...]`. On install, wowusky
+  resolves the transitive dependency graph against the loaded catalog and
+  installs every missing dependency first (dependencies before dependents).
+  Already-installed dependencies are skipped, cycles are handled safely,
+  and dependency ids missing from the catalog are logged and skipped.
+- Real dependency data wired into the shipped catalog: LittleWigs → BigWigs,
+  the Details plugins (Tiny Threat, Compare2, Streamer) → Details!, BigWigs
+  Voice → BigWigs, LittleWigs (CurseForge) → BigWigs (CurseForge).
 
 ### Changed
-- **`run_gui` → `wowusky/gui/main.py`** (G2): the 1385-line Tk main-window
-  builder moved verbatim out of `app.py`. `app.py` keeps a lazy delegator
-  to avoid an import cycle; the GUI body pulls its shared helpers via a
-  star import.
-- **Provider page/label + CurseForge web URLs → `core/resolver.py`** (G1):
-  `addon_provider_page`, `provider_action_label`, `curseforge_search_url`,
-  `curseforge_files_url`, `cf_web_version_type` and `SEMI_MANAGED_SOURCES`.
-  All flavor-parameterised; `app.py` keeps thin flavor-aware wrappers.
-- **Install / provider orchestration → `wowusky/orchestrator.py`** (H):
-  the install/update facade (`install_addon`, `uninstall_addon`,
-  `install_curseforge*`, `import_zip_file`, `generate_wac_companion`, the
-  `SOURCES` version/URL dispatch, the CurseForge URL facades, the catalog
-  loader and queries, `get_current_flavor`, `app_log`). `app.py` re-exports
-  every public name, so the GUI star import and all call sites keep working.
-- **`app.py` is now 493 lines** (down from 5179 at the start of the
-  refactor) — the v0.5/v0.7 roadmap target of `< 500 lines` is reached.
-
-### Fixed
-- **Profile-switch freeze**: switching profiles no longer rebuilds every
-  tab synchronously. `refresh_all()` renders only the visible tab and marks
-  the rest dirty; offscreen tabs rebuild lazily when next shown.
-- **Post-install freeze**: installing an addon with the Log tab open no
-  longer blocks the window while the offscreen Browse/Installed tabs
-  re-render.
-- **Browse-tab open lag**: the ~240-entry catalog is now rendered in
-  batches of 25 via the event loop, so the tab opens instantly and the
-  list paints progressively instead of freezing on a single synchronous
-  build.
+- `install_addon` (orchestrator) gained an `install_deps` flag (default
+  `True`) and installs resolved dependencies before the target. The
+  single-addon core path is unchanged.
+- Manifest loader now normalises a `depends` field (defaults to `[]`).
 
 ### Internal
-- New tests: `tests/test_resolver.py` (15 cases). Provider-characterisation
-  and dry-run smoke tests updated to patch the orchestrator module surface.
+- New tests: `tests/test_depends.py` (resolver unit tests + orchestrator
+  install-order wiring + real-catalog dependency assertions).
 <!-- WHATS-NEW:END -->
 
 ---
@@ -64,8 +51,8 @@ changes; existing profiles, installed lists and backups are untouched.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.6.4.zip
-cd wowusky-v0.6.4
+unzip wowusky-v0.7.0.zip
+cd wowusky-v0.7.0
 chmod +x install.sh
 ./install.sh
 ```
@@ -89,7 +76,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.6.4-py3-none-any.whl
+pip install dist/wowusky-0.7.0-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
@@ -252,13 +239,13 @@ at 06:00 UTC and opens an issue for any broken catalog entries.
 
 The v0.4 refactor was the prerequisite. Now planned:
 
-- **v0.5** — finish GUI extraction (move tab classes from `app.py` into
-  `wowusky/gui/`), reach `app.py < 500 lines`.
-- **v0.6** — dependency resolver (Ace3, LibSharedMedia etc. pulled
-  automatically when an addon declares `"depends": [...]`).
-- **v0.7** — CLI surface: `wowusky install elvui`, `wowusky list --updates`,
+- ~~**v0.5/v0.6.4** — finish GUI extraction, reach `app.py < 500 lines`.~~ ✅ done
+- ~~**v0.7.0** — dependency resolver: catalog entries declare
+  `"depends": [...]` and wowusky installs them automatically, in order,
+  before the addon itself.~~ ✅ done
+- **Next** — CLI surface: `wowusky install elvui`, `wowusky list --updates`,
   `wowusky profile switch retail`.
-- **v0.8** — optional systemd-user-service for daily update checks.
+- **Later** — optional systemd-user-service for daily update checks.
 
 See [CHANGELOG.md](CHANGELOG.md) for what landed in each release and
 [CONTRIBUTING.md](CONTRIBUTING.md) if you'd like to send a patch.

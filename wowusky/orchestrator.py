@@ -27,6 +27,7 @@ from wowusky.catalog import load_catalog as _load_manifest_catalog
 from wowusky.core import http as _ws_http
 from wowusky.core import resolver as _resolver
 from wowusky.core.backup import backup_addon_folders
+from wowusky.core.depends import resolve_dependencies
 from wowusky.core.flavors import WOW_FLAVORS, is_compatible
 from wowusky.core.installer import (
     build_import_entry,
@@ -313,7 +314,32 @@ def provider_action_label(addon, installed=False):
 
 # ── install / uninstall (profile/config state wired in) ──────────────
 
-def install_addon(addon, addons_path, log=print, progress=None):
+def install_addon(addon, addons_path, log=print, progress=None, install_deps=True):
+    """Install *addon*, pulling in any missing catalog dependencies first.
+
+    Catalog entries may declare ``"depends": ["id", ...]``; those entries
+    are resolved against the loaded catalog and installed (in dependency
+    order) before the target. Already-installed dependencies are skipped,
+    cycles are handled, and dependency ids not present in the catalog are
+    logged and skipped. Pass ``install_deps=False`` to install only the
+    target (used internally so resolved dependencies don't re-resolve).
+    """
+    if install_deps:
+        deps, missing = resolve_dependencies(
+            addon,
+            find_addon=find_addon_by_id,
+            is_installed=lambda aid: aid in load_installed(),
+        )
+        for dep_id in missing:
+            log(f"  ⚠ dependency not in catalog, skipping: {dep_id}")
+            app_log(f"dependency missing from catalog: {dep_id} (needed by {addon.get('id')})")
+        for dep in deps:
+            log(f"⟩ dependency of {addon['name']}: {dep['name']}")
+            _install_single(dep, addons_path, log=log, progress=progress)
+    return _install_single(addon, addons_path, log=log, progress=progress)
+
+
+def _install_single(addon, addons_path, log=print, progress=None):
     """Thin wrapper — wires profile/config state into the core install logic."""
     def _generate_wac(ap):
         ok = generate_wac_companion(ap)

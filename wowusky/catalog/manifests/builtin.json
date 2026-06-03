@@ -256,7 +256,10 @@
       ],
       "description": "BigWigs for dungeons, delves, and scenarios.",
       "provider": "github",
-      "repo": "BigWigsMods/LittleWigs"
+      "repo": "BigWigsMods/LittleWigs",
+      "depends": [
+        "bigwigs"
+      ]
     },
     {
       "id": "dbm",
