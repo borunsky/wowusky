@@ -296,6 +296,75 @@ def _profile_set_active(params: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# WeakAuras (wago tracking)
+# ---------------------------------------------------------------------------
+
+
+@method("weakauras.list")
+def _weakauras_list(_params: dict[str, Any]) -> dict[str, Any]:
+    """List the tracked Wago auras for the active profile (offline read)."""
+    from wowusky.core import wago as _wago
+
+    data = _wago.load_wago()
+    auras = data.get("auras", {})
+    items = [
+        {
+            "slug": slug,
+            "name": a.get("name", slug),
+            "version": a.get("version", 1),
+            "type": a.get("type", "WeakAura"),
+            "note": a.get("note", ""),
+            "url": a.get("url", f"https://wago.io/{slug}"),
+        }
+        for slug, a in auras.items()
+    ]
+    items.sort(key=lambda x: str(x["name"]).lower())
+    return {"count": len(items), "items": items}
+
+
+# ---------------------------------------------------------------------------
+# Backups
+# ---------------------------------------------------------------------------
+
+
+@method("backups.list")
+def _backups_list(_params: dict[str, Any]) -> dict[str, Any]:
+    """List full backups and per-addon backups for the active profile."""
+    from wowusky.core import backup as _backup
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    full = [
+        {"path": b["path"], "name": b["name"], "mtime": b["mtime"], "size": b["size"]}
+        for b in _backup.list_full_backups()
+    ]
+
+    profile = _state.get_active_profile_id()
+    addon_backups: list[dict[str, Any]] = []
+    for addon_id, entry in _installed.load(profile).items():
+        for b in _backup.list_addon_backups(addon_id):
+            addon_backups.append(
+                {
+                    "addon_id": addon_id,
+                    "addon_name": entry.get("name", addon_id),
+                    "name": b["name"],
+                    "path": b["path"],
+                    "mtime": b["mtime"],
+                    "size": b["size"],
+                    "version": b.get("version", "unknown"),
+                }
+            )
+    addon_backups.sort(key=lambda x: x["mtime"], reverse=True)
+
+    return {
+        "full": full,
+        "addons": addon_backups,
+        "full_count": len(full),
+        "addon_count": len(addon_backups),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 
