@@ -95,7 +95,7 @@ export function InstalledScreen({ refreshKey }: Props): JSX.Element {
             </p>
           </div>
         ) : (
-          <div>
+          <div style={{ padding: "0 10px 16px" }}>
             <div className="ihead">
               <span />
               <span>Addon</span>
