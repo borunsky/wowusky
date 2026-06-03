@@ -1,0 +1,86 @@
+/* ============================================================
+   wowusky — responsive layer (CONTAINER queries)
+   .win is a size container (container-name: app), so the layout
+   adapts to the WINDOW's own width — works at any embed size,
+   not just the full viewport.
+   ============================================================ */
+
+/* ---- detail panel: cap to window on smaller sizes ---- */
+@container app (max-width: 960px) {
+  .detail.open { width: min(416px, 78cqw); }
+}
+
+/* ---- roomier search, smaller flavor picker ---- */
+@container app (max-width: 900px) {
+  .flavor-pick { min-width: 0; }
+  .toolbar { padding-left: 18px; padding-right: 18px; }
+  .page-head, .page-pad, .inst-toolbar, .update-banner { padding-left: 18px; padding-right: 18px; }
+  .page-body.scroll { padding-left: 18px !important; padding-right: 18px !important; }
+}
+
+/* ---- collapse sidebar to an icon rail ---- */
+@container app (max-width: 840px) {
+  .sidebar { width: 60px; padding: 14px 8px; align-items: stretch; }
+  .sidebar .side-label,
+  .sidebar .nav-item .lbl,
+  .sidebar .nav-item .count,
+  .sidebar .side-foot { display: none; }
+  .sidebar .nav-item { justify-content: center; padding: 0; gap: 0; }
+  .sidebar .nav-item.active::before { left: -8px; top: 9px; bottom: 9px; }
+}
+
+/* ---- hero stacks; installed table → flex rows; search wraps ---- */
+@container app (max-width: 760px) {
+  .hero-row { flex-wrap: wrap; }
+  .hero-name { white-space: normal; }
+  .hero-cta { margin-left: 0; width: 100%; flex-direction: row; }
+  .hero-cta .btn { flex: 1; }
+
+  .ihead { display: none; }
+  .irow { display: flex; align-items: center; gap: 12px; }
+  .irow > div:nth-child(2) { flex: 1; min-width: 0; }
+  .irow > .ver-mono { display: none; }
+  .irow > div:nth-child(4) { flex: none; }
+
+  .searchrow { flex-wrap: wrap; }
+  .search { flex-basis: 100%; order: -1; }
+}
+
+/* ---- narrow: detail full-bleed, cards stack ---- */
+@container app (max-width: 560px) {
+  .appbar { gap: 10px; padding: 0 12px; }
+  .brand .name, .brand .ver { display: none; }
+  .flavor-pick .fp-tag { display: none; }
+  .flavor-pick { padding: 0 10px; }
+
+  .detail.open { width: 100%; }
+  .detail-inner { width: 100%; }
+
+  .toolbar { padding: 10px 14px 9px; }
+  .page-head, .page-pad, .inst-toolbar, .update-banner { padding-left: 14px; padding-right: 14px; }
+  .page-body.scroll { padding-left: 14px !important; padding-right: 14px !important; }
+
+  .agrid { grid-template-columns: 1fr; }
+
+  .acard { flex-wrap: wrap; }
+  .acard .right { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; margin-top: 2px; }
+
+  .update-banner { flex-wrap: wrap; }
+  .update-banner .btn { margin-left: 0 !important; }
+
+  .bcard { flex-wrap: wrap; }
+  .bcard .bmain { flex-basis: calc(100% - 58px); }
+  .bcard .br { width: 100%; justify-content: flex-end; }
+
+  .hero-meta { gap: 12px; }
+  .settings-wrap, .import-wrap { padding-left: 14px; padding-right: 14px; }
+  .statusbar .path { display: none; }
+}
+
+/* ---- very narrow: never horizontally scroll ---- */
+@container app (max-width: 430px) {
+  .filtergroup .glabel { display: none; }
+  .sortsel { min-width: 0; }
+  .detail-stats { grid-template-columns: 1fr; }
+  .src-tile { min-width: 100%; }
+}
