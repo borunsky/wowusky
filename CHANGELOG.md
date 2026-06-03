@@ -4,6 +4,47 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] — 2026-06-03
+
+Refactor + responsiveness release. Completes the journey toward
+`app.py < 500 lines` (Etappes G & H) and removes the UI freezes that came
+with the previous extraction passes. No catalog or install-behaviour
+changes; existing profiles, installed lists and backups are untouched.
+
+### Changed
+- **`run_gui` → `wowusky/gui/main.py`** (G2): the 1385-line Tk main-window
+  builder moved verbatim out of `app.py`. `app.py` keeps a lazy delegator
+  to avoid an import cycle; the GUI body pulls its shared helpers via a
+  star import.
+- **Provider page/label + CurseForge web URLs → `core/resolver.py`** (G1):
+  `addon_provider_page`, `provider_action_label`, `curseforge_search_url`,
+  `curseforge_files_url`, `cf_web_version_type` and `SEMI_MANAGED_SOURCES`.
+  All flavor-parameterised; `app.py` keeps thin flavor-aware wrappers.
+- **Install / provider orchestration → `wowusky/orchestrator.py`** (H):
+  the install/update facade (`install_addon`, `uninstall_addon`,
+  `install_curseforge*`, `import_zip_file`, `generate_wac_companion`, the
+  `SOURCES` version/URL dispatch, the CurseForge URL facades, the catalog
+  loader and queries, `get_current_flavor`, `app_log`). `app.py` re-exports
+  every public name, so the GUI star import and all call sites keep working.
+- **`app.py` is now 493 lines** (down from 5179 at the start of the
+  refactor) — the v0.5/v0.7 roadmap target of `< 500 lines` is reached.
+
+### Fixed
+- **Profile-switch freeze**: switching profiles no longer rebuilds every
+  tab synchronously. `refresh_all()` renders only the visible tab and marks
+  the rest dirty; offscreen tabs rebuild lazily when next shown.
+- **Post-install freeze**: installing an addon with the Log tab open no
+  longer blocks the window while the offscreen Browse/Installed tabs
+  re-render.
+- **Browse-tab open lag**: the ~240-entry catalog is now rendered in
+  batches of 25 via the event loop, so the tab opens instantly and the
+  list paints progressively instead of freezing on a single synchronous
+  build.
+
+### Internal
+- New tests: `tests/test_resolver.py` (15 cases). Provider-characterisation
+  and dry-run smoke tests updated to patch the orchestrator module surface.
+
 ## [0.6.3] — 2026-06-02
 
 Refactor release — Etappe F. The remaining business logic moves out of
@@ -719,6 +760,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.6.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.4
 [0.6.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.3
 [0.6.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.2
 [0.6.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.1

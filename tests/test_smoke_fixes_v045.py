@@ -68,15 +68,18 @@ def test_b10_no_hardcoded_expanduser_data_dir():
 def test_b1_dry_run_install_does_no_network(monkeypatch, tmp_path):
     """install_addon in dry-run mode must return before downloading."""
     import wowusky.app as app
+    import wowusky.orchestrator as orchestrator
 
-    monkeypatch.setattr(app, "is_dry_run", lambda: True)
+    # install_addon lives in wowusky.orchestrator (re-exported from app);
+    # patch the orchestrator module so the function's own namespace sees them.
+    monkeypatch.setattr(orchestrator, "is_dry_run", lambda: True)
 
     def boom(*_a, **_kw):
         raise AssertionError("dry-run install attempted a network call")
 
-    monkeypatch.setattr(app, "http_download", boom)
-    monkeypatch.setattr(app, "get_download_url", boom)
-    monkeypatch.setattr(app, "get_latest_version", lambda _a: "1.2.3")
+    monkeypatch.setattr(orchestrator, "http_download", boom)
+    monkeypatch.setattr(orchestrator, "get_download_url", boom)
+    monkeypatch.setattr(orchestrator, "get_latest_version", lambda _a: "1.2.3")
 
     addon = {"id": "x", "name": "Test Addon", "source": "github",
              "folders": ["X"], "repo": "owner/repo"}

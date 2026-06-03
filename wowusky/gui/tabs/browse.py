@@ -79,6 +79,7 @@ class BrowseTab:
         self._filter_by_flavor = filter_by_flavor
         self._render_card = render_card
         self._render_job = [None]
+        self._chunk_job = [None]
         self._chips: list = []
         C = ctx.palette
         sans = ctx.sans_family
@@ -226,12 +227,38 @@ class BrowseTab:
                 root.after_cancel(self._render_job[0])
         self._render_job[0] = root.after(120, self.render)
 
+    def _render_cards_chunked(self, filtered, installed, index=0, chunk=25):
+        """Render the filtered cards in small batches off the event loop.
+
+        The full catalog is ~240 rows; building them all in one synchronous
+        pass froze the window for a noticeable beat when the Browse tab was
+        opened. Rendering a chunk and then yielding via ``after`` keeps the
+        UI responsive and lets the list paint progressively. The first chunk
+        runs synchronously so small/filtered lists (and the tests) still see
+        their rows immediately.
+        """
+        end = min(index + chunk, len(filtered))
+        for a in filtered[index:end]:
+            self._render_card(self.inner, a, installed.get(a["id"]))
+        if end < len(filtered):
+            self._chunk_job[0] = self.ctx.root.after(
+                1, lambda: self._render_cards_chunked(filtered, installed, end, chunk))
+        else:
+            self._chunk_job[0] = None
+
     def render(self) -> None:
         import tkinter as tk
 
         ctx = self.ctx
         C = ctx.palette
         sans = ctx.sans_family
+
+        # Cancel any in-flight chunked render from a previous call so rapid
+        # filter changes don't stack overlapping batches into the list.
+        if self._chunk_job[0] is not None:
+            with contextlib.suppress(Exception):
+                self.ctx.root.after_cancel(self._chunk_job[0])
+            self._chunk_job[0] = None
 
         for w in self.inner.winfo_children():
             w.destroy()
@@ -301,5 +328,4 @@ class BrowseTab:
                          font=ctx.font_sm).pack(pady=(6, 0))
             return
 
-        for a in filtered:
-            self._render_card(self.inner, a, installed.get(a["id"]))
+        self._render_cards_chunked(filtered, installed)
