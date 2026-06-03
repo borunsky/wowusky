@@ -4,6 +4,16 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] — 2026-06-03
+
+### Fixed
+- Suppressed `RuntimeError: main thread is not in main loop` warnings raised
+  during the test suite (and visible in the AUR `check()` phase). The addon
+  details dialog's background `_fill_versions` thread now guards its Tk
+  `after()` dispatch with a `winfo_exists()` check wrapped in
+  `try/except (RuntimeError, TclError)`, so it no longer touches a torn-down
+  Tk root.
+
 ## [0.8.2] — 2026-06-03
 
 ### Fixed
@@ -852,6 +862,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.8.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.3
 [0.8.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.2
 [0.8.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.1
 [0.8.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.0
