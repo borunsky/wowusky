@@ -96,3 +96,17 @@ def test_sync_matches_catalog(tmp_path):
     assert installed["elvui"]["source"] == "tukui"
     assert installed["elvui"]["version"] == "13.5"
     assert "fs_elvui" not in installed
+
+
+def test_sync_matches_catalog_with_provider_field(tmp_path):
+    # The real bundled catalog uses ``provider`` (not ``source``); a discovered
+    # folder matching such an entry must not raise KeyError. Regression test.
+    addons = tmp_path / "AddOns"
+    addons.mkdir()
+    _make_addon_folder(str(addons), "Details", version="11.1")
+    catalog = [{"id": "details", "name": "Details!", "provider": "curseforge_web",
+                "folders": ["Details"]}]
+    scan.sync_filesystem_with_db(str(addons), catalog)
+    installed = state.load_installed()
+    assert installed["details"]["source"] == "curseforge_web"
+    assert "fs_details" not in installed
