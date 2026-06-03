@@ -1,7 +1,7 @@
 # Maintainer: Kevin <info@borunsky.de>
 
 pkgname=wowusky
-pkgver=0.6.3
+pkgver=0.6.4
 pkgrel=1
 pkgdesc='Minimalist World of Warcraft addon manager for Linux'
 arch=('any')
