@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.8.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.8.1    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,52 +15,14 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.8.0
+## What's new in v0.8.1
 
-Feature release — CLI surface. wowusky can now be driven entirely from
-the terminal without opening the GUI.
-
-### Added
-- **CLI surface** (`wowusky/cli.py`): `wowusky <command>` dispatch on
-  `sys.argv`. When arguments are present the GUI is bypassed entirely.
-- Commands: `install <id>...`, `uninstall <id>...`, `update [<id>...]`,
-  `status`, `search <query>`, `orphans`, `import [file.zip]`,
-  `backup create|list|restore`, `rollback <id> [sel]`,
-  `weakauras list|add|remove|update|import|search|companion` (alias `wa`),
-  `profile list`, `profile switch <name|id>`,
-  `set curseforge-key <key>`, `version`, `help [<command>]`.
-- `install` and `update` support `-n/--dry-run` (show plan, no changes)
-  and `--no-deps` (skip automatic dependency installation).
-- **Automatic full backup** before every command that touches the WoW
-  install (AddOns + WTF). Skipped for read-only/offline commands and via
-  the global `--no-backup` flag.
-- **Full-profile backup/restore** from the CLI: `backup create`,
-  `backup list`, `backup restore <index|name|path>`.
-- **Per-addon rollback** from the CLI: `rollback <id>` restores an addon's
-  newest backup; `rollback <id> --list` lists them; `--backup <sel>` picks
-  a specific one.
-- **WeakAuras/Wago.io** management from the CLI: track, untrack, check for
-  updates, import from SavedVariables, search Wago.io, and regenerate the
-  WeakAurasCompanion addon.
-- **`help` command** with a full command reference plus per-command detail
-  (`wowusky help <command>`) showing syntax, options and examples.
-- **`-q/--quiet`** global flag: suppresses progress/info output (keeps
-  warnings, errors and explicit results) — handy for cron jobs.
-- **`--json`** global flag: machine-readable JSON output for `status`,
-  `search`, `orphans`, `backup list` and `weakauras list`. Implies quiet.
-- **`update --all-profiles`**: update every configured profile in turn,
-  each with its own automatic backup, restoring the active profile after.
-- **`completion bash|zsh`**: print a shell completion script to stdout
-  (no external dependency).
-- **systemd user timer** (`packaging/systemd/`): `wowusky-update.service`
-  + `.timer` run `wowusky update --all-profiles --quiet` daily.
-- Plain/schlichte output: aligned columns with `ljust`, `✓`/`✗`/`↑`
-  markers, no colours or external dependencies.
-
-### Internal
-- New tests: `tests/test_cli.py` (56 tests covering parser, search,
-  install dry-run, orphans, help, backup, rollback, weakauras, auto-backup,
-  quiet, json, update --all-profiles, completion, and `set curseforge-key`).
+### Fixed
+- `wowusky` launcher (`console_scripts` entry point) failed to start after
+  installation via pip / AUR. The `main()` dispatch function was nested
+  inside `if __name__ == "__main__":` instead of being defined at module
+  level, so `wowusky.__main__:main` could not be resolved. Promoted `main()`
+  to a proper top-level function.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -70,8 +32,8 @@ the terminal without opening the GUI.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.8.0.zip
-cd wowusky-v0.8.0
+unzip wowusky-v0.8.1.zip
+cd wowusky-v0.8.1
 chmod +x install.sh
 ./install.sh
 ```
@@ -95,7 +57,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.8.0-py3-none-any.whl
+pip install dist/wowusky-0.8.1-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
