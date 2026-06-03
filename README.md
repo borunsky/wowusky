@@ -230,7 +230,20 @@ The v0.4 refactor was the prerequisite. Now planned:
   `wowusky profile switch retail`, `wowusky set curseforge-key <key>`,
   `--json`/`--quiet`, shell completion, and a systemd user timer for daily
   update checks.~~ ✅ done
-- **Next** — TBD. See [issues](https://github.com/borunsky/wowusky/issues)
+- **v0.9.0** — *Portability & diagnostics*:
+  - **Addon-set export/import** — export a profile's full addon list (with
+    versions and sources) to a shareable JSON file, and import it back into a
+    new or existing profile with per-addon conflict resolution. Available from
+    both the GUI and the CLI (`wowusky export <profile> <file>`,
+    `wowusky import-set <file>`).
+  - **`wowusky health` command + Health tab** — surface the existing
+    `tools/health_check` engine as a first-class CLI command and a GUI tab
+    (offline/online check, results table, error filter, JSON export).
+- **v0.9.1 (tentative)** — auto-update polling + in-app "updates available"
+  indicator (the per-profile `auto_update` flag already exists but is unused),
+  and CurseForge ZIP version selection in the addon details dialog (parity
+  with the existing GitHub version picker).
+- **Later** — see [issues](https://github.com/borunsky/wowusky/issues)
   or open one with a request.
 
 See [CHANGELOG.md](CHANGELOG.md) for what landed in each release and
