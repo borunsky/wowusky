@@ -15,13 +15,15 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.8.2
+## What's new in v0.8.3
 
 ### Fixed
-- README version banner and install snippets still referenced `0.8.0`,
-  which broke the `test_docs_consistency` checks during the AUR `check()`
-  phase (the v0.8.1 source tag shipped with the stale banner). Bumped all
-  README references so packaged builds pass their tests again.
+- Suppressed `RuntimeError: main thread is not in main loop` warnings raised
+  during the test suite (and visible in the AUR `check()` phase). The addon
+  details dialog's background `_fill_versions` thread now guards its Tk
+  `after()` dispatch with a `winfo_exists()` check wrapped in
+  `try/except (RuntimeError, TclError)`, so it no longer touches a torn-down
+  Tk root.
 <!-- WHATS-NEW:END -->
 
 ---
