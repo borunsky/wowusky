@@ -127,6 +127,89 @@ def _catalog_search(params: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Installed addons
+# ---------------------------------------------------------------------------
+
+# Map installer source strings onto the UI's source pill classes.
+_SOURCE_PILL = {
+    "github": "github",
+    "tukui": "tukui",
+    "wowi": "wowi",
+    "curseforge": "curse",
+    "curseforge_web": "curse",
+    "curseforge_manual": "curse",
+    "internal_wac": "wowusky",
+    "import": "local",
+    "imported": "local",
+}
+
+
+def _installed_entry_to_addon(addon_id: str, entry: dict[str, Any]) -> dict[str, Any]:
+    name = entry.get("name", addon_id)
+    raw_source = str(entry.get("source", "") or "")
+    return {
+        "id": addon_id,
+        "name": name,
+        "version": entry.get("version", "unknown"),
+        "source": _SOURCE_PILL.get(raw_source, "local"),
+        "folders": entry.get("folders", []),
+        "interface": entry.get("interface"),
+        "url": entry.get("url"),
+        "glyph": (name[:1] or "?").upper(),
+    }
+
+
+@method("installed.list")
+def _installed_list(params: dict[str, Any]) -> dict[str, Any]:
+    """List addons installed under the active (or given) profile.
+
+    params: {profile?: str}
+    returns: {profile: str, count: int, addons_path: str, items: [addon]}
+    """
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    data = _installed.load(profile)
+    items = [
+        _installed_entry_to_addon(addon_id, entry)
+        for addon_id, entry in data.items()
+    ]
+    items.sort(key=lambda a: a["name"].lower())
+    try:
+        addons_path = _state.get_addons_path()
+    except Exception:  # noqa: BLE001 — path may be unconfigured
+        addons_path = ""
+    return {
+        "profile": profile,
+        "count": len(items),
+        "addons_path": addons_path,
+        "items": items,
+    }
+
+
+@method("app.rescan")
+def _app_rescan(_params: dict[str, Any]) -> dict[str, Any]:
+    """Re-scan the filesystem and reconcile it with the installed DB.
+
+    Returns the refreshed installed list for the active profile.
+    """
+    from wowusky.catalog import load_catalog
+    from wowusky.core import scan as _scan
+    from wowusky.core import state as _state
+
+    try:
+        addons_path = _state.get_addons_path()
+        _scan.sync_filesystem_with_db(addons_path, load_catalog())
+    except Exception as exc:  # noqa: BLE001 — surface scan issues without crashing
+        _log("rescan error:", traceback.format_exc())
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+    profile = _state.get_active_profile_id()
+    return {"ok": True, **_installed_list({"profile": profile})}
+
+
+# ---------------------------------------------------------------------------
 # Dispatch loop
 # ---------------------------------------------------------------------------
 

@@ -19,9 +19,10 @@ interface Props {
   onThemeChange: (t: Theme) => void;
   onDensityChange: (d: Density) => void;
   onRescan: () => void;
+  rescanning?: boolean;
 }
 
-export function AppBar({ version, theme, density: _density, onThemeChange, onDensityChange: _onDensityChange, onRescan }: Props): JSX.Element {
+export function AppBar({ version, theme, density: _density, onThemeChange, onDensityChange: _onDensityChange, onRescan, rescanning }: Props): JSX.Element {
   const [flavorIdx, setFlavorIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,11 +76,20 @@ export function AppBar({ version, theme, density: _density, onThemeChange, onDen
 
       <div className="spacer" />
 
-      <button className="iconbtn" title="Rescan addons" onClick={onRescan}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <path d="M8 2.5 10.5 5 8 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+      <button
+        className="iconbtn"
+        title="Rescan addons"
+        onClick={onRescan}
+        disabled={rescanning}
+      >
+        {rescanning ? (
+          <span className="spin" />
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M8 2.5 10.5 5 8 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </button>
 
       <div className="theme-toggle">

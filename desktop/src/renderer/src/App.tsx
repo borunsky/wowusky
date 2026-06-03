@@ -6,6 +6,7 @@ import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { BrowseScreen } from "./screens/BrowseScreen";
+import { InstalledScreen } from "./screens/InstalledScreen";
 
 export type Theme = "dark" | "light" | "system";
 export type Density = "comfortable" | "compact";
@@ -39,6 +40,20 @@ export default function App(): JSX.Element {
   const [density, setDensity] = useState<Density>(() => {
     return (localStorage.getItem("wowusky:density") as Density | null) ?? "comfortable";
   });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [rescanning, setRescanning] = useState(false);
+  const [installedCount, setInstalledCount] = useState(0);
+
+  function handleRescan() {
+    setRescanning(true);
+    bridge
+      .call("app.rescan", {})
+      .catch(() => {})
+      .finally(() => {
+        setRescanning(false);
+        setRefreshKey((k) => k + 1);
+      });
+  }
 
   // Fetch version from bridge
   useEffect(() => {
@@ -47,6 +62,14 @@ export default function App(): JSX.Element {
       .then((r) => { setVersion(r.version); setBridgeOk(true); })
       .catch(() => setBridgeOk(false));
   }, []);
+
+  // Keep the sidebar installed-count badge in sync (also after rescans).
+  useEffect(() => {
+    bridge
+      .call<{ count: number }>("installed.list", {})
+      .then((r) => setInstalledCount(r.count))
+      .catch(() => {});
+  }, [refreshKey]);
 
   // Apply theme to document
   useEffect(() => {
@@ -86,13 +109,16 @@ export default function App(): JSX.Element {
         density={density}
         onThemeChange={setTheme}
         onDensityChange={setDensity}
-        onRescan={() => bridge.call("app.ping", { echo: "rescan" }).catch(() => {})}
+        onRescan={handleRescan}
+        rescanning={rescanning}
       />
       <div className="body">
-        <Sidebar screen={screen} onNav={setScreen} addonCount={0} />
+        <Sidebar screen={screen} onNav={setScreen} addonCount={installedCount} />
         <div className="content">
           {screen === "browse" ? (
             <BrowseScreen />
+          ) : screen === "installed" ? (
+            <InstalledScreen refreshKey={refreshKey} />
           ) : (
             <PlaceholderScreen name={meta.name} icon={meta.icon} description={meta.description} />
           )}
