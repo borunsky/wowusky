@@ -296,6 +296,53 @@ def _profile_set_active(params: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+
+
+@method("health.check")
+def _health_check(params: dict[str, Any]) -> dict[str, Any]:
+    """Run the offline catalog health check (no network I/O).
+
+    Verifies every catalog entry has a known provider and resolves to a
+    reference. params: {scope?: "all"} (reserved for future installed-only).
+    returns: {total, ok, failed, results: [{id, name, provider, status, detail}]}
+    """
+    from wowusky.catalog import load_catalog
+    from wowusky.tools.health_check import check_addon_offline
+
+    catalog = load_catalog()
+    by_id = {e.get("id"): e for e in catalog}
+
+    results: list[dict[str, Any]] = []
+    ok = 0
+    for entry in catalog:
+        r = check_addon_offline(entry)
+        failed = "error" in r
+        if not failed:
+            ok += 1
+        src_entry = by_id.get(r.get("id"), {})
+        results.append(
+            {
+                "id": r.get("id"),
+                "name": src_entry.get("name", r.get("id")),
+                "provider": r.get("provider", ""),
+                "status": "error" if failed else "ok",
+                "detail": r.get("error") if failed else r.get("resolved", ""),
+            }
+        )
+
+    # Failures first, then alphabetical, so problems surface at the top.
+    results.sort(key=lambda r: (r["status"] != "error", str(r["name"]).lower()))
+    return {
+        "total": len(catalog),
+        "ok": ok,
+        "failed": len(catalog) - ok,
+        "results": results,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Dispatch loop
 # ---------------------------------------------------------------------------
 

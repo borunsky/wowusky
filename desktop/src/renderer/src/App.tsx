@@ -8,6 +8,7 @@ import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { BrowseScreen } from "./screens/BrowseScreen";
 import { InstalledScreen } from "./screens/InstalledScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
+import { HealthScreen } from "./screens/HealthScreen";
 
 export type Theme = "dark" | "light" | "system";
 export type Density = "comfortable" | "compact";
@@ -130,6 +131,8 @@ export default function App(): JSX.Element {
             <BrowseScreen />
           ) : screen === "installed" ? (
             <InstalledScreen refreshKey={refreshKey} />
+          ) : screen === "health" ? (
+            <HealthScreen />
           ) : screen === "settings" ? (
             <SettingsScreen
               theme={theme}
