@@ -37,10 +37,14 @@ _CLI_COMMANDS = {
     "--help", "-h", "--version",
 }
 
-if __name__ == "__main__":
+def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] in _CLI_COMMANDS:
         from wowusky.cli import run_cli  # noqa: E402
         run_cli()
     else:
-        from wowusky.app import main  # noqa: E402
-        main()
+        from wowusky.app import main as _gui_main  # noqa: E402
+        _gui_main()
+
+
+if __name__ == "__main__":
+    main()

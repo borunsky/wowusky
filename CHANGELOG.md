@@ -4,6 +4,15 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] — 2026-06-03
+
+### Fixed
+- `wowusky` launcher (`console_scripts` entry point) failed to start after
+  installation via pip / AUR. The `main()` dispatch function was nested
+  inside `if __name__ == "__main__":` instead of being defined at module
+  level, so `wowusky.__main__:main` could not be resolved. Promoted `main()`
+  to a proper top-level function.
+
 ## [0.8.0] — 2026-06-03
 
 Feature release — CLI surface. wowusky can now be driven entirely from
@@ -835,6 +844,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.8.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.1
 [0.8.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.0
 [0.7.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.7.0
 [0.6.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.4
