@@ -25,7 +25,7 @@ Thumbs.db
 # wowusky runtime data (in case someone runs from the source dir)
 config.json.local
 *.json.migrated
-# makepkg artifacts
-pkg/
-src/
+# makepkg artifacts (anchored to repo root so they don't clobber desktop/src)
+/pkg/
+/src/
 *.pkg.tar.zst
