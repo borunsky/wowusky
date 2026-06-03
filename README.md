@@ -11,56 +11,51 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 
 ---
 
-## What's new in v0.4
+<!-- WHATS-NEW:START -->
+<!-- This section is generated from the latest CHANGELOG.md entry by
+     .github/workflows/readme-version-sync.yml on each published release.
+     Edit CHANGELOG.md, not the text between these markers. -->
+## What's new in v0.6.4
 
-This release is the long-promised refactor. The 5000-line monolith has been
-split into reusable modules, and the project now has the bones of a real
-maintained package.
+Refactor + responsiveness release. Completes the journey toward
+`app.py < 500 lines` (Etappes G & H) and removes the UI freezes that came
+with the previous extraction passes. No catalog or install-behaviour
+changes; existing profiles, installed lists and backups are untouched.
 
-### Architecture
-- **Modular layout** under `wowusky/core/`, `wowusky/providers/`,
-  `wowusky/catalog/`. app.py is down from 5179 to 493 lines as provider and core logic moves into wowusky/providers/ and wowusky/core/
-  shed its duplicated `WOW_FLAVORS`, TOC helpers, HTTP helpers, and
-  the inlined 241-entry catalog literal in favour of importing from
-  `wowusky.core` and `wowusky.catalog`.
-  - **What still ships in `app.py`**: the Tk GUI, the addon
-    install/update orchestration, and a self-contained set of
-    provider helpers that the GUI calls directly. The new
-    `wowusky.providers` package (Tukui, GitHub, WoWInterface,
-    CurseForge, Wago) ships as a complete, tested registry and is
-    used by `wowusky.tools.health_check` today; migrating the GUI's
-    install path onto it is scheduled for v0.5.
-- **Per-profile installed.json** plus a new `profiles.json` for multi-version
-  setups. A pre-0.4 single-profile install is migrated automatically.
-- **Backup & rollback**: every install/update archives the old folders into
-  a per-profile, per-addon ZIP under `~/.local/share/wowusky/backups/`,
-  pruned to the 3 most recent.
-- **Centralised HTTP layer** with response cache and exponential retry,
-  used by `wowusky.core` and `wowusky.providers`.
+### Changed
+- **`run_gui` → `wowusky/gui/main.py`** (G2): the 1385-line Tk main-window
+  builder moved verbatim out of `app.py`. `app.py` keeps a lazy delegator
+  to avoid an import cycle; the GUI body pulls its shared helpers via a
+  star import.
+- **Provider page/label + CurseForge web URLs → `core/resolver.py`** (G1):
+  `addon_provider_page`, `provider_action_label`, `curseforge_search_url`,
+  `curseforge_files_url`, `cf_web_version_type` and `SEMI_MANAGED_SOURCES`.
+  All flavor-parameterised; `app.py` keeps thin flavor-aware wrappers.
+- **Install / provider orchestration → `wowusky/orchestrator.py`** (H):
+  the install/update facade (`install_addon`, `uninstall_addon`,
+  `install_curseforge*`, `import_zip_file`, `generate_wac_companion`, the
+  `SOURCES` version/URL dispatch, the CurseForge URL facades, the catalog
+  loader and queries, `get_current_flavor`, `app_log`). `app.py` re-exports
+  every public name, so the GUI star import and all call sites keep working.
+- **`app.py` is now 493 lines** (down from 5179 at the start of the
+  refactor) — the v0.5/v0.7 roadmap target of `< 500 lines` is reached.
 
-### Catalog
-- **Manifest-based**: the 241 entries (42 builtin + 4 community seed + 195
-  CurseForge slugs) now live in `wowusky/catalog/manifests/*.json` instead
-  of being inlined in Python. User overrides live under
-  `~/.local/share/wowusky/manifests/`.
+### Fixed
+- **Profile-switch freeze**: switching profiles no longer rebuilds every
+  tab synchronously. `refresh_all()` renders only the visible tab and marks
+  the rest dirty; offscreen tabs rebuild lazily when next shown.
+- **Post-install freeze**: installing an addon with the Log tab open no
+  longer blocks the window while the offscreen Browse/Installed tabs
+  re-render.
+- **Browse-tab open lag**: the ~240-entry catalog is now rendered in
+  batches of 25 via the event loop, so the tab opens instantly and the
+  list paints progressively instead of freezing on a single synchronous
+  build.
 
-### Quality
-- **Test suite expanded from 6 → 109 tests** covering TOC parsing, flavor
-  compatibility, profile lifecycle, manifest merging, ZIP smart-extract,
-  backup pruning/rollback, provider resolve, version comparisons, and the
-  offline catalog health check.
-- **Ruff in CI** with a strict ruleset for the new modules and per-file
-  ignores for the legacy GUI. Caught three real bugs during introduction
-  (variable shadowing in `make_backup`, missing `_http` import after
-  refactor, undefined `log_file` typo).
-- **Import smoke and offline catalog health check** run on every push
-  (since v0.4.2 / v0.4.3) so a missing module or a typo'd provider name
-  in a manifest fails CI immediately.
-- **Weekly provider health-check** workflow opens automated issues for
-  broken catalog entries.
-- **Build + install verification** runs on every push (Python 3.10/3.11/3.12).
-- **Proper PKGBUILD** for AUR submission, MIT license file, desktop entry,
-  scalable SVG icon.
+### Internal
+- New tests: `tests/test_resolver.py` (15 cases). Provider-characterisation
+  and dry-run smoke tests updated to patch the orchestrator module surface.
+<!-- WHATS-NEW:END -->
 
 ---
 
