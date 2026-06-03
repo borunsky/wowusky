@@ -68,66 +68,64 @@ export function InstalledScreen({ refreshKey }: Props): JSX.Element {
       </div>
 
       <div className="page-body scroll">
-        <div className="page-pad">
-          {error ? (
-            <div className="empty">
-              <div className="eicon">!</div>
-              <h3>Could not load installed addons</h3>
-              <p>{error}</p>
+        {error ? (
+          <div className="empty">
+            <div className="eicon">!</div>
+            <h3>Could not load installed addons</h3>
+            <p>{error}</p>
+          </div>
+        ) : loading && !result ? (
+          <div className="empty">
+            <div className="spin" />
+            <p>Scanning…</p>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="empty">
+            <div className="eicon">
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <rect x="4" y="5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.6"/>
+                <path d="M9 11h8M9 15h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
             </div>
-          ) : loading && !result ? (
-            <div className="empty">
-              <div className="spin" />
-              <p>Scanning…</p>
+            <h3>{q ? "No matches" : "No addons installed"}</h3>
+            <p>
+              {q
+                ? "Try a different filter term."
+                : "Install addons from the Browse tab, or hit Rescan to detect existing ones."}
+            </p>
+          </div>
+        ) : (
+          <div>
+            <div className="ihead">
+              <span />
+              <span>Addon</span>
+              <span>Source</span>
+              <span>Version</span>
+              <span style={{ justifySelf: "end" }}>Actions</span>
             </div>
-          ) : items.length === 0 ? (
-            <div className="empty">
-              <div className="eicon">
-                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                  <rect x="4" y="5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.6"/>
-                  <path d="M9 11h8M9 15h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                </svg>
-              </div>
-              <h3>{q ? "No matches" : "No addons installed"}</h3>
-              <p>
-                {q
-                  ? "Try a different filter term."
-                  : "Install addons from the Browse tab, or hit Rescan to detect existing ones."}
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="ihead">
-                <span />
-                <span>Addon</span>
-                <span>Source</span>
-                <span>Version</span>
-                <span style={{ justifySelf: "end" }}>Actions</span>
-              </div>
-              {items.map((a) => (
-                <div key={a.id} className="irow">
-                  <MonoBadge a={a} />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="iname">{a.name}</div>
-                    <div className="idesc">
-                      {a.folders.length} folder{a.folders.length === 1 ? "" : "s"}
-                      {a.interface ? ` · interface ${a.interface}` : ""}
-                    </div>
+            {items.map((a) => (
+              <div key={a.id} className="irow">
+                <MonoBadge a={a} />
+                <div style={{ minWidth: 0 }}>
+                  <div className="iname">{a.name}</div>
+                  <div className="idesc">
+                    {a.folders.length} folder{a.folders.length === 1 ? "" : "s"}
+                    {a.interface ? ` · interface ${a.interface}` : ""}
                   </div>
-                  <span className={`pill src-${a.source}`}>
-                    <span className="dot" />
-                    {sourceLabel(a.source)}
+                </div>
+                <span className={`pill src-${a.source}`}>
+                  <span className="dot" />
+                  {sourceLabel(a.source)}
                   </span>
                   <span className="ver-mono">{a.version}</span>
                   <div className="iright">
                     <button className="btn btn-sm">Update</button>
                     <button className="btn btn-sm btn-danger">Remove</button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
