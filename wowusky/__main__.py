@@ -32,7 +32,7 @@ _ensure_package_on_path()
 # Dispatch: CLI when arguments are given, GUI/terminal otherwise.
 _CLI_COMMANDS = {
     "install", "uninstall", "update", "status",
-    "search", "orphans", "import", "profile", "set", "version",
+    "search", "orphans", "import", "profile", "set", "version", "help",
     "--help", "-h", "--version",
 }
 

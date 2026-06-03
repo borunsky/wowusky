@@ -266,6 +266,182 @@ def cmd_version(args: argparse.Namespace) -> None:
     print(f"wowusky {__version__}")
 
 
+def cmd_help(args: argparse.Namespace) -> None:
+    from wowusky import __version__
+    topic = getattr(args, "topic", None)
+
+    COMMANDS = {
+        "install": {
+            "syntax":   "wowusky install <id> [<id>...] [-n] [--no-deps]",
+            "desc":     "Install one or more addons from the catalog by their id.",
+            "flags": [
+                ("-n, --dry-run", "Show what would be installed without making changes."),
+                ("--no-deps",     "Skip automatic installation of catalog dependencies."),
+            ],
+            "examples": [
+                ("wowusky install elvui",                       "Install ElvUI."),
+                ("wowusky install bigwigs littlewigs",          "Install two addons at once."),
+                ("wowusky install details_cf --no-deps",        "Install without pulling in deps."),
+                ("wowusky install weakauras -n",                "Preview what would happen."),
+            ],
+        },
+        "uninstall": {
+            "syntax":   "wowusky uninstall <id> [<id>...]",
+            "desc":     "Remove one or more installed addons and their folders.",
+            "flags":    [],
+            "examples": [
+                ("wowusky uninstall elvui",           "Remove ElvUI."),
+                ("wowusky uninstall bigwigs littlewigs", "Remove two addons at once."),
+            ],
+        },
+        "update": {
+            "syntax":   "wowusky update [<id>...] [-n] [--no-deps]",
+            "desc":     "Update installed addons. Without ids, updates every installed catalog addon.",
+            "flags": [
+                ("-n, --dry-run", "Show what would be updated without making changes."),
+                ("--no-deps",     "Skip dependency updates."),
+            ],
+            "examples": [
+                ("wowusky update",             "Update all installed addons."),
+                ("wowusky update elvui",       "Update only ElvUI."),
+                ("wowusky update -n",          "Preview available updates."),
+            ],
+        },
+        "status": {
+            "syntax":   "wowusky status",
+            "desc":     "Show all installed addons with their installed version and latest available version.\n"
+                        "  An ↑ marker means an update is available.",
+            "flags":    [],
+            "examples": [
+                ("wowusky status", "List all installed addons and their update state."),
+            ],
+        },
+        "search": {
+            "syntax":   "wowusky search <query>",
+            "desc":     "Search the catalog by addon id, name, or description.",
+            "flags":    [],
+            "examples": [
+                ("wowusky search raid",    "Find all raid-related addons."),
+                ("wowusky search elvui",   "Look up ElvUI by name."),
+                ("wowusky search bigwigs", "Search by id."),
+            ],
+        },
+        "orphans": {
+            "syntax":   "wowusky orphans",
+            "desc":     "List addons that are installed but no longer appear in the catalog.\n"
+                        "  These can be removed with 'uninstall' or kept as-is.",
+            "flags":    [],
+            "examples": [
+                ("wowusky orphans", "Show orphaned addons."),
+            ],
+        },
+        "import": {
+            "syntax":   "wowusky import [<file.zip>]",
+            "desc":     "Import an addon from a ZIP file.\n"
+                        "  Without a path, picks the newest ZIP from ~/Downloads automatically.",
+            "flags":    [],
+            "examples": [
+                ("wowusky import",                          "Import newest ZIP from ~/Downloads."),
+                ("wowusky import ~/Downloads/MyAddon.zip",  "Import a specific file."),
+            ],
+        },
+        "profile": {
+            "syntax":   "wowusky profile list\n"
+                        "  wowusky profile switch <name|id>",
+            "desc":     "Manage WoW installation profiles.\n"
+                        "  Each profile has its own installed list, backup history, and settings.\n"
+                        "  The active profile is marked with * in the list.",
+            "flags":    [],
+            "examples": [
+                ("wowusky profile list",           "Show all profiles (* = active)."),
+                ("wowusky profile switch retail",  "Switch to the 'retail' profile."),
+                ("wowusky profile switch tbc",     "Switch to the TBC profile."),
+            ],
+        },
+        "set": {
+            "syntax":   "wowusky set curseforge-key <key>\n"
+                        "  wowusky set curseforge-key",
+            "desc":     "Configure wowusky settings.\n\n"
+                        "  curseforge-key   Store your CurseForge Eternal API key.\n"
+                        "                   Enables direct addon lookups and updates for\n"
+                        "                   numeric CurseForge ids. Omit the value to clear.",
+            "flags":    [],
+            "examples": [
+                ("wowusky set curseforge-key abc123def456",  "Save a CurseForge API key."),
+                ("wowusky set curseforge-key",               "Remove the stored key."),
+            ],
+        },
+        "version": {
+            "syntax":   "wowusky version",
+            "desc":     "Print the installed wowusky version and exit.",
+            "flags":    [],
+            "examples": [
+                ("wowusky version", f"Prints: wowusky {__version__}"),
+            ],
+        },
+    }
+
+    if topic and topic in COMMANDS:
+        c = COMMANDS[topic]
+        print(f"\nUsage:  {c['syntax']}\n")
+        print(f"  {c['desc']}\n")
+        if c["flags"]:
+            print("Options:")
+            w = max(len(f) for f, _ in c["flags"])
+            for flag, desc in c["flags"]:
+                print(f"  {flag.ljust(w)}  {desc}")
+            print()
+        print("Examples:")
+        w = max(len(ex) for ex, _ in c["examples"])
+        for ex, note in c["examples"]:
+            print(f"  {ex.ljust(w)}  # {note}")
+        print()
+        return
+
+    if topic:
+        print(f"Unknown command '{topic}'. Available commands are listed below.\n")
+
+    print(f"wowusky {__version__} — minimalist WoW addon manager for Linux\n")
+    print("Usage:  wowusky <command> [arguments]\n")
+    print("Commands:\n")
+
+    rows = [
+        ("install   <id>...",            "Install catalog addon(s) by id"),
+        ("uninstall <id>...",            "Remove installed addon(s)"),
+        ("update    [<id>...]",          "Update addons (all if no ids given)"),
+        ("status",                       "List installed addons and available updates"),
+        ("search    <query>",            "Search the catalog by name, id or description"),
+        ("orphans",                      "List installed addons absent from the catalog"),
+        ("import    [file.zip]",         "Import a ZIP (defaults to newest in ~/Downloads)"),
+        ("profile   list|switch <name>", "Manage WoW installation profiles"),
+        ("set       curseforge-key [v]", "Configure wowusky settings"),
+        ("version",                      "Print version and exit"),
+        ("help      [<command>]",        "Show this help, or detailed help for one command"),
+    ]
+    w = max(len(r[0]) for r in rows)
+    for cmd_col, desc in rows:
+        print(f"  {cmd_col.ljust(w)}  {desc}")
+
+    print()
+    print("Flags available on install / update:")
+    print("  -n, --dry-run   Show what would happen without making changes.")
+    print("  --no-deps       Skip automatic catalog dependency installation.")
+    print()
+    print("Examples:")
+    examples = [
+        ("wowusky install elvui bigwigs",    "Install two addons"),
+        ("wowusky update -n",                "Preview available updates"),
+        ("wowusky search raid",              "Search catalog for raid addons"),
+        ("wowusky profile switch retail",    "Switch active WoW profile"),
+        ("wowusky set curseforge-key KEY",   "Store CurseForge API key"),
+        ("wowusky help install",             "Detailed help for 'install'"),
+    ]
+    we = max(len(e) for e, _ in examples)
+    for ex, note in examples:
+        print(f"  {ex.ljust(we)}  # {note}")
+    print()
+
+
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
@@ -342,6 +518,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("version", help="Print the wowusky version and exit.")
     sp.set_defaults(func=cmd_version)
 
+    # help
+    sp = sub.add_parser("help", help="Show help, or detailed help for one command.")
+    sp.add_argument("topic", nargs="?", default=None, metavar="command")
+    sp.set_defaults(func=cmd_help)
+
     return p
 
 
@@ -349,6 +530,6 @@ def run_cli(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     if not hasattr(args, "func"):
-        parser.print_help()
+        cmd_help(args)
         sys.exit(0)
     args.func(args)

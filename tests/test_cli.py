@@ -157,6 +157,40 @@ def test_orphans_found(capsys):
 
 
 # ---------------------------------------------------------------------------
+# cmd_help
+# ---------------------------------------------------------------------------
+
+def test_help_lists_all_commands(capsys):
+    run_cli(["help"])
+    out = capsys.readouterr().out
+    for cmd in ("install", "uninstall", "update", "status", "search",
+                "orphans", "import", "profile", "set", "version"):
+        assert cmd in out
+
+
+def test_help_topic_install(capsys):
+    run_cli(["help", "install"])
+    out = capsys.readouterr().out
+    assert "Usage:" in out
+    assert "--dry-run" in out
+    assert "Examples:" in out
+
+
+def test_help_topic_set(capsys):
+    run_cli(["help", "set"])
+    out = capsys.readouterr().out
+    assert "curseforge-key" in out
+    assert "Examples:" in out
+
+
+def test_help_unknown_topic(capsys):
+    run_cli(["help", "doesnotexist"])
+    out = capsys.readouterr().out
+    assert "Unknown command" in out
+    assert "install" in out  # still shows full help
+
+
+# ---------------------------------------------------------------------------
 # cmd_set
 # ---------------------------------------------------------------------------
 
