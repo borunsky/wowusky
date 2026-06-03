@@ -138,10 +138,10 @@
 .update-banner { display: flex; align-items: center; gap: 12px; margin: 8px 24px 0; padding: 12px 16px; border-radius: var(--radius); background: color-mix(in oklab, var(--accent), transparent 90%); border: 1px solid var(--accent-line); }
 .update-banner .ub-text { font-size: 13px; color: var(--text); }
 .update-banner .ub-text b { color: var(--accent); }
-.irow { display: grid; grid-template-columns: 40px minmax(0,1fr) 130px 150px auto; align-items: center; gap: 16px; padding: 12px 14px; border-radius: var(--radius-sm); cursor: pointer; }
+.irow { display: grid; grid-template-columns: 40px minmax(0,1fr) 130px 150px 180px; align-items: center; gap: 16px; padding: 12px 14px; border-radius: var(--radius-sm); cursor: pointer; }
 .irow:hover { background: var(--row-hover); }
 .irow + .irow { border-top: 1px solid var(--border); }
-.ihead { display: grid; grid-template-columns: 40px minmax(0,1fr) 130px 150px auto; align-items: center; gap: 16px; padding: 8px 14px; font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); border-bottom: 1px solid var(--border); }
+.ihead { display: grid; grid-template-columns: 40px minmax(0,1fr) 130px 150px 180px; align-items: center; gap: 16px; padding: 8px 14px; font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); border-bottom: 1px solid var(--border); }
 .iname { font-weight: 600; font-size: 14px; }
 .idesc { font-size: 12px; color: var(--text-faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .istatus { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; white-space: nowrap; }
