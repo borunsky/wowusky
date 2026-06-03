@@ -4,6 +4,27 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-06-03
+
+Feature release — CLI surface. wowusky can now be driven entirely from
+the terminal without opening the GUI.
+
+### Added
+- **CLI surface** (`wowusky/cli.py`): `wowusky <command>` dispatch on
+  `sys.argv`. When arguments are present the GUI is bypassed entirely.
+- Commands: `install <id>...`, `uninstall <id>...`, `update [<id>...]`,
+  `status`, `search <query>`, `orphans`, `import [file.zip]`,
+  `profile list`, `profile switch <name|id>`,
+  `set curseforge-key <key>`, `version`.
+- `install` and `update` support `-n/--dry-run` (show plan, no changes)
+  and `--no-deps` (skip automatic dependency installation).
+- Plain/schlichte output: aligned columns with `ljust`, `✓`/`✗`/`↑`
+  markers, no colours or external dependencies.
+
+### Internal
+- New tests: `tests/test_cli.py` (19 tests covering parser, search,
+  install dry-run, orphans, set curseforge-key, version).
+
 ## [0.7.0] — 2026-06-03
 
 Feature release — automatic dependency resolution. Installing a catalog
@@ -788,6 +809,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.8.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.0
 [0.7.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.7.0
 [0.6.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.4
 [0.6.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.6.3

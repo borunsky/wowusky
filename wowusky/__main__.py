@@ -29,7 +29,17 @@ def _ensure_package_on_path() -> None:
 
 _ensure_package_on_path()
 
-from wowusky.app import main  # noqa: E402
+# Dispatch: CLI when arguments are given, GUI/terminal otherwise.
+_CLI_COMMANDS = {
+    "install", "uninstall", "update", "status",
+    "search", "orphans", "import", "profile", "set", "version",
+    "--help", "-h", "--version",
+}
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] in _CLI_COMMANDS:
+        from wowusky.cli import run_cli  # noqa: E402
+        run_cli()
+    else:
+        from wowusky.app import main  # noqa: E402
+        main()
