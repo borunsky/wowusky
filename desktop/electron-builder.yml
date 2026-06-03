@@ -1,0 +1,15 @@
+# Packaging config — wired up fully in the Phase 8 (packaging) work.
+# Linux targets chosen to match wowusky's existing distribution channels.
+appId: de.borunsky.wowusky
+productName: wowusky
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+linux:
+  target:
+    - AppImage
+    - dir
+  category: Game
+  maintainer: Kevin <info@borunsky.de>
