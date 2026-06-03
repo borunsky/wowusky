@@ -5,6 +5,7 @@ import { AppBar } from "./components/AppBar";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
+import { BrowseScreen } from "./screens/BrowseScreen";
 
 export type Theme = "dark" | "light" | "system";
 export type Density = "comfortable" | "compact";
@@ -90,7 +91,11 @@ export default function App(): JSX.Element {
       <div className="body">
         <Sidebar screen={screen} onNav={setScreen} addonCount={0} />
         <div className="content">
-          <PlaceholderScreen name={meta.name} icon={meta.icon} description={meta.description} />
+          {screen === "browse" ? (
+            <BrowseScreen />
+          ) : (
+            <PlaceholderScreen name={meta.name} icon={meta.icon} description={meta.description} />
+          )}
           <StatusBar version={version} bridgeOk={bridgeOk} />
         </div>
       </div>
