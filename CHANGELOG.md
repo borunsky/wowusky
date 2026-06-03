@@ -4,6 +4,14 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] — 2026-06-03
+
+### Fixed
+- README version banner and install snippets still referenced `0.8.0`,
+  which broke the `test_docs_consistency` checks during the AUR `check()`
+  phase (the v0.8.1 source tag shipped with the stale banner). Bumped all
+  README references so packaged builds pass their tests again.
+
 ## [0.8.1] — 2026-06-03
 
 ### Fixed
@@ -844,6 +852,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.8.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.2
 [0.8.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.1
 [0.8.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.0
 [0.7.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.7.0
