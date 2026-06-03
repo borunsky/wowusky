@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import { bridge } from "../api";
+import { useState, useEffect, useRef } from "react";import { bridge } from "../api";
 import { sourceLabel, rarityFor, type Addon, type SearchResult } from "./browseData";
 import { DetailPanel } from "./DetailPanel";
 
@@ -49,6 +48,18 @@ export function BrowseScreen(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Addon | null>(null);
+  const [catMenuOpen, setCatMenuOpen] = useState(false);
+  const catMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) {
+        setCatMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
 
   function setViewPersist(v: View) {
     setView(v);
@@ -119,15 +130,30 @@ export function BrowseScreen(): JSX.Element {
         <div className="filters">
           <div className="filtergroup">
             <span className="glabel">Category</span>
-            {categories.map((c) => (
+            <div className="dropdown" ref={catMenuRef}>
               <button
-                key={c}
-                className={`chip${category === c ? " on" : ""}`}
-                onClick={() => setCategory(c)}
+                className={`sortsel${catMenuOpen ? " on" : ""}`}
+                onClick={() => setCatMenuOpen((o) => !o)}
               >
-                {c}
+                {category}
+                <svg className="chev" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
-            ))}
+              {catMenuOpen && (
+                <div className="menu" style={{ maxHeight: 320, overflowY: "auto" }}>
+                  {categories.map((c) => (
+                    <button
+                      key={c}
+                      className={`menu-item${category === c ? " on" : ""}`}
+                      onClick={() => { setCategory(c); setCatMenuOpen(false); }}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
