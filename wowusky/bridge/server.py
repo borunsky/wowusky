@@ -210,6 +210,92 @@ def _app_rescan(_params: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Settings & profiles
+# ---------------------------------------------------------------------------
+
+
+def _profile_summaries() -> list[dict[str, Any]]:
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    data = _state.load_profiles()
+    profiles = data.get("profiles", {})
+    out: list[dict[str, Any]] = []
+    for pid, p in profiles.items():
+        try:
+            count = len(_installed.load(pid))
+        except Exception:  # noqa: BLE001 — a broken profile shouldn't hide the rest
+            count = 0
+        out.append(
+            {
+                "id": pid,
+                "name": p.get("name", pid),
+                "flavor": p.get("flavor", pid),
+                "addons_path": p.get("addons_path", ""),
+                "color_tag": p.get("color_tag"),
+                "count": count,
+            }
+        )
+    out.sort(key=lambda p: p["name"].lower())
+    return out
+
+
+@method("settings.get")
+def _settings_get(_params: dict[str, Any]) -> dict[str, Any]:
+    """Return the persisted core settings the GUI can edit."""
+    from wowusky.core import state as _state
+
+    try:
+        addons_path = _state.get_addons_path()
+    except Exception:  # noqa: BLE001
+        addons_path = ""
+    try:
+        wtf_path = _state.get_wtf_path()
+    except Exception:  # noqa: BLE001
+        wtf_path = ""
+
+    cf_key = _state.get_curseforge_api_key() or ""
+    return {
+        "addons_path": addons_path,
+        "wtf_path": wtf_path,
+        "dry_run": bool(_state.is_dry_run()),
+        "curseforge_api_key_set": bool(cf_key),
+        "active_profile": _state.get_active_profile_id(),
+        "profiles": _profile_summaries(),
+    }
+
+
+@method("settings.update")
+def _settings_update(params: dict[str, Any]) -> dict[str, Any]:
+    """Apply any provided settings fields, then return the fresh settings.
+
+    Recognised fields: addons_path, dry_run, curseforge_api_key.
+    """
+    from wowusky.core import state as _state
+
+    if "addons_path" in params:
+        _state.set_addons_path(str(params["addons_path"]))
+    if "dry_run" in params:
+        _state.set_dry_run(bool(params["dry_run"]))
+    if "curseforge_api_key" in params:
+        _state.set_curseforge_api_key(str(params["curseforge_api_key"]))
+
+    return _settings_get({})
+
+
+@method("profile.setActive")
+def _profile_set_active(params: dict[str, Any]) -> dict[str, Any]:
+    """Switch the active profile and return refreshed settings."""
+    from wowusky.core import state as _state
+
+    pid = params.get("profile")
+    if not pid:
+        raise ValueError("profile is required")
+    _state.set_active_profile(str(pid))
+    return _settings_get({})
+
+
+# ---------------------------------------------------------------------------
 # Dispatch loop
 # ---------------------------------------------------------------------------
 

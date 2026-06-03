@@ -67,6 +67,23 @@
   --glyph-col: rgba(255,255,255,.95);
 }
 
+/* ---------------- ACCENTS (layer over either theme) ---------------- */
+[data-accent="blue"] {
+  --accent: #4d9fff; --accent-deep: #2f7fe0; --accent-text: #04122a;
+  --accent-soft: rgba(77,159,255,0.14); --accent-line: rgba(77,159,255,0.34);
+}
+[data-accent="purple"] {
+  --accent: #a78bff; --accent-deep: #7c5fe6; --accent-text: #16092e;
+  --accent-soft: rgba(167,139,255,0.15); --accent-line: rgba(167,139,255,0.36);
+}
+[data-accent="orange"] {
+  --accent: #ff9a5e; --accent-deep: #e6743a; --accent-text: #2a1304;
+  --accent-soft: rgba(255,154,94,0.14); --accent-line: rgba(255,154,94,0.34);
+}
+[data-theme="light"][data-accent="blue"]   { --accent: #2f7fe0; --accent-deep: #2366c2; --accent-text: #fff; }
+[data-theme="light"][data-accent="purple"] { --accent: #7c5fe6; --accent-deep: #6347c4; --accent-text: #fff; }
+[data-theme="light"][data-accent="orange"] { --accent: #e6743a; --accent-deep: #c25a26; --accent-text: #fff; }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { background: #11151c; font-family: var(--sans); }

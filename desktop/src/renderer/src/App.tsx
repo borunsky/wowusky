@@ -7,9 +7,11 @@ import { StatusBar } from "./components/StatusBar";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { BrowseScreen } from "./screens/BrowseScreen";
 import { InstalledScreen } from "./screens/InstalledScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 
 export type Theme = "dark" | "light" | "system";
 export type Density = "comfortable" | "compact";
+export type Accent = "teal" | "blue" | "purple" | "orange";
 export type Screen = "browse" | "installed" | "weakauras" | "backups" | "health" | "settings";
 
 function resolveTheme(t: Theme): "dark" | "light" {
@@ -39,6 +41,9 @@ export default function App(): JSX.Element {
   });
   const [density, setDensity] = useState<Density>(() => {
     return (localStorage.getItem("wowusky:density") as Density | null) ?? "comfortable";
+  });
+  const [accent, setAccent] = useState<Accent>(() => {
+    return (localStorage.getItem("wowusky:accent") as Accent | null) ?? "teal";
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [rescanning, setRescanning] = useState(false);
@@ -93,6 +98,12 @@ export default function App(): JSX.Element {
     localStorage.setItem("wowusky:density", density);
   }, [density]);
 
+  // Apply accent to document
+  useEffect(() => {
+    document.documentElement.setAttribute("data-accent", accent);
+    localStorage.setItem("wowusky:accent", accent);
+  }, [accent]);
+
   // Persist screen choice
   useEffect(() => {
     localStorage.setItem("wowusky:screen", screen);
@@ -119,6 +130,16 @@ export default function App(): JSX.Element {
             <BrowseScreen />
           ) : screen === "installed" ? (
             <InstalledScreen refreshKey={refreshKey} />
+          ) : screen === "settings" ? (
+            <SettingsScreen
+              theme={theme}
+              density={density}
+              accent={accent}
+              onThemeChange={setTheme}
+              onDensityChange={setDensity}
+              onAccentChange={setAccent}
+              onProfileChange={() => setRefreshKey((k) => k + 1)}
+            />
           ) : (
             <PlaceholderScreen name={meta.name} icon={meta.icon} description={meta.description} />
           )}

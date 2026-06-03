@@ -18,6 +18,10 @@ document.documentElement.setAttribute(
   "data-density",
   localStorage.getItem("wowusky:density") ?? "comfortable",
 );
+document.documentElement.setAttribute(
+  "data-accent",
+  localStorage.getItem("wowusky:accent") ?? "teal",
+);
 
 const root = document.getElementById("root");
 if (!root) throw new Error("missing #root");
