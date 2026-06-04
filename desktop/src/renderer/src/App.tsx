@@ -52,6 +52,7 @@ export default function App(): JSX.Element {
   const [rescanning, setRescanning] = useState(false);
   const [installedCount, setInstalledCount] = useState(0);
   const [updateCount, setUpdateCount] = useState(0);
+  const [toast, setToast] = useState<string | null>(null);
   // Auto-update runs at most once per session, only for the active profile.
   const autoUpdateRan = useRef(false);
 
@@ -83,7 +84,7 @@ export default function App(): JSX.Element {
   }, [refreshKey]);
 
   // Background update check → "updates available" badge. If the active profile
-  // has auto-update enabled, apply them once per session, then re-check.
+  // or global auto_update_on_launch is enabled, apply them once per session.
   useEffect(() => {
     let cancelled = false;
     bridge
@@ -94,14 +95,23 @@ export default function App(): JSX.Element {
         setUpdateCount(ids.length);
         if (ids.length === 0 || autoUpdateRan.current) return;
         return bridge
-          .call<{ active_profile: string; profiles: Array<{ id: string; auto_update?: boolean }> }>("settings.get", {})
+          .call<{ active_profile: string; auto_update_on_launch?: boolean; profiles: Array<{ id: string; auto_update?: boolean }> }>("settings.get", {})
           .then((s) => {
             const active = s.profiles.find((p) => p.id === s.active_profile);
-            if (!active?.auto_update) return;
+            if (!active?.auto_update && !s.auto_update_on_launch) return;
             autoUpdateRan.current = true;
+            setToast(`Auto-updating ${ids.length} addon${ids.length === 1 ? "" : "s"}…`);
             return bridge
-              .call("installed.updateAll", { ids })
-              .then(() => { if (!cancelled) { setUpdateCount(0); setRefreshKey((k) => k + 1); } });
+              .call<{ updated?: number }>("installed.updateAll", { ids })
+              .then((res) => {
+                if (!cancelled) {
+                  setUpdateCount(0);
+                  setRefreshKey((k) => k + 1);
+                  const n = res?.updated ?? ids.length;
+                  setToast(`Auto-update complete: ${n} addon${n === 1 ? "" : "s"} updated`);
+                  setTimeout(() => setToast(null), 4000);
+                }
+              });
           });
       })
       .catch(() => {});
@@ -150,6 +160,7 @@ export default function App(): JSX.Element {
 
   return (
     <div className="win">
+      {toast && <div className="app-toast">{toast}</div>}
       <Titlebar />
       <AppBar
         version={version}

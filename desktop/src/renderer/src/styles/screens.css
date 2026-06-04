@@ -267,13 +267,19 @@
 /* WEAKAURAS */
 .wa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 14px; }
 .wa-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; display: flex; flex-direction: column; gap: 11px; }
+.wa-card-upd { border-color: color-mix(in oklab, var(--accent), transparent 40%); }
 .wa-top { display: flex; align-items: center; gap: 11px; }
 .wa-ic { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(150deg, color-mix(in oklab,var(--badge-b),#fff 25%), var(--badge-b)); display: grid; place-items: center; color: #2a230d; flex: none; }
 .wa-nm { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wa-au { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wa-foot { display: flex; align-items: center; justify-content: space-between; }
+.wa-foot { display: flex; align-items: center; gap: 8px; }
 .wa-sync { font-size: 11.5px; color: var(--green); display: inline-flex; align-items: center; gap: 6px; }
 .wa-sync.behind { color: var(--amber); }
+.wa-meta { font-size: 11px; color: var(--text-faint); }
+.wa-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.wa-notice { font-size: 12.5px; color: var(--text-dim); background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 12px; }
+.wa-upd-btn { font-size: 11px; padding: 3px 9px; flex: none; }
+.badge-upd { font-size: 11px; font-weight: 600; background: var(--accent); color: #fff; border-radius: 999px; padding: 2px 8px; }
 
 /* fade-in for screen switches — transform only, never gates visibility */
 @keyframes fadeUp { from { transform: translateY(7px); } to { transform: none; } }

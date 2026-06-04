@@ -309,12 +309,15 @@ def _settings_get(_params: dict[str, Any]) -> dict[str, Any]:
     except Exception:  # noqa: BLE001
         wtf_path = ""
 
+    from wowusky.core import config as _config
+
     cf_key = _state.get_curseforge_api_key() or ""
     return {
         "addons_path": addons_path,
         "wtf_path": wtf_path,
         "dry_run": bool(_state.is_dry_run()),
         "curseforge_api_key_set": bool(cf_key),
+        "auto_update_on_launch": bool(_config.get_auto_update_on_launch()),
         "active_profile": _state.get_active_profile_id(),
         "profiles": _profile_summaries(),
     }
@@ -334,6 +337,9 @@ def _settings_update(params: dict[str, Any]) -> dict[str, Any]:
         _state.set_dry_run(bool(params["dry_run"]))
     if "curseforge_api_key" in params:
         _state.set_curseforge_api_key(str(params["curseforge_api_key"]))
+    if "auto_update_on_launch" in params:
+        from wowusky.core import config as _config
+        _config.set_auto_update_on_launch(bool(params["auto_update_on_launch"]))
 
     return _settings_get({})
 
@@ -472,14 +478,95 @@ def _weakauras_list(_params: dict[str, Any]) -> dict[str, Any]:
             "slug": slug,
             "name": a.get("name", slug),
             "version": a.get("version", 1),
+            "latest_version": a.get("latest_version", a.get("version", 1)),
+            "has_update": _has_aura_update(a),
             "type": a.get("type", "WeakAura"),
             "note": a.get("note", ""),
+            "author": a.get("author", ""),
+            "modified": a.get("modified", ""),
             "url": a.get("url", f"https://wago.io/{slug}"),
         }
         for slug, a in auras.items()
     ]
     items.sort(key=lambda x: str(x["name"]).lower())
     return {"count": len(items), "items": items}
+
+
+def _has_aura_update(a: dict) -> bool:
+    try:
+        cur = int(a.get("version", 1))
+        lat = int(a.get("latest_version", cur))
+        return lat > cur
+    except (ValueError, TypeError):
+        return False
+
+
+@method("wago.checkUpdates")
+def _wago_check_updates(_params: dict[str, Any]) -> dict[str, Any]:
+    """Fetch latest version info for all tracked auras and return those with updates."""
+    from wowusky.core import wago as _wago
+
+    updated_slugs = _wago.wago_check_updates()
+    return {"updates": updated_slugs, "count": len(updated_slugs)}
+
+
+@method("wago.update")
+def _wago_update(params: dict[str, Any]) -> dict[str, Any]:
+    """Update a single aura to its latest version on wago.io."""
+    from wowusky.core import wago as _wago
+    from wowusky.providers.wago_fns import wago_fetch_info
+
+    slug = str(params.get("slug", "")).strip()
+    if not slug:
+        raise ValueError("slug is required")
+
+    info = wago_fetch_info(slug)
+    if not info:
+        return {"ok": False, "error": "could not fetch aura info from wago.io"}
+
+    wago = _wago.load_wago()
+    if slug not in wago.get("auras", {}):
+        return {"ok": False, "error": "aura not tracked"}
+
+    entry = wago["auras"][slug]
+    latest = info.get("version") or info.get("wagoVersion") or entry.get("version", 1)
+    entry["version"] = latest
+    entry["latest_version"] = latest
+    entry["author"] = info.get("username") or info.get("author") or entry.get("author", "")
+    entry["modified"] = info.get("modified") or info.get("date") or entry.get("modified", "")
+    entry["note"] = info.get("versionString") or info.get("changelog", {}).get("text", "") or entry.get("note", "")
+    _wago.save_wago(wago)
+    return {"ok": True, "slug": slug, "version": latest}
+
+
+@method("wago.updateAll")
+def _wago_update_all(_params: dict[str, Any]) -> dict[str, Any]:
+    """Update all tracked auras that have pending updates."""
+    from wowusky.core import wago as _wago
+    from wowusky.providers.wago_fns import wago_fetch_info
+
+    wago = _wago.load_wago()
+    auras = wago.get("auras", {})
+    updated = []
+    failed = []
+    for slug, entry in auras.items():
+        if not _has_aura_update(entry):
+            continue
+        try:
+            info = wago_fetch_info(slug)
+            if not info:
+                failed.append(slug)
+                continue
+            latest = info.get("version") or info.get("wagoVersion") or entry.get("latest_version")
+            entry["version"] = latest
+            entry["latest_version"] = latest
+            entry["author"] = info.get("username") or info.get("author") or entry.get("author", "")
+            entry["modified"] = info.get("modified") or info.get("date") or entry.get("modified", "")
+            updated.append(slug)
+        except Exception:  # noqa: BLE001
+            failed.append(slug)
+    _wago.save_wago(wago)
+    return {"ok": True, "updated": updated, "failed": failed}
 
 
 # ---------------------------------------------------------------------------

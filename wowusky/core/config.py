@@ -85,6 +85,12 @@ def is_dry_run() -> bool:
 def set_dry_run(value: bool) -> None:
     set_key("dry_run", bool(value))
 
+def get_auto_update_on_launch() -> bool:
+    return bool(get("auto_update_on_launch", False))
+
+def set_auto_update_on_launch(value: bool) -> None:
+    set_key("auto_update_on_launch", bool(value))
+
 
 def migrate_legacy_installed(target_profile_id: str) -> bool:
     """Move the pre-0.4 ``installed.json`` into the per-profile location.

@@ -88,6 +88,16 @@
 html, body { margin: 0; height: 100%; }
 body { background: #11151c; font-family: var(--sans); }
 
+/* app-level toast */
+.app-toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border-2);
+  border-radius: 999px; padding: 8px 20px; font-size: 13px; font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3); z-index: 9999;
+  animation: fadeUp .2s var(--ease);
+  pointer-events: none;
+}
+
 /* window shell */
 .win {
   position: absolute; inset: 0;

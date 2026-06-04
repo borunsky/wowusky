@@ -22,6 +22,7 @@ interface CoreSettings {
   addons_path: string;
   wtf_path: string;
   dry_run: boolean;
+  auto_update_on_launch: boolean;
   curseforge_api_key_set: boolean;
   active_profile: string;
   profiles: ProfileSummary[];
@@ -224,6 +225,11 @@ export function SettingsScreen({
   function toggleDryRun() {
     if (!core) return;
     bridge.call<CoreSettings>("settings.update", { dry_run: !core.dry_run })
+      .then(setCore).catch(() => {});
+  }
+  function toggleAutoUpdateOnLaunch() {
+    if (!core) return;
+    bridge.call<CoreSettings>("settings.update", { auto_update_on_launch: !core.auto_update_on_launch })
       .then(setCore).catch(() => {});
   }
   function switchProfile(id: string) {
@@ -821,6 +827,15 @@ export function SettingsScreen({
           <div className="set-group">
             <h3>Advanced</h3>
             <div className="set-card">
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Auto-update on launch</div>
+                  <div className="sd">Silently update all outdated addons when the app starts. A summary toast is shown when complete.</div>
+                </div>
+                <div className="sr">
+                  <div className={`switch${core?.auto_update_on_launch ? " on" : ""}`} onClick={toggleAutoUpdateOnLaunch}><i /></div>
+                </div>
+              </div>
               <div className="set-row">
                 <div className="sl">
                   <div className="st">Dry-run mode</div>
