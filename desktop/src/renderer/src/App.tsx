@@ -4,6 +4,7 @@ import { Titlebar } from "./components/Titlebar";
 import { AppBar } from "./components/AppBar";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
+import { FirstRunWizard } from "./components/FirstRunWizard";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { BrowseScreen } from "./screens/BrowseScreen";
 import { InstalledScreen } from "./screens/InstalledScreen";
@@ -53,6 +54,8 @@ export default function App(): JSX.Element {
   const [installedCount, setInstalledCount] = useState(0);
   const [updateCount, setUpdateCount] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  // First-run wizard (#56): null = unknown yet, true/false once settings load.
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   // Auto-update runs at most once per session, only for the active profile.
   const autoUpdateRan = useRef(false);
   const notifiedUpdates = useRef(false);
@@ -75,6 +78,14 @@ export default function App(): JSX.Element {
       .then((r) => { setVersion(r.version); setBridgeOk(true); })
       .catch(() => setBridgeOk(false));
   }, []);
+
+  // Decide whether to show the first-run wizard (#56): no profiles configured.
+  useEffect(() => {
+    bridge
+      .call<{ profiles: Array<unknown> }>("settings.get", {})
+      .then((s) => setNeedsSetup((s.profiles?.length ?? 0) === 0))
+      .catch(() => setNeedsSetup(false));
+  }, [refreshKey]);
 
   // Keep the sidebar installed-count badge in sync (also after rescans).
   useEffect(() => {
@@ -167,11 +178,63 @@ export default function App(): JSX.Element {
     localStorage.setItem("wowusky:screen", screen);
   }, [screen]);
 
+  // Update all outdated addons (shared by the U shortcut).
+  function updateAllOutdated() {
+    if (autoUpdateRan.current) { /* no-op marker only for auto-update */ }
+    bridge
+      .call<{ updates: Record<string, string> }>("installed.updates", {})
+      .then((r) => {
+        const ids = Object.keys(r.updates ?? {});
+        if (ids.length === 0) {
+          setToast("Everything is up to date");
+          setTimeout(() => setToast(null), 2500);
+          return;
+        }
+        setToast(`Updating ${ids.length} addon${ids.length === 1 ? "" : "s"}…`);
+        return bridge.call<{ updated?: number }>("installed.updateAll", { ids }).then((res) => {
+          setUpdateCount(0);
+          setRefreshKey((k) => k + 1);
+          const n = res?.updated ?? ids.length;
+          setToast(`Updated ${n} addon${n === 1 ? "" : "s"}`);
+          setTimeout(() => setToast(null), 4000);
+        });
+      })
+      .catch(() => {});
+  }
+
+  // Global keyboard shortcuts (#58). Ignored while typing in a field.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t?.isContentEditable) return;
+      switch (e.key.toLowerCase()) {
+        case "b": setScreen("browse"); break;
+        case "i": setScreen("installed"); break;
+        case "w": setScreen("weakauras"); break;
+        case "s": setScreen("settings"); break;
+        case "u": updateAllOutdated(); break;
+        case "r": handleRescan(); break;
+        default: return;
+      }
+      e.preventDefault();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const meta = SCREEN_META[screen];
 
   return (
     <div className="win">
       {toast && <div className="app-toast">{toast}</div>}
+      {needsSetup && (
+        <FirstRunWizard
+          onDone={() => { setNeedsSetup(false); setScreen("installed"); setRefreshKey((k) => k + 1); }}
+        />
+      )}
       <Titlebar />
       <AppBar
         version={version}

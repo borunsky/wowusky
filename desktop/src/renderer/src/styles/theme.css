@@ -98,6 +98,41 @@ body { background: #11151c; font-family: var(--sans); }
   pointer-events: none;
 }
 
+/* first-run wizard (#56) */
+.wizard-overlay {
+  position: fixed; inset: 0; z-index: 9998;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in oklab, var(--bg-deep), transparent 25%);
+  backdrop-filter: blur(3px);
+  animation: fadeUp .18s var(--ease);
+}
+.wizard {
+  width: min(560px, 92vw); max-height: 86vh; overflow: auto;
+  background: var(--panel); border: 1px solid var(--border-2);
+  border-radius: var(--radius, 12px); box-shadow: 0 12px 48px rgba(0,0,0,.45);
+  display: flex; flex-direction: column;
+}
+.wizard-head { display: flex; gap: 14px; align-items: center; padding: 22px 24px 14px; }
+.wizard-logo {
+  width: 44px; height: 44px; flex: none; border-radius: 10px;
+  display: grid; place-items: center; font-weight: 800; font-size: 22px;
+  color: #06231f; background: var(--accent);
+}
+.wizard-head h2 { margin: 0 0 2px; font-size: 18px; }
+.wizard-head p { margin: 0; font-size: 13px; color: var(--text-dim); }
+.wizard-body { padding: 6px 24px 14px; min-height: 120px; }
+.wizard-label { font-size: 12.5px; color: var(--text-dim); margin-bottom: 10px; }
+.wizard-list { display: flex; flex-direction: column; gap: 8px; }
+.wizard-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm, 8px);
+}
+.wi-name { font-size: 13.5px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.wi-path { font-size: 11.5px; color: var(--text-faint); word-break: break-all; }
+.wizard-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 0; text-align: center; color: var(--text-dim); }
+.wizard-foot { display: flex; gap: 8px; padding: 14px 24px 20px; border-top: 1px solid var(--border); }
+.wizard-skip { margin-left: auto; }
+
 /* window shell */
 .win {
   position: absolute; inset: 0;

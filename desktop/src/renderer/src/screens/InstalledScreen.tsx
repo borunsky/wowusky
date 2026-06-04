@@ -32,6 +32,9 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  // Filters (#57): by source and "outdated only".
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [outdatedOnly, setOutdatedOnly] = useState(false);
   // id of the addon a mutation is currently running for ("" = none).
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -179,7 +182,15 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
 
   const all = result?.items ?? [];
   const q = query.trim().toLowerCase();
-  const items = q ? all.filter((a) => a.name.toLowerCase().includes(q)) : all;
+  // Sources present in the current list, for the filter dropdown.
+  const sources = [...new Set(all.map((a) => a.source))].sort();
+  const items = all.filter((a) => {
+    if (q && !(a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q))) return false;
+    if (sourceFilter !== "all" && a.source !== sourceFilter) return false;
+    if (outdatedOnly && !updates[a.id]) return false;
+    return true;
+  });
+  const filtersActive = q !== "" || sourceFilter !== "all" || outdatedOnly;
 
   return (
     <div className="page">
@@ -206,6 +217,27 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
+          </label>
+          {sources.length > 1 && (
+            <select
+              className="field inst-filter"
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              title="Filter by source"
+            >
+              <option value="all">All sources</option>
+              {sources.map((s) => (
+                <option key={s} value={s}>{sourceLabel(s)}</option>
+              ))}
+            </select>
+          )}
+          <label className="inst-check" title="Show only addons with a pending update">
+            <input
+              type="checkbox"
+              checked={outdatedOnly}
+              onChange={(e) => setOutdatedOnly(e.target.checked)}
+            />
+            Outdated only
           </label>
           {selected.size === 0 && Object.keys(updates).length > 0 && (
             <button
@@ -259,10 +291,10 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
                 <path d="M9 11h8M9 15h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
               </svg>
             </div>
-            <h3>{q ? "No matches" : "No addons installed"}</h3>
+            <h3>{filtersActive ? "No matches" : "No addons installed"}</h3>
             <p>
-              {q
-                ? "Try a different filter term."
+              {filtersActive
+                ? "No installed addons match the current filters."
                 : "Install addons from the Browse tab, or hit Rescan to detect existing ones."}
             </p>
           </div>
