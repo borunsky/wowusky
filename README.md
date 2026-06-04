@@ -15,35 +15,24 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.9.5
+## What's new in v0.14.0
 
 ### Added
-- **Dependency preview in the detail panel**: addons that declare catalog
-  dependencies now show a "Also installs N dependencies" hint in the Install
-  CTA area, and the Dependencies section in the scroll body labels each dep
-  as *installed* (accent-colored) or *required* — unknown ids are flagged as
-  *not in catalog*. Backed by the new `addon.deps` bridge method and
-  `orchestrator.dependency_preview()`.
-- **Bulk update / remove on the Installed tab**: every row now has a checkbox;
-  a header checkbox selects/deselects all visible rows. When rows are selected
-  a context bar appears in the toolbar with **Update (N)** (only for rows that
-  have a pending update) and **Remove** bulk actions. Backed by the new
-  `installed.removeMany` bridge method.
-- **Scheduled-update timer (systemd)**: a new `wowusky schedule` CLI command
-  (`status` / `enable [--interval hourly|daily|weekly]` / `disable`) installs
-  and manages a systemd *user* timer that runs `wowusky update -q` on a
-  schedule. The desktop Settings screen gains a **Scheduled Updates** section
-  that shows the current timer state and lets you enable, reconfigure, or
-  remove the timer — all in-app. Backed by `wowusky/core/schedule.py` and
-  three new bridge methods (`schedule.status`, `schedule.enable`,
-  `schedule.disable`). Degrades gracefully where systemd is unavailable.
-- **Import from Downloads (desktop)**: the Settings screen gains an **Import
-  from Downloads** section that scans `~/Downloads` for `.zip` files, guesses
-  the catalog match for each (by fuzzy-matching the filename against addon ids
-  and names), and installs them with one click. Multiple ZIPs are shown
-  newest-first. Backed by `orchestrator.scan_download_zips_annotated()` +
-  `guess_catalog_match()` and two new bridge methods (`downloads.scan`,
-  `downloads.import`).
+- **Desktop notifications** (#54): wowusky now sends a native OS notification
+  when addon updates are available on launch, even when the window is not in
+  focus. The notification fires at most once per session and only when
+  auto-update is off. Toggle it under **Settings → Advanced → Desktop
+  notifications**. Backed by the new `desktop_notifications` config option
+  (exposed through `settings.get` / `settings.update`) and an Electron
+  `notify` IPC bridge guarded by `Notification.isSupported()`.
+- **Cross-profile sync** (#55): copy installed addons from one WoW profile
+  into another without re-installing each by hand. **Settings → Profiles**
+  gains a **Sync from another profile** control: pick a source, preview what
+  is new / already installed / in conflict (and which addons are skipped
+  because they are not in the catalog), then apply with optional conflict
+  skipping. Backed by the new `profile.syncPreview` and `profile.syncApply`
+  bridge methods, which install into the target profile and restore the
+  active profile afterwards.
 <!-- WHATS-NEW:END -->
 
 ---
