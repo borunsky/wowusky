@@ -38,11 +38,13 @@ class Bridge {
   }
 
   start(): void {
-    // In dev the repo root is the parent of desktop/. In production the
-    // packaged resources dir is used (wired in a later packaging phase).
     const pythonBin = resolvePython();
-    const repoRoot =
-      process.env.WOWUSKY_REPO_ROOT || resolve(app.getAppPath(), "..");
+    // Dev: repo root is the parent of desktop/.
+    // Packaged: the wowusky Python package is installed system-wide; CWD just
+    // needs to be somewhere harmless — we use the resources dir.
+    const repoRoot = process.env.WOWUSKY_REPO_ROOT || (
+      app.isPackaged ? process.resourcesPath : resolve(app.getAppPath(), "..")
+    );
 
     this.proc = spawn(pythonBin, ["-m", "wowusky.bridge"], {
       cwd: repoRoot,

@@ -1,5 +1,7 @@
 # build artifacts
 build/
+# electron-builder needs its icon in desktop/build/ — track that dir
+!desktop/build/
 dist/
 *.egg-info/
 *.whl
