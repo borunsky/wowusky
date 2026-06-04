@@ -15,14 +15,28 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.9.1
+## What's new in v0.9.3
+
+### Added
+- **Profile rename & delete** in the desktop Settings screen. Rename edits the
+  display name in place (the profile id — and so its installed DB and backups —
+  stays stable); delete removes the profile (reassigning the active one) while
+  keeping its on-disk installed list and backups so re-adding the same path
+  restores the inventory.
+
+### Changed
+- **Header profile dropdown is now functional.** It lists the configured
+  profiles, shows the active one, and switching an entry actually changes the
+  active profile — the sidebar, status bar, installed list and Browse
+  installed-markers all follow the selection. Previously it was a cosmetic list
+  of hardcoded flavors.
+- **Autoscan only surfaces new installations.** WoW installs whose AddOns path
+  already matches a configured profile (compared by real path) are filtered out,
+  and adding a scanned install removes just that entry from the results.
 
 ### Fixed
-- The addon-details dialog's background version-lookup thread no longer touches
-  Tk from a non-main thread. On Python 3.14 that aborted the interpreter with a
-  fatal `Tcl_AsyncDelete: async handler deleted by the wrong thread` panic
-  during the test suite (breaking the AUR `check()` phase). The worker now only
-  computes version choices; the main thread polls the result and renders.
+- **Sidebar footer** showed a hardcoded "retail / path not set" placeholder. It
+  now reflects the active profile's flavor and whether its path is configured.
 <!-- WHATS-NEW:END -->
 
 ---
