@@ -4,6 +4,29 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] — 2026-06-04
+
+### Added
+- **Profile rename & delete** in the desktop Settings screen. Rename edits the
+  display name in place (the profile id — and so its installed DB and backups —
+  stays stable); delete removes the profile (reassigning the active one) while
+  keeping its on-disk installed list and backups so re-adding the same path
+  restores the inventory.
+
+### Changed
+- **Header profile dropdown is now functional.** It lists the configured
+  profiles, shows the active one, and switching an entry actually changes the
+  active profile — the sidebar, status bar, installed list and Browse
+  installed-markers all follow the selection. Previously it was a cosmetic list
+  of hardcoded flavors.
+- **Autoscan only surfaces new installations.** WoW installs whose AddOns path
+  already matches a configured profile (compared by real path) are filtered out,
+  and adding a scanned install removes just that entry from the results.
+
+### Fixed
+- **Sidebar footer** showed a hardcoded "retail / path not set" placeholder. It
+  now reflects the active profile's flavor and whether its path is configured.
+
 ## [0.9.2] — 2026-06-04
 
 ### Added
@@ -921,6 +944,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.9.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.3
 [0.9.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.2
 [0.9.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.1
 [0.9.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.0
