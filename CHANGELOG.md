@@ -4,6 +4,26 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] — 2026-06-04
+
+### Added
+- **Scheduled backups** (#51): create automatic full-profile backups on a
+  configurable systemd user timer (hourly / daily / weekly), managed from
+  **Settings → Scheduled Backups**. A retention setting keeps only the N
+  newest full backups. Adds the `wowusky backup auto --keep N` CLI command
+  and the `backupSchedule.status` / `backupSchedule.enable` /
+  `backupSchedule.disable` bridge methods, backed by
+  `backup.auto_full_backup()` and `backup.prune_full_backups()`.
+- **Storage overview** (#52): the Backups screen now shows total backup size,
+  a per-addon breakdown with the top consumer highlighted, and a one-click
+  **Clean up** that prunes down to a configurable number of full backups.
+  Backed by the new `storage.summary` and `storage.cleanup` bridge methods.
+- **Release notes** (#53): when an update is available, the Detail Panel shows
+  a collapsible **What's new in vX** section that lazy-loads the source's
+  release notes. Backed by the GitHub provider's `github_release_notes()`, the
+  provider-agnostic `orchestrator.update_notes()` dispatcher, and the
+  `addon.releaseNotes` bridge method.
+
 ## [0.12.0] — 2026-06-04
 
 ### Added
@@ -1080,6 +1100,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.13.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.13.0
 [0.12.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.12.0
 [0.11.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.11.0
 [0.10.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.10.0
