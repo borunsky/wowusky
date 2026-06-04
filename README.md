@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.9.3    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.9.5    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,28 +15,24 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.9.3
+## What's new in v0.9.5
 
 ### Added
-- **Profile rename & delete** in the desktop Settings screen. Rename edits the
-  display name in place (the profile id — and so its installed DB and backups —
-  stays stable); delete removes the profile (reassigning the active one) while
-  keeping its on-disk installed list and backups so re-adding the same path
-  restores the inventory.
-
-### Changed
-- **Header profile dropdown is now functional.** It lists the configured
-  profiles, shows the active one, and switching an entry actually changes the
-  active profile — the sidebar, status bar, installed list and Browse
-  installed-markers all follow the selection. Previously it was a cosmetic list
-  of hardcoded flavors.
-- **Autoscan only surfaces new installations.** WoW installs whose AddOns path
-  already matches a configured profile (compared by real path) are filtered out,
-  and adding a scanned install removes just that entry from the results.
-
-### Fixed
-- **Sidebar footer** showed a hardcoded "retail / path not set" placeholder. It
-  now reflects the active profile's flavor and whether its path is configured.
+- **Dependency preview in the detail panel**: before you install any addon that
+  has catalog dependencies, the detail panel now shows which deps would be
+  co-installed and which are already present — so you know exactly what a click
+  on Install does.
+- **Bulk update / remove on the Installed tab**: tick one or more addons with
+  the new row checkboxes and hit **Update** or **Remove** in the selection bar.
+  A header checkbox selects all visible rows.
+- **Scheduled-update timer (systemd)**: Settings → Scheduled Updates exposes a
+  new section to install, configure (hourly / daily / weekly) and remove a
+  systemd user timer that runs `wowusky update -q` on a schedule. Also
+  available via `wowusky schedule enable|disable|status`.
+- **Import from Downloads (desktop)**: Settings → Import from Downloads lists
+  all `.zip` files in `~/Downloads`, guesses which catalog addon each one
+  belongs to, and installs them with one click. Works for CurseForge ZIPs that
+  were downloaded manually.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -46,8 +42,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.9.3.zip
-cd wowusky-v0.9.3
+unzip wowusky-v0.9.5.zip
+cd wowusky-v0.9.5
 chmod +x install.sh
 ./install.sh
 ```
@@ -71,7 +67,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.9.3-py3-none-any.whl
+pip install dist/wowusky-0.9.5-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
@@ -243,19 +239,16 @@ The v0.4 refactor was the prerequisite. Now planned:
   `wowusky profile switch retail`, `wowusky set curseforge-key <key>`,
   `--json`/`--quiet`, shell completion, and a systemd user timer for daily
   update checks.~~ ✅ done
-- **v0.9.0** — *Portability & diagnostics*:
-  - **Addon-set export/import** — export a profile's full addon list (with
-    versions and sources) to a shareable JSON file, and import it back into a
-    new or existing profile with per-addon conflict resolution. Available from
-    both the GUI and the CLI (`wowusky export <profile> <file>`,
-    `wowusky import-set <file>`).
-  - **`wowusky health` command + Health tab** — surface the existing
-    `tools/health_check` engine as a first-class CLI command and a GUI tab
-    (offline/online check, results table, error filter, JSON export).
-- **v0.9.1 (tentative)** — auto-update polling + in-app "updates available"
-  indicator (the per-profile `auto_update` flag already exists but is unused),
-  and CurseForge ZIP version selection in the addon details dialog (parity
-  with the existing GitHub version picker).
+- ~~**v0.9.0** — *Portability & diagnostics*: addon-set export/import (GUI +
+  CLI `export` / `import-set`, with per-addon conflict resolution) and the
+  `wowusky health` command plus a Health tab.~~ ✅ done
+- ~~**v0.9.4** — auto-update on launch + in-app "updates available" indicator
+  (wires up the per-profile `auto_update` flag), and CurseForge/GitHub ZIP
+  version selection in the addon detail panel.~~ ✅ done
+- ~~**v0.9.5** — *Workflow polish*: dependency preview in detail panel, bulk
+  update/remove on the Installed tab, systemd scheduled-update timer (CLI +
+  Settings screen), and sturdier Import from Downloads with multi-ZIP listing
+  and auto catalog matching.~~ ✅ done
 - **Later** — see [issues](https://github.com/borunsky/wowusky/issues)
   or open one with a request.
 

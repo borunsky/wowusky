@@ -6,6 +6,7 @@ interface Props {
   screen: Screen;
   onNav: (s: Screen) => void;
   addonCount: number;
+  updateCount?: number;
   refreshKey?: number;
 }
 
@@ -70,7 +71,7 @@ const NAV: { id: Screen; label: string; icon: JSX.Element }[] = [
   },
 ];
 
-export function Sidebar({ screen, onNav, addonCount, refreshKey = 0 }: Props): JSX.Element {
+export function Sidebar({ screen, onNav, addonCount, updateCount = 0, refreshKey = 0 }: Props): JSX.Element {
   const [flavor, setFlavor] = useState<string>("—");
   const [addonsPath, setAddonsPath] = useState<string>("");
 
@@ -97,7 +98,12 @@ export function Sidebar({ screen, onNav, addonCount, refreshKey = 0 }: Props): J
         >
           {item.icon}
           {item.label}
-          {item.id === "installed" && addonCount > 0 && (
+          {item.id === "installed" && updateCount > 0 && (
+            <span className="count count-update" title={`${updateCount} update${updateCount === 1 ? "" : "s"} available`}>
+              {updateCount} ↑
+            </span>
+          )}
+          {item.id === "installed" && updateCount === 0 && addonCount > 0 && (
             <span className="count">{addonCount}</span>
           )}
         </button>

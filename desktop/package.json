@@ -1,6 +1,6 @@
 {
   "name": "wowusky-desktop",
-  "version": "0.9.3",
+  "version": "0.9.5",
   "description": "wowusky desktop shell (Electron + React) for the redesigned UI",
   "license": "MIT",
   "author": "wowusky contributors",

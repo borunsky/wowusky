@@ -4,6 +4,69 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] — 2026-06-04
+
+### Added
+- **Dependency preview in the detail panel**: addons that declare catalog
+  dependencies now show a "Also installs N dependencies" hint in the Install
+  CTA area, and the Dependencies section in the scroll body labels each dep
+  as *installed* (accent-colored) or *required* — unknown ids are flagged as
+  *not in catalog*. Backed by the new `addon.deps` bridge method and
+  `orchestrator.dependency_preview()`.
+- **Bulk update / remove on the Installed tab**: every row now has a checkbox;
+  a header checkbox selects/deselects all visible rows. When rows are selected
+  a context bar appears in the toolbar with **Update (N)** (only for rows that
+  have a pending update) and **Remove** bulk actions. Backed by the new
+  `installed.removeMany` bridge method.
+- **Scheduled-update timer (systemd)**: a new `wowusky schedule` CLI command
+  (`status` / `enable [--interval hourly|daily|weekly]` / `disable`) installs
+  and manages a systemd *user* timer that runs `wowusky update -q` on a
+  schedule. The desktop Settings screen gains a **Scheduled Updates** section
+  that shows the current timer state and lets you enable, reconfigure, or
+  remove the timer — all in-app. Backed by `wowusky/core/schedule.py` and
+  three new bridge methods (`schedule.status`, `schedule.enable`,
+  `schedule.disable`). Degrades gracefully where systemd is unavailable.
+- **Import from Downloads (desktop)**: the Settings screen gains an **Import
+  from Downloads** section that scans `~/Downloads` for `.zip` files, guesses
+  the catalog match for each (by fuzzy-matching the filename against addon ids
+  and names), and installs them with one click. Multiple ZIPs are shown
+  newest-first. Backed by `orchestrator.scan_download_zips_annotated()` +
+  `guess_catalog_match()` and two new bridge methods (`downloads.scan`,
+  `downloads.import`).
+
+## [0.9.4] — 2026-06-04
+
+### Added
+- **Addon-set export / import**: export a profile's full installed list to a
+  portable JSON file (`wowusky export <file.json>`) and import it back into
+  any profile with per-addon conflict resolution
+  (`wowusky import-set <file.json> [-y] [--skip-conflicts]`). The desktop
+  Settings screen gains an **Export** button per profile and an **Import**
+  section with an inline conflict-resolution preview.
+- **`wowusky health` command**: the existing catalog health-check engine is
+  now a first-class CLI command. `--offline` for fast provider-resolve
+  validation (no network); default mode also fetches latest versions. Exits
+  non-zero when any entry fails.
+
+- **Version selection in the addon detail panel.** GitHub and CurseForge
+  addons now expose a *Choose a specific version* list in the Browse detail
+  panel — pick any release/tag (GitHub) or file (CurseForge, release/beta/alpha
+  labelled) and install it directly. Backed by the `addon.versions` and
+  `addon.installVersion` bridge methods; flavor-aware and newest-first.
+- **Auto-update + "updates available" indicator.** Each profile has an
+  **Auto-update on launch** toggle (Settings → Profiles). When enabled, the
+  active profile's pending updates are applied automatically on app start. The
+  sidebar shows a live **N ↑** badge of available updates, and the Installed
+  tab gains an **Update all** button. New bridge methods: `profile.setAutoUpdate`
+  and `installed.updateAll`.
+
+### Changed
+- **Update buttons only appear when an update is actually available.** The
+  Installed tab and the Browse detail panel now run a background update check
+  (`installed.updates` bridge method) and only show an **Update → \<version\>**
+  button for addons whose provider reports a newer version. Up-to-date addons
+  no longer show a pointless Update button.
+
 ## [0.9.3] — 2026-06-04
 
 ### Added
@@ -944,6 +1007,8 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.9.5]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.5
+[0.9.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.4
 [0.9.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.3
 [0.9.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.2
 [0.9.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.1

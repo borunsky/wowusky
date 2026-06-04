@@ -197,6 +197,42 @@ def _installed_list(params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+@method("installed.updates")
+def _installed_updates(params: dict[str, Any]) -> dict[str, Any]:
+    """Check installed addons for available updates (does network I/O).
+
+    Compares each installed addon's recorded version against the latest
+    version its provider reports. Only addons that are in the catalog, have a
+    known current version, and whose latest differs are reported.
+
+    params: {profile?: str}
+    returns: {profile: str, updates: {id: latest_version}}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    db = _installed.load(profile)
+
+    updates: dict[str, str] = {}
+    for addon_id, entry in db.items():
+        cat_entry = _orch.find_addon_by_id(addon_id)
+        if cat_entry is None:
+            continue
+        current = entry.get("version") or ""
+        if not current:
+            continue
+        try:
+            latest = _orch.get_latest_version(cat_entry)
+        except Exception:  # noqa: BLE001 — a single lookup failure shouldn't break the rest
+            latest = None
+        if latest and latest != current:
+            updates[addon_id] = latest
+
+    return {"profile": profile, "updates": updates}
+
+
 @method("app.rescan")
 def _app_rescan(_params: dict[str, Any]) -> dict[str, Any]:
     """Re-scan the filesystem and reconcile it with the installed DB.
@@ -243,6 +279,7 @@ def _profile_summaries() -> list[dict[str, Any]]:
                 "addons_path": p.get("addons_path", ""),
                 "color_tag": p.get("color_tag"),
                 "count": count,
+                "auto_update": bool(p.get("auto_update", False)),
             }
         )
     out.sort(key=lambda p: p["name"].lower())
@@ -347,6 +384,18 @@ def _profile_delete(params: dict[str, Any]) -> dict[str, Any]:
     if not pid:
         raise ValueError("profile is required")
     _state.delete_profile(str(pid))
+    return _settings_get({})
+
+
+@method("profile.setAutoUpdate")
+def _profile_set_auto_update(params: dict[str, Any]) -> dict[str, Any]:
+    """Toggle a profile's auto-update flag, then return refreshed settings."""
+    from wowusky.core import state as _state
+
+    pid = params.get("profile")
+    if not pid:
+        raise ValueError("profile is required")
+    _state.set_auto_update(str(pid), bool(params.get("enabled")))
     return _settings_get({})
 
 
@@ -564,6 +613,116 @@ def _addon_remove(params: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "log": lines, **_installed_list({"profile": profile})}
 
 
+def _resolve_addon(addon_id: str) -> dict[str, Any] | None:
+    """Find an addon dict by id — prefer the catalog, fall back to the
+    installed DB (so orphan/imported addons still resolve)."""
+    from wowusky import orchestrator as _orch
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    entry = _orch.find_addon_by_id(addon_id)
+    if entry is not None:
+        return entry
+    db = _installed.load(_state.get_active_profile_id())
+    inst = db.get(addon_id)
+    if inst is not None:
+        return {"id": addon_id, **inst}
+    return None
+
+
+@method("addon.versions")
+def _addon_versions(params: dict[str, Any]) -> dict[str, Any]:
+    """List selectable download versions for an addon (GitHub / CurseForge).
+
+    params: {id: str}
+    returns: {id, versions: [{label, url, version, type}], error?}
+    """
+    from wowusky import orchestrator as _orch
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+    entry = _resolve_addon(addon_id)
+    if entry is None:
+        return {"id": addon_id, "versions": []}
+    try:
+        versions = _orch.list_addon_versions(entry)
+    except Exception as exc:  # noqa: BLE001 — version lookup must never crash the panel
+        _log("versions error:", traceback.format_exc())
+        return {"id": addon_id, "versions": [], "error": f"{type(exc).__name__}: {exc}"}
+    return {"id": addon_id, "versions": versions}
+
+
+@method("addon.installVersion")
+def _addon_install_version(params: dict[str, Any]) -> dict[str, Any]:
+    """Install a specific version of an addon from a direct ZIP url.
+
+    params: {id: str, url: str, label?: str}
+    returns: {ok, log, error?, ...installed_list}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import state as _state
+
+    addon_id = params.get("id")
+    url = params.get("url")
+    label = params.get("label") or params.get("version") or "manual"
+    if not addon_id or not url:
+        raise ValueError("id and url are required")
+
+    entry = _resolve_addon(addon_id)
+    if entry is None:
+        return {"ok": False, "error": f"addon not found: {addon_id}"}
+
+    log_fn, progress_fn, lines = _action_callbacks(addon_id)
+    try:
+        ok = _orch.install_addon_version(entry, str(url), str(label), log=log_fn, progress=progress_fn)
+    except Exception as exc:  # noqa: BLE001 — report failure to the UI
+        _log("installVersion error:", traceback.format_exc())
+        _notify("action.done", {"id": addon_id, "ok": False, "error": str(exc)})
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}", "log": lines}
+
+    _notify("action.done", {"id": addon_id, "ok": bool(ok)})
+    profile = _state.get_active_profile_id()
+    return {"ok": bool(ok), "log": lines, **_installed_list({"profile": profile})}
+
+
+@method("installed.updateAll")
+def _installed_update_all(params: dict[str, Any]) -> dict[str, Any]:
+    """Update installed addons that have a newer version available.
+
+    params: {ids?: [str]}  — when omitted, every addon with an available
+    update is updated. When given, only those ids are updated.
+    returns: {updated: [str], failed: [str], ...installed_list}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import state as _state
+
+    targets = params.get("ids")
+    if not targets:
+        targets = list(_installed_updates({}).get("updates", {}).keys())
+
+    addons_path = _state.get_addons_path()
+    updated: list[str] = []
+    failed: list[str] = []
+    for addon_id in targets:
+        entry = _orch.find_addon_by_id(addon_id)
+        if entry is None:
+            failed.append(addon_id)
+            continue
+        log_fn, progress_fn, _lines = _action_callbacks(addon_id)
+        try:
+            _orch.install_addon(entry, addons_path, log=log_fn, progress=progress_fn)
+            updated.append(addon_id)
+            _notify("action.done", {"id": addon_id, "ok": True})
+        except Exception as exc:  # noqa: BLE001 — keep going through the rest
+            _log("updateAll error:", traceback.format_exc())
+            failed.append(addon_id)
+            _notify("action.done", {"id": addon_id, "ok": False, "error": str(exc)})
+
+    profile = _state.get_active_profile_id()
+    return {"updated": updated, "failed": failed, **_installed_list({"profile": profile})}
+
+
 # ---------------------------------------------------------------------------
 # Backup restore
 # ---------------------------------------------------------------------------
@@ -649,6 +808,217 @@ def _health_check(params: dict[str, Any]) -> dict[str, Any]:
         "failed": len(catalog) - ok,
         "results": results,
     }
+
+
+# ---------------------------------------------------------------------------
+# Addon-set export / import
+# ---------------------------------------------------------------------------
+
+
+@method("addons.exportSet")
+def _addons_export_set(params: dict[str, Any]) -> dict[str, Any]:
+    """Export the installed addon list for a profile as a portable JSON snapshot.
+
+    params: {profile?: str}
+    returns: {data: {...}, filename: str, json: str}
+    """
+    import json as _json
+
+    from wowusky.core import addonset as _addonset
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    data = _addonset.export_addon_set(profile)
+    prof_name = data["profile"].get("name", profile).replace(" ", "-").lower()
+    filename = f"wowusky-{prof_name}-addons.json"
+    return {
+        "data": data,
+        "filename": filename,
+        "json": _json.dumps(data, indent=2, ensure_ascii=False),
+    }
+
+
+@method("addons.importSet")
+def _addons_import_set(params: dict[str, Any]) -> dict[str, Any]:
+    """Parse an exported addon set and return a per-addon conflict preview.
+
+    params: {data: object, profile?: str}
+    returns: {profile_name, profile, preview: [{id, name, version, installed_version, source, status}]}
+    """
+    from wowusky.core import addonset as _addonset
+    from wowusky.core import state as _state
+
+    raw = params.get("data")
+    if not isinstance(raw, dict):
+        raise ValueError("data must be an object")
+    profile = params.get("profile") or _state.get_active_profile_id()
+    preview = _addonset.import_addon_set_preview(raw, profile)
+    prof_data = _state.load_profiles()
+    prof = prof_data.get("profiles", {}).get(profile, {})
+    src_prof = raw.get("profile", {})
+    return {
+        "profile": profile,
+        "profile_name": prof.get("name", profile),
+        "source_profile": src_prof.get("name", src_prof.get("id", "")),
+        "preview": preview,
+    }
+
+
+@method("addons.importSet.apply")
+def _addons_import_set_apply(params: dict[str, Any]) -> dict[str, Any]:
+    """Apply an addon-set import (writes DB entries, no downloads).
+
+    params: {data: object, profile?: str, skip?: [str]}
+    returns: {imported, skipped, ...installed_list}
+    """
+    from wowusky.core import addonset as _addonset
+    from wowusky.core import state as _state
+
+    raw = params.get("data")
+    if not isinstance(raw, dict):
+        raise ValueError("data must be an object")
+    profile = params.get("profile") or _state.get_active_profile_id()
+    skip = list(params.get("skip") or [])
+    result = _addonset.import_addon_set_apply(raw, profile, skip)
+    return {**result, **_installed_list({"profile": profile})}
+
+
+# ---------------------------------------------------------------------------
+# Dependency preview
+# ---------------------------------------------------------------------------
+
+
+@method("addon.deps")
+def _addon_deps(params: dict[str, Any]) -> dict[str, Any]:
+    """List the catalog dependencies installing an addon would pull in.
+
+    params: {id: str}
+    returns: {id, deps: [{id, name, installed}], missing: [str]}
+    """
+    from wowusky import orchestrator as _orch
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+    entry = _orch.find_addon_by_id(addon_id)
+    if entry is None:
+        return {"id": addon_id, "deps": [], "missing": []}
+    return {"id": addon_id, **_orch.dependency_preview(entry)}
+
+
+# ---------------------------------------------------------------------------
+# Bulk remove
+# ---------------------------------------------------------------------------
+
+
+@method("installed.removeMany")
+def _installed_remove_many(params: dict[str, Any]) -> dict[str, Any]:
+    """Remove several installed addons in one action (backups are taken).
+
+    params: {ids: [str]}
+    returns: {removed: [str], failed: [str], ...installed_list}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import state as _state
+
+    ids = list(params.get("ids") or [])
+    if not ids:
+        raise ValueError("ids is required")
+
+    addons_path = _state.get_addons_path()
+    removed: list[str] = []
+    failed: list[str] = []
+    for addon_id in ids:
+        log_fn, _progress_fn, _lines = _action_callbacks(addon_id)
+        try:
+            _orch.uninstall_addon(addon_id, addons_path, log=log_fn)
+            removed.append(addon_id)
+            _notify("action.done", {"id": addon_id, "ok": True})
+        except Exception as exc:  # noqa: BLE001 — keep going through the rest
+            _log("removeMany error:", traceback.format_exc())
+            failed.append(addon_id)
+            _notify("action.done", {"id": addon_id, "ok": False, "error": str(exc)})
+
+    profile = _state.get_active_profile_id()
+    return {"removed": removed, "failed": failed, **_installed_list({"profile": profile})}
+
+
+# ---------------------------------------------------------------------------
+# Import from Downloads
+# ---------------------------------------------------------------------------
+
+
+@method("downloads.scan")
+def _downloads_scan(params: dict[str, Any]) -> dict[str, Any]:
+    """List ZIPs in the Downloads dir with guessed catalog associations.
+
+    params: {limit?: int}
+    returns: {dir, items: [{path, name, mtime, guess: {id, name}|null}]}
+    """
+    from wowusky import orchestrator as _orch
+
+    limit = int(params.get("limit") or 25)
+    return {"dir": _orch.downloads_dir(), "items": _orch.scan_download_zips_annotated(limit)}
+
+
+@method("downloads.import")
+def _downloads_import(params: dict[str, Any]) -> dict[str, Any]:
+    """Import a downloaded ZIP into the active profile (manual install).
+
+    params: {path: str, id?: str, name?: str}
+      - id/name: optional catalog association (from downloads.scan guess).
+    returns: {ok, log, error?, ...installed_list}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import state as _state
+
+    path = params.get("path")
+    if not path:
+        raise ValueError("path is required")
+    token = str(path)
+    addons_path = _state.get_addons_path()
+    log_fn, _progress_fn, lines = _action_callbacks(token)
+    try:
+        addon_id = _orch.import_zip_file(
+            path, addons_path, name=params.get("name"), log=log_fn,
+        )
+    except Exception as exc:  # noqa: BLE001 — report import failure to the UI
+        _log("import error:", traceback.format_exc())
+        _notify("action.done", {"id": token, "ok": False, "error": str(exc)})
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}", "log": lines}
+
+    _notify("action.done", {"id": token, "ok": True})
+    profile = _state.get_active_profile_id()
+    return {"ok": True, "id": addon_id, "log": lines, **_installed_list({"profile": profile})}
+
+
+# ---------------------------------------------------------------------------
+# Scheduled updates (systemd user timer)
+# ---------------------------------------------------------------------------
+
+
+@method("schedule.status")
+def _schedule_status(_params: dict[str, Any]) -> dict[str, Any]:
+    """Report the systemd update-timer status. returns: see core.schedule.status."""
+    from wowusky.core import schedule as _schedule
+
+    return _schedule.status()
+
+
+@method("schedule.enable")
+def _schedule_enable(params: dict[str, Any]) -> dict[str, Any]:
+    """Install + enable the update timer. params: {interval?: daily|weekly|hourly}."""
+    from wowusky.core import schedule as _schedule
+
+    return _schedule.enable(params.get("interval") or "daily")
+
+
+@method("schedule.disable")
+def _schedule_disable(_params: dict[str, Any]) -> dict[str, Any]:
+    """Disable + remove the update timer."""
+    from wowusky.core import schedule as _schedule
+
+    return _schedule.disable()
 
 
 # ---------------------------------------------------------------------------

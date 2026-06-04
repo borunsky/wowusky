@@ -15,6 +15,7 @@ interface ProfileSummary {
   addons_path: string;
   color_tag: string | null;
   count: number;
+  auto_update: boolean;
 }
 
 interface CoreSettings {
@@ -24,6 +25,38 @@ interface CoreSettings {
   curseforge_api_key_set: boolean;
   active_profile: string;
   profiles: ProfileSummary[];
+}
+
+interface DownloadZip {
+  path: string;
+  name: string;
+  mtime: number;
+  guess: { id: string; name: string } | null;
+}
+
+interface ScheduleStatus {
+  available: boolean;
+  installed: boolean;
+  enabled?: boolean;
+  active?: boolean;
+  interval?: string;
+  next_run?: string | null;
+}
+
+interface AddonPreviewItem {
+  id: string;
+  name: string;
+  version: string;
+  installed_version: string;
+  source: string;
+  status: "new" | "same" | "conflict";
+}
+
+interface ImportPreview {
+  profile: string;
+  profile_name: string;
+  source_profile: string;
+  preview: AddonPreviewItem[];
 }
 
 interface Props {
@@ -55,14 +88,70 @@ export function SettingsScreen({
   const [scanResults, setScanResults] = useState<ScanResult[] | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importData, setImportData] = useState<object | null>(null);
+  const [skipConflicts, setSkipConflicts] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [schedule, setSchedule] = useState<ScheduleStatus | null>(null);
+  const [scheduleInterval, setScheduleInterval] = useState<string>("daily");
+  const [scheduleWorking, setScheduleWorking] = useState(false);
+  const [dlZips, setDlZips] = useState<DownloadZip[] | null>(null);
+  const [dlScanning, setDlScanning] = useState(false);
+  const [dlBusy, setDlBusy] = useState<string | null>(null);
+  const [dlNotice, setDlNotice] = useState<string | null>(null);
 
   function reload() {
     bridge.call<CoreSettings>("settings.get", {}).then((s) => {
       setCore(s);
       setAddonsPath(s.addons_path);
     }).catch(() => {});
+    bridge.call<ScheduleStatus>("schedule.status", {}).then(setSchedule).catch(() => {});
   }
   useEffect(reload, []);
+
+  function enableSchedule() {
+    setScheduleWorking(true);
+    bridge.call<ScheduleStatus & { ok: boolean }>("schedule.enable", { interval: scheduleInterval })
+      .then((r) => setSchedule(r))
+      .catch(() => {})
+      .finally(() => setScheduleWorking(false));
+  }
+  function disableSchedule() {
+    setScheduleWorking(true);
+    bridge.call<ScheduleStatus & { ok: boolean }>("schedule.disable", {})
+      .then((r) => setSchedule(r))
+      .catch(() => {})
+      .finally(() => setScheduleWorking(false));
+  }
+
+  function scanDownloads() {
+    setDlScanning(true);
+    setDlNotice(null);
+    bridge.call<{ items: DownloadZip[] }>("downloads.scan", {})
+      .then((r) => setDlZips(r.items))
+      .catch(() => setDlZips([]))
+      .finally(() => setDlScanning(false));
+  }
+
+  function importDownloadZip(zip: DownloadZip) {
+    if (dlBusy) return;
+    setDlBusy(zip.path);
+    setDlNotice(null);
+    bridge.call<{ ok: boolean; error?: string }>("downloads.import", {
+      path: zip.path,
+      name: zip.guess?.name,
+    }).then((r) => {
+      if (r.ok) {
+        setDlZips((zips) => (zips ?? []).filter((z) => z.path !== zip.path));
+        setDlNotice(`Imported ${zip.guess?.name ?? zip.name}`);
+        onProfileChange();
+      } else {
+        setDlNotice(`Failed: ${r.error ?? "unknown error"}`);
+      }
+    })
+    .catch((e) => setDlNotice(String(e)))
+    .finally(() => setDlBusy(null));
+  }
 
   function flash() {
     setSaved(true);
@@ -85,6 +174,10 @@ export function SettingsScreen({
   function switchProfile(id: string) {
     bridge.call<CoreSettings>("profile.setActive", { profile: id })
       .then((s) => { setCore(s); setAddonsPath(s.addons_path); onProfileChange(); }).catch(() => {});
+  }
+  function toggleAutoUpdate(id: string, enabled: boolean) {
+    bridge.call<CoreSettings>("profile.setAutoUpdate", { profile: id, enabled })
+      .then((s) => { setCore(s); onProfileChange(); }).catch(() => {});
   }
 
   function autoscan() {
@@ -126,6 +219,54 @@ export function SettingsScreen({
     bridge.call<CoreSettings>("profile.delete", { profile: id })
       .then((s) => { setCore(s); setAddonsPath(s.addons_path); onProfileChange(); })
       .catch(() => {});
+  }
+
+  function exportProfile(profileId: string) {
+    bridge.call<{ json: string; filename: string }>("addons.exportSet", { profile: profileId })
+      .then(({ json, filename }) => {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => {});
+  }
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        bridge.call<ImportPreview>("addons.importSet", { data })
+          .then((preview) => { setImportData(data); setImportPreview(preview); setSkipConflicts(false); })
+          .catch(() => {});
+      } catch { /* invalid JSON — ignore */ }
+    };
+    reader.readAsText(file);
+  }
+
+  function applyImport() {
+    if (!importData || !importPreview) return;
+    setImporting(true);
+    const skip = skipConflicts
+      ? (importPreview.preview ?? []).filter((p) => p.status === "conflict").map((p) => p.id)
+      : [];
+    bridge.call<CoreSettings & { imported: number; skipped: number }>(
+      "addons.importSet.apply",
+      { data: importData, profile: importPreview.profile, skip },
+    ).then((s) => {
+      setCore(s);
+      setImportPreview(null);
+      setImportData(null);
+      onProfileChange();
+      flash();
+    }).catch(() => {}).finally(() => setImporting(false));
   }
 
   async function setPathDialog(profileId?: string) {
@@ -246,6 +387,14 @@ export function SettingsScreen({
                     <div className="sd" style={{ color: p.addons_path ? undefined : "var(--red)" }}>
                       {p.addons_path || "path not set"} · {p.count} addons
                     </div>
+                    <label
+                      className="auto-update-row"
+                      style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, cursor: "pointer" }}
+                      title="Automatically update this profile's addons on launch"
+                    >
+                      <span className={`switch switch-sm${p.auto_update ? " on" : ""}`} onClick={(e) => { e.preventDefault(); toggleAutoUpdate(p.id, !p.auto_update); }}><i /></span>
+                      <span className="sd" style={{ margin: 0 }}>Auto-update on launch</span>
+                    </label>
                   </div>
                   <div className="sr" style={{ gap: 6, display: "flex", alignItems: "center" }}>
                     {editingId === p.id ? (
@@ -266,6 +415,9 @@ export function SettingsScreen({
                         ) : (
                           <button className="btn btn-sm" onClick={() => switchProfile(p.id)}>Activate</button>
                         )}
+                        <button className="btn btn-sm" title="Export addon list" onClick={() => exportProfile(p.id)}>
+                          Export
+                        </button>
                         <button className="btn btn-sm btn-danger" title="Delete profile" onClick={() => deleteProfile(p.id, p.name)}>
                           Delete
                         </button>
@@ -314,6 +466,172 @@ export function SettingsScreen({
               ))}
             </div>
           </div>
+
+          {/* Addon Sets */}
+          <div className="set-group">
+            <h3>Addon Sets</h3>
+            <p className="gdesc">Export or import a profile's full addon list as a portable JSON file.</p>
+            <div className="set-card">
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Import addon set</div>
+                  <div className="sd">Load a previously exported addon list into the active profile.</div>
+                </div>
+                <div className="sr">
+                  <label className="btn btn-sm btn-primary" style={{ cursor: "pointer" }}>
+                    Choose file…
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      style={{ display: "none" }}
+                      onChange={handleImportFile}
+                    />
+                  </label>
+                </div>
+              </div>
+              {importPreview && (() => {
+                const newCount = importPreview.preview.filter((p) => p.status === "new").length;
+                const conflictCount = importPreview.preview.filter((p) => p.status === "conflict").length;
+                const sameCount = importPreview.preview.filter((p) => p.status === "same").length;
+                return (
+                  <div style={{ padding: "8px 0 4px", borderTop: "1px solid var(--border)", marginTop: 4 }}>
+                    <div className="sd" style={{ marginBottom: 8 }}>
+                      From <strong>{importPreview.source_profile}</strong> →{" "}
+                      <strong>{importPreview.profile_name}</strong>:{" "}
+                      <span style={{ color: "var(--green)" }}>{newCount} new</span>
+                      {conflictCount > 0 && <span style={{ color: "var(--red)", marginLeft: 6 }}>{conflictCount} conflict(s)</span>}
+                      {sameCount > 0 && <span style={{ color: "var(--text-faint)", marginLeft: 6 }}>{sameCount} already installed</span>}
+                    </div>
+                    {conflictCount > 0 && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer" }}>
+                        <input type="checkbox" checked={skipConflicts} onChange={(e) => setSkipConflicts(e.target.checked)} />
+                        <span className="sd">Skip conflicting addons</span>
+                      </label>
+                    )}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn btn-sm btn-primary" onClick={applyImport} disabled={importing}>
+                        {importing ? "Importing…" : "Apply import"}
+                      </button>
+                      <button className="btn btn-sm" onClick={() => { setImportPreview(null); setImportData(null); }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Import from Downloads */}
+          <div className="set-group">
+            <h3>Import from Downloads</h3>
+            <p className="gdesc">Install addon ZIPs directly from your Downloads folder. Catalog entries are guessed automatically.</p>
+            <div className="set-card">
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Scan Downloads folder</div>
+                  <div className="sd">Finds .zip files and matches them against the catalog.</div>
+                </div>
+                <div className="sr">
+                  <button className="btn btn-sm btn-primary" disabled={dlScanning} onClick={scanDownloads}>
+                    {dlScanning ? "Scanning…" : "Scan"}
+                  </button>
+                </div>
+              </div>
+              {dlNotice && (
+                <div className="sd" style={{ marginTop: 6, color: "var(--accent)" }}>{dlNotice}</div>
+              )}
+              {dlZips !== null && (
+                dlZips.length === 0 ? (
+                  <div className="sd" style={{ marginTop: 6 }}>No addon ZIPs found in Downloads.</div>
+                ) : (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {dlZips.map((z) => (
+                      <div key={z.path} className="set-row" style={{ alignItems: "center" }}>
+                        <div className="sl" style={{ minWidth: 0 }}>
+                          <div className="st" style={{ fontWeight: 500, fontSize: 13 }}>{z.name}</div>
+                          {z.guess && (
+                            <div className="sd">→ {z.guess.name}</div>
+                          )}
+                        </div>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          disabled={dlBusy !== null}
+                          onClick={() => importDownloadZip(z)}
+                        >
+                          {dlBusy === z.path ? "Installing…" : "Install"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Scheduled Updates */}
+          {schedule && (
+            <div className="set-group">
+              <h3>Scheduled Updates</h3>
+              <p className="gdesc">
+                Automatically check for addon updates via a systemd user timer — no GUI needed.
+                Runs <code>wowusky update -q</code> on the configured schedule.
+              </p>
+              <div className="set-card">
+                {!schedule.available ? (
+                  <div className="set-row">
+                    <div className="sl">
+                      <div className="st">Scheduled updates</div>
+                      <div className="sd">Not available — systemd user instance not detected.</div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="set-row">
+                      <div className="sl">
+                        <div className="st">
+                          Timer status
+                          {schedule.installed && (
+                            <span className={`installed-tag${schedule.enabled && schedule.active ? "" : " conflict"}`} style={{ marginLeft: 8 }}>
+                              {schedule.enabled && schedule.active ? `enabled · ${schedule.interval ?? "daily"}` : schedule.enabled ? "enabled, inactive" : "disabled"}
+                            </span>
+                          )}
+                        </div>
+                        {schedule.installed && schedule.next_run && (
+                          <div className="sd">Next run: {schedule.next_run}</div>
+                        )}
+                        {!schedule.installed && (
+                          <div className="sd">No timer installed.</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="set-row" style={{ gap: 10 }}>
+                      <div className="sl" style={{ flex: "none" }}>
+                        <select
+                          className="field"
+                          value={scheduleInterval}
+                          onChange={(e) => setScheduleInterval(e.target.value)}
+                          disabled={scheduleWorking}
+                        >
+                          <option value="hourly">Hourly</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                        </select>
+                      </div>
+                      <button className="btn btn-sm btn-primary" disabled={scheduleWorking} onClick={enableSchedule}>
+                        {scheduleWorking ? "…" : schedule.installed ? "Update timer" : "Enable"}
+                      </button>
+                      {schedule.installed && (
+                        <button className="btn btn-sm btn-danger" disabled={scheduleWorking} onClick={disableSchedule}>
+                          {scheduleWorking ? "…" : "Disable"}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Paths */}
           <div className="set-group">

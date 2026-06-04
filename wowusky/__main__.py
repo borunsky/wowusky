@@ -34,6 +34,7 @@ _CLI_COMMANDS = {
     "install", "uninstall", "update", "status",
     "search", "orphans", "import", "profile", "set", "version", "help",
     "backup", "rollback", "weakauras", "wa", "completion",
+    "health", "export", "import-set", "schedule",
     "--help", "-h", "--version",
 }
 

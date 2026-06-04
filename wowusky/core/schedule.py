@@ -1,0 +1,187 @@
+"""Scheduled-update support via a systemd *user* timer.
+
+wowusky can install a ``wowusky-update.timer`` into the user's systemd
+instance so addon updates are checked on a schedule (daily by default)
+without a running GUI. This module is the pure orchestration layer: it
+writes the unit files, drives ``systemctl --user``, and reports status.
+
+Everything degrades gracefully when systemd is unavailable (e.g. a
+non-systemd distro or a container) — :func:`available` returns ``False``
+and :func:`status` reports ``available: False`` rather than raising.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import os
+import shutil
+import subprocess
+
+SERVICE_NAME = "wowusky-update.service"
+TIMER_NAME = "wowusky-update.timer"
+
+# systemd OnCalendar expressions for the intervals we expose.
+INTERVALS = {
+    "hourly": "hourly",
+    "daily": "daily",
+    "weekly": "weekly",
+}
+
+
+def _unit_dir() -> str:
+    base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    return os.path.join(base, "systemd", "user")
+
+
+def service_path() -> str:
+    return os.path.join(_unit_dir(), SERVICE_NAME)
+
+
+def timer_path() -> str:
+    return os.path.join(_unit_dir(), TIMER_NAME)
+
+
+def _wowusky_exec() -> str:
+    """Resolve the command the timer should run.
+
+    Prefer the installed ``wowusky`` launcher on PATH; fall back to the
+    conventional ``~/.local/bin/wowusky`` the installer creates.
+    """
+    found = shutil.which("wowusky")
+    if found:
+        return found
+    return os.path.expanduser("~/.local/bin/wowusky")
+
+
+def available() -> bool:
+    """True when a usable ``systemctl --user`` instance is present."""
+    if not shutil.which("systemctl"):
+        return False
+    try:
+        proc = subprocess.run(
+            ["systemctl", "--user", "is-system-running"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    # is-system-running prints running/degraded/… with rc 0; "offline" or a
+    # missing user bus yields non-zero output we treat as unavailable.
+    return bool(proc.stdout.strip()) and "offline" not in proc.stdout
+
+
+def _systemctl(*args: str) -> tuple[int, str]:
+    try:
+        proc = subprocess.run(
+            ["systemctl", "--user", *args],
+            capture_output=True, text=True, timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return 1, str(exc)
+    return proc.returncode, (proc.stdout + proc.stderr).strip()
+
+
+def _show(prop: str) -> str:
+    rc, out = _systemctl("show", TIMER_NAME, "-p", prop, "--value")
+    return out.strip() if rc == 0 else ""
+
+
+def status() -> dict:
+    """Report the current scheduled-update state.
+
+    Returns a dict with at least ``available`` and ``installed``; when
+    installed it adds ``enabled``, ``active``, ``interval`` and the
+    next/last run timestamps.
+    """
+    if not available():
+        return {"available": False, "installed": False}
+    installed = os.path.isfile(timer_path())
+    if not installed:
+        return {"available": True, "installed": False}
+    enabled = _show("UnitFileState") in ("enabled", "enabled-runtime")
+    active = _show("ActiveState") == "active"
+    return {
+        "available": True,
+        "installed": True,
+        "enabled": enabled,
+        "active": active,
+        "interval": _read_interval(),
+        "next_run": _show("NextElapseUSecRealtime") or None,
+        "last_run": _show("LastTriggerUSec") or None,
+    }
+
+
+def _read_interval() -> str:
+    """Recover the configured interval from the on-disk timer unit."""
+    try:
+        with open(timer_path(), encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("OnCalendar="):
+                    val = line.split("=", 1)[1].strip()
+                    for name, expr in INTERVALS.items():
+                        if expr == val:
+                            return name
+                    return val
+    except OSError:
+        pass
+    return "daily"
+
+
+def _write_units(interval: str) -> None:
+    oncal = INTERVALS.get(interval, INTERVALS["daily"])
+    os.makedirs(_unit_dir(), exist_ok=True)
+    service = (
+        "[Unit]\n"
+        "Description=wowusky scheduled addon update\n"
+        "After=network-online.target\n"
+        "Wants=network-online.target\n"
+        "\n"
+        "[Service]\n"
+        "Type=oneshot\n"
+        f"ExecStart={_wowusky_exec()} update -q\n"
+    )
+    timer = (
+        "[Unit]\n"
+        "Description=wowusky scheduled addon update timer\n"
+        "\n"
+        "[Timer]\n"
+        f"OnCalendar={oncal}\n"
+        "Persistent=true\n"
+        "\n"
+        "[Install]\n"
+        "WantedBy=timers.target\n"
+    )
+    with open(service_path(), "w", encoding="utf-8") as fh:
+        fh.write(service)
+    with open(timer_path(), "w", encoding="utf-8") as fh:
+        fh.write(timer)
+
+
+def enable(interval: str = "daily") -> dict:
+    """Install the unit files and enable + start the timer.
+
+    Returns the resulting :func:`status` on success, or
+    ``{"ok": False, "error": ...}`` on failure.
+    """
+    if not available():
+        return {"ok": False, "error": "systemd user instance not available"}
+    if interval not in INTERVALS:
+        interval = "daily"
+    _write_units(interval)
+    _systemctl("daemon-reload")
+    rc, out = _systemctl("enable", "--now", TIMER_NAME)
+    if rc != 0:
+        return {"ok": False, "error": out or "failed to enable timer"}
+    return {"ok": True, **status()}
+
+
+def disable() -> dict:
+    """Stop, disable and remove the timer + service units."""
+    if not available():
+        return {"ok": False, "error": "systemd user instance not available"}
+    _systemctl("disable", "--now", TIMER_NAME)
+    for path in (timer_path(), service_path()):
+        with contextlib.suppress(OSError):
+            os.remove(path)
+    _systemctl("daemon-reload")
+    return {"ok": True, **status()}
