@@ -9,6 +9,7 @@ interface WowuskyBridge {
   minimize(): void;
   maximize(): void;
   close(): void;
+  setBadgeCount?(count: number): void;
 }
 
 declare global {

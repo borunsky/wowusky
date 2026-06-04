@@ -43,6 +43,7 @@ INSTALLED_DIR = DATA_DIR / "installed"
 BACKUP_DIR    = DATA_DIR / "backups"
 MANIFEST_DIR  = DATA_DIR / "manifests"
 LOG_DIR       = DATA_DIR / "logs"
+FAVORITES_FILE = DATA_DIR / "favorites.json"
 
 # Legacy locations (pre-0.4) that we still migrate from.
 LEGACY_INSTALLED_FILE = DATA_DIR / "installed.json"

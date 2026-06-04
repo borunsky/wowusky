@@ -11,13 +11,16 @@ export interface Addon {
   flavors: string[];
   folders: string[];
   depends: string[];
+  tags: string[];
   installed?: boolean;
+  favorite?: boolean;
 }
 
 export interface SearchResult {
   total: number;
   count: number;
   categories: string[];
+  tags: string[];
   items: Addon[];
 }
 

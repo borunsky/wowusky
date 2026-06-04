@@ -72,12 +72,13 @@ _PROVIDER_SOURCE = {
 }
 
 
-def _entry_to_addon(entry: dict[str, Any]) -> dict[str, Any]:
+def _entry_to_addon(entry: dict[str, Any], favorites: set[str] | None = None) -> dict[str, Any]:
     """Project a catalog manifest entry onto the shape the UI expects."""
     name = entry.get("name", entry.get("id", "?"))
     provider = entry.get("provider", "")
+    addon_id = entry.get("id")
     return {
-        "id": entry.get("id"),
+        "id": addon_id,
         "name": name,
         "author": entry.get("author", "Unknown"),
         "category": entry.get("category", "Other"),
@@ -87,50 +88,57 @@ def _entry_to_addon(entry: dict[str, Any]) -> dict[str, Any]:
         "flavors": entry.get("flavors", []),
         "folders": entry.get("folders", []),
         "depends": entry.get("depends", []),
+        "tags": entry.get("tags", []),
+        "favorite": favorites is not None and addon_id in favorites,
     }
 
 
 @method("catalog.search")
 def _catalog_search(params: dict[str, Any]) -> dict[str, Any]:
-    """Filter the bundled manifest catalog by query + category.
+    """Filter the catalog using fuzzy search + tags.
 
-    params: {query?: str, category?: str, limit?: int}
-    returns: {total: int, count: int, categories: [str], items: [addon]}
+    params: {query?: str, category?: str, limit?: int, only_favorites?: bool}
+    returns: {total: int, count: int, categories: [str], tags: [str], items: [addon]}
     """
     from wowusky.catalog import load_catalog
+    from wowusky.core import favorites as _fav
     from wowusky.core import installed as _installed
+    from wowusky.core import search as _search
     from wowusky.core import state as _state
 
     catalog = load_catalog()
-    query = str(params.get("query", "")).strip().lower()
+    query = str(params.get("query", ""))
     category = params.get("category") or "All"
     limit = int(params.get("limit", 200))
+    only_favorites = bool(params.get("only_favorites", False))
 
     try:
         installed_ids = set(_installed.load(_state.get_active_profile_id()).keys())
-    except Exception:  # noqa: BLE001 — search must work even without a profile
+    except Exception:  # noqa: BLE001
         installed_ids = set()
 
+    try:
+        fav_ids = _fav.load()
+    except Exception:  # noqa: BLE001
+        fav_ids = set()
+
     categories = sorted({e.get("category", "Other") for e in catalog})
+    all_tags = sorted({t for e in catalog for t in e.get("tags", [])})
+
+    matched = _search.search(catalog, query, category=category,
+                             only_favorites=only_favorites, favorites=fav_ids)
 
     items: list[dict[str, Any]] = []
-    for entry in catalog:
-        if category != "All" and entry.get("category") != category:
-            continue
-        if query:
-            hay = f"{entry.get('name', '')} {entry.get('description', '')}".lower()
-            if query not in hay:
-                continue
-        addon = _entry_to_addon(entry)
+    for entry in matched:
+        addon = _entry_to_addon(entry, fav_ids)
         addon["installed"] = addon["id"] in installed_ids
         items.append(addon)
 
-    total = len(items)
-    items.sort(key=lambda a: a["name"].lower())
     return {
         "total": len(catalog),
-        "count": total,
+        "count": len(items),
         "categories": ["All", *categories],
+        "tags": all_tags,
         "items": items[:limit],
     }
 
@@ -165,6 +173,7 @@ def _installed_entry_to_addon(addon_id: str, entry: dict[str, Any]) -> dict[str,
         "interface": entry.get("interface"),
         "url": entry.get("url"),
         "glyph": (name[:1] or "?").upper(),
+        "note": entry.get("note", ""),
     }
 
 
@@ -941,6 +950,61 @@ def _installed_remove_many(params: dict[str, Any]) -> dict[str, Any]:
 
     profile = _state.get_active_profile_id()
     return {"removed": removed, "failed": failed, **_installed_list({"profile": profile})}
+
+
+# ---------------------------------------------------------------------------
+# Notes & Favorites
+# ---------------------------------------------------------------------------
+
+
+@method("installed.setNote")
+def _installed_set_note(params: dict[str, Any]) -> dict[str, Any]:
+    """Persist a personal note for an installed addon.
+
+    params: {id: str, note: str}
+    returns: {ok: bool}
+    """
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    addon_id = params.get("id")
+    note = str(params.get("note") or "")
+    if not addon_id:
+        raise ValueError("id is required")
+    profile = _state.get_active_profile_id()
+    data = _installed.load(profile)
+    if addon_id not in data:
+        raise ValueError(f"addon {addon_id!r} not installed")
+    data[addon_id]["note"] = note
+    _installed.save(profile, data)
+    return {"ok": True}
+
+
+@method("favorites.list")
+def _favorites_list(_params: dict[str, Any]) -> dict[str, Any]:
+    """Return the set of favorited catalog IDs.
+
+    returns: {ids: [str]}
+    """
+    from wowusky.core import favorites as _fav
+
+    return {"ids": sorted(_fav.load())}
+
+
+@method("favorites.toggle")
+def _favorites_toggle(params: dict[str, Any]) -> dict[str, Any]:
+    """Toggle the favorite state for a catalog addon.
+
+    params: {id: str}
+    returns: {id: str, favorite: bool}
+    """
+    from wowusky.core import favorites as _fav
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+    now_fav = _fav.toggle(addon_id)
+    return {"id": addon_id, "favorite": now_fav}
 
 
 # ---------------------------------------------------------------------------

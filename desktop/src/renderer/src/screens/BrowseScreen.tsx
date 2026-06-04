@@ -73,6 +73,8 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
   const [catMenuOpen, setCatMenuOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   // Map of installed addon id -> latest version, when an update is available.
   const [updates, setUpdates] = useState<Record<string, string>>({});
   const progress = useActionProgress();
@@ -83,9 +85,25 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
 
   // Re-run the current search so the installed flag refreshes after a change.
   function refetch() {
+    const q = activeTag ? `tag:${activeTag} ${query}` : query;
     bridge
-      .call<SearchResult>("catalog.search", { query, category })
+      .call<SearchResult>("catalog.search", { query: q, category, only_favorites: onlyFavorites })
       .then((r) => setResult(r))
+      .catch(() => {});
+  }
+
+  function toggleFavorite(a: Addon) {
+    bridge
+      .call<{ id: string; favorite: boolean }>("favorites.toggle", { id: a.id })
+      .then((r) => {
+        setResult((prev) => prev ? {
+          ...prev,
+          items: prev.items.map((x) => x.id === r.id ? { ...x, favorite: r.favorite } : x),
+        } : prev);
+        if (onlyFavorites && !r.favorite) {
+          setResult((prev) => prev ? { ...prev, items: prev.items.filter((x) => x.id !== r.id) } : prev);
+        }
+      })
       .catch(() => {});
   }
 
@@ -165,14 +183,15 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
     setLoading(true);
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      const q = activeTag ? `tag:${activeTag} ${query}` : query;
       bridge
-        .call<SearchResult>("catalog.search", { query, category })
+        .call<SearchResult>("catalog.search", { query: q, category, only_favorites: onlyFavorites })
         .then((r) => { setResult(r); setError(null); })
         .catch((e) => setError(String(e)))
         .finally(() => setLoading(false));
     }, 160);
     return () => clearTimeout(debounceRef.current);
-  }, [query, category, refreshKey]);
+  }, [query, category, refreshKey, onlyFavorites, activeTag]);
 
   // Refresh update availability on profile switch / rescan.
   useEffect(() => { checkUpdates(); }, [refreshKey]);
@@ -252,6 +271,24 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
             </div>
           </div>
         </div>
+        <div className="filters">
+          <button
+            className={`tag-chip${onlyFavorites ? " on" : ""}`}
+            onClick={() => setOnlyFavorites((v) => !v)}
+            title="Show only favorites"
+          >
+            ★ Favorites
+          </button>
+          {(result?.tags ?? []).map((t) => (
+            <button
+              key={t}
+              className={`tag-chip${activeTag === t ? " on" : ""}`}
+              onClick={() => setActiveTag((prev) => prev === t ? null : t)}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
         {(liveLabel || notice) && <div className="inst-notice">{liveLabel ?? notice}</div>}
       </div>
 
@@ -303,6 +340,11 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
                     </div>
                   </div>
                   <div className="right" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      className={`fav-btn${a.favorite ? " on" : ""}`}
+                      title={a.favorite ? "Remove from favorites" : "Add to favorites"}
+                      onClick={() => toggleFavorite(a)}
+                    >★</button>
                     <InstallButton
                       installed={a.installed}
                       busy={busyId === a.id}
@@ -338,7 +380,12 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
                       <span className="gstats">
                         <span className="s">{a.category}</span>
                       </span>
-                      <span onClick={(e) => e.stopPropagation()}>
+                      <span onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <button
+                          className={`fav-btn${a.favorite ? " on" : ""}`}
+                          title={a.favorite ? "Remove from favorites" : "Add to favorites"}
+                          onClick={() => toggleFavorite(a)}
+                        >★</button>
                         <InstallButton
                           installed={a.installed}
                           busy={busyId === a.id}

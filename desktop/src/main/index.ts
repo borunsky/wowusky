@@ -170,6 +170,11 @@ app.whenReady().then(() => {
     return result.canceled ? null : (result.filePaths[0] ?? null);
   });
 
+  // Update badge (Linux/macOS taskbar; no-op on platforms without badge support).
+  ipcMain.on("badge:set", (_e, count: number) => {
+    app.setBadgeCount(Math.max(0, count | 0));
+  });
+
   // Window controls for the custom titlebar.
   ipcMain.on("win:minimize", () => mainWindow?.minimize());
   ipcMain.on("win:maximize", () => {

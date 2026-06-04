@@ -108,6 +108,11 @@ export default function App(): JSX.Element {
     return () => { cancelled = true; };
   }, [refreshKey]);
 
+  // Sync updateCount to Electron taskbar badge.
+  useEffect(() => {
+    window.wowusky?.setBadgeCount?.(updateCount);
+  }, [updateCount]);
+
   // Apply theme to document
   useEffect(() => {
     const resolved = resolveTheme(theme);

@@ -24,6 +24,9 @@ const api = {
   minimize: () => ipcRenderer.send("win:minimize"),
   maximize: () => ipcRenderer.send("win:maximize"),
   close: () => ipcRenderer.send("win:close"),
+
+  /** Set the taskbar/dock badge count (0 clears it). */
+  setBadgeCount: (count: number) => ipcRenderer.send("badge:set", count),
 };
 
 contextBridge.exposeInMainWorld("wowusky", api);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { bridge } from "../api";
 import { sourceLabel, rarityFor } from "./browseData";
 import type { InstalledAddon, InstalledResult } from "./installedData";
@@ -157,6 +157,26 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
       .finally(() => setBusy(null));
   }
 
+  // Inline note editing
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [noteVal, setNoteVal] = useState("");
+  const noteRef = useRef<HTMLInputElement>(null);
+
+  function startNote(a: InstalledAddon) {
+    setEditingNote(a.id);
+    setNoteVal(a.note ?? "");
+    setTimeout(() => noteRef.current?.focus(), 30);
+  }
+
+  function saveNote(a: InstalledAddon) {
+    setEditingNote(null);
+    bridge.call("installed.setNote", { id: a.id, note: noteVal }).catch(() => {});
+    setResult((r) => r ? {
+      ...r,
+      items: r.items.map((x) => x.id === a.id ? { ...x, note: noteVal } : x),
+    } : r);
+  }
+
   const all = result?.items ?? [];
   const q = query.trim().toLowerCase();
   const items = q ? all.filter((a) => a.name.toLowerCase().includes(q)) : all;
@@ -277,10 +297,28 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
                 <MonoBadge a={a} />
                 <div style={{ minWidth: 0 }}>
                   <div className="iname">{a.name}</div>
-                  <div className="idesc">
-                    {a.folders.length} folder{a.folders.length === 1 ? "" : "s"}
-                    {a.interface ? ` · interface ${a.interface}` : ""}
-                  </div>
+                  {editingNote === a.id ? (
+                    <input
+                      ref={noteRef}
+                      className="note-input"
+                      value={noteVal}
+                      placeholder="Add a note…"
+                      onChange={(e) => setNoteVal(e.target.value)}
+                      onBlur={() => saveNote(a)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveNote(a); if (e.key === "Escape") setEditingNote(null); }}
+                    />
+                  ) : (
+                    <div
+                      className="idesc"
+                      title={a.note ? "Click to edit note" : "Click to add note"}
+                      onClick={(e) => { e.stopPropagation(); startNote(a); }}
+                    >
+                      {a.note
+                        ? <span className="note-val">{a.note}</span>
+                        : <>{a.folders.length} folder{a.folders.length === 1 ? "" : "s"}{a.interface ? ` · interface ${a.interface}` : ""}</>
+                      }
+                    </div>
+                  )}
                 </div>
                 <span className={`pill src-${a.source}`}>
                   <span className="dot" />

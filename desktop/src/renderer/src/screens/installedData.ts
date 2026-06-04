@@ -9,6 +9,7 @@ export interface InstalledAddon {
   interface: string | null;
   url: string | null;
   glyph: string;
+  note?: string;
 }
 
 export interface InstalledResult {
