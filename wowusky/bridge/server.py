@@ -915,6 +915,104 @@ def _addon_deps(params: dict[str, Any]) -> dict[str, Any]:
     return {"id": addon_id, **_orch.dependency_preview(entry)}
 
 
+@method("addon.conflicts")
+def _addon_conflicts(params: dict[str, Any]) -> dict[str, Any]:
+    """List installed addons that conflict with the given catalog addon.
+
+    params: {id: str}
+    returns: {id, conflicts: [{id, name}]}
+    """
+    from wowusky import orchestrator as _orch
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+    entry = _orch.find_addon_by_id(addon_id)
+    if entry is None:
+        return {"id": addon_id, "conflicts": []}
+    return {"id": addon_id, **_orch.conflict_check(entry)}
+
+
+# ---------------------------------------------------------------------------
+# Addon-set export / import (#44) and backup diff (#45)
+# ---------------------------------------------------------------------------
+
+
+@method("set.export")
+def _set_export(_params: dict[str, Any]) -> dict[str, Any]:
+    """Return a portable addon-set snapshot of the active profile as JSON text.
+
+    returns: {data: str, count: int}
+    """
+    import json as _json
+
+    from wowusky.core import addonset as _addonset
+
+    snapshot = _addonset.export_addon_set()
+    return {"data": _json.dumps(snapshot, indent=2), "count": snapshot.get("count", 0)}
+
+
+@method("set.importPreview")
+def _set_import_preview(params: dict[str, Any]) -> dict[str, Any]:
+    """Parse pasted addon-set JSON and report a per-addon conflict preview.
+
+    params: {data: str}
+    returns: {ok, items?: [{id, name, version, installed_version, source, status}], error?}
+    """
+    import json as _json
+
+    from wowusky.core import addonset as _addonset
+
+    raw = params.get("data")
+    if not raw:
+        raise ValueError("data is required")
+    try:
+        parsed = _json.loads(raw)
+        items = _addonset.import_addon_set_preview(parsed)
+    except (ValueError, _json.JSONDecodeError) as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "items": items}
+
+
+@method("set.importApply")
+def _set_import_apply(params: dict[str, Any]) -> dict[str, Any]:
+    """Apply a pasted addon-set into the installed DB (no downloads).
+
+    params: {data: str, skip_ids?: [str]}
+    returns: {ok, imported?, skipped?, error?}
+    """
+    import json as _json
+
+    from wowusky.core import addonset as _addonset
+
+    raw = params.get("data")
+    if not raw:
+        raise ValueError("data is required")
+    skip_ids = params.get("skip_ids") or []
+    try:
+        parsed = _json.loads(raw)
+        result = _addonset.import_addon_set_apply(parsed, skip_ids=skip_ids)
+    except (ValueError, _json.JSONDecodeError) as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, **result}
+
+
+@method("backups.diff")
+def _backups_diff(params: dict[str, Any]) -> dict[str, Any]:
+    """Diff two backup archives by their ZIP indices (no extraction).
+
+    params: {a: str, b: str}  (two backup ZIP paths)
+    returns: {added: [str], removed: [str], changed: [{path, size_a, size_b}]}
+    """
+    from wowusky.core import backup as _backup
+
+    a = params.get("a")
+    b = params.get("b")
+    if not a or not b:
+        raise ValueError("a and b paths are required")
+    return _backup.diff_backups(a, b)
+
+
 # ---------------------------------------------------------------------------
 # Bulk remove
 # ---------------------------------------------------------------------------

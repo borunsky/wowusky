@@ -22,6 +22,12 @@ interface BackupsResult {
   addon_count: number;
 }
 
+interface DiffResult {
+  added: string[];
+  removed: string[];
+  changed: { path: string; size_a: number; size_b: number }[];
+}
+
 // Dev-only placeholder data, shown when the profile has no backups yet so the
 // layout can be eyeballed. Flip to false to disable.
 const SHOW_DEMO = false;
@@ -88,8 +94,24 @@ export function BackupsScreen(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Diff state (#45): pick two backups, show the file-level diff.
+  const [diffAddon, setDiffAddon] = useState<string>("");
+  const [diffA, setDiffA] = useState<string>("");
+  const [diffB, setDiffB] = useState<string>("");
+  const [diff, setDiff] = useState<DiffResult | null>(null);
+  const [diffErr, setDiffErr] = useState<string | null>(null);
   const progress = useActionProgress();
   const liveLabel = busy ? progressLabel(progress[busy]) : null;
+
+  function runDiff(a: string, b: string) {
+    setDiff(null);
+    setDiffErr(null);
+    if (!a || !b || a === b) return;
+    bridge
+      .call<DiffResult>("backups.diff", { a, b })
+      .then(setDiff)
+      .catch((e) => setDiffErr(String(e)));
+  }
 
   function reload() {
     setLoading(true);
@@ -190,6 +212,71 @@ export function BackupsScreen(): JSX.Element {
                   </div>
                 </>
               )}
+
+              {(() => {
+                // Addons that have ≥2 snapshots can be diffed.
+                const byAddon = new Map<string, AddonBackup[]>();
+                for (const b of view!.addons) {
+                  const arr = byAddon.get(b.addon_id) ?? [];
+                  arr.push(b);
+                  byAddon.set(b.addon_id, arr);
+                }
+                const diffable = [...byAddon.entries()].filter(([, arr]) => arr.length >= 2);
+                if (diffable.length === 0) return null;
+                const selectable = diffAddon ? (byAddon.get(diffAddon) ?? []) : [];
+                return (
+                  <>
+                    <div className="section-h" style={{ marginTop: 18 }}>
+                      <span className="t">Compare backups</span>
+                    </div>
+                    <div className="diff-box">
+                      <div className="diff-controls">
+                        <select
+                          value={diffAddon}
+                          onChange={(e) => { setDiffAddon(e.target.value); setDiffA(""); setDiffB(""); setDiff(null); setDiffErr(null); }}
+                        >
+                          <option value="">Select an addon…</option>
+                          {diffable.map(([id, arr]) => (
+                            <option key={id} value={id}>{arr[0].addon_name} ({arr.length})</option>
+                          ))}
+                        </select>
+                        {diffAddon && (
+                          <>
+                            <select value={diffA} onChange={(e) => { setDiffA(e.target.value); runDiff(e.target.value, diffB); }}>
+                              <option value="">Version A…</option>
+                              {selectable.map((b) => <option key={b.path} value={b.path}>{`v${b.version} · ${fmtDate(b.mtime)}`}</option>)}
+                            </select>
+                            <span className="diff-arrow">→</span>
+                            <select value={diffB} onChange={(e) => { setDiffB(e.target.value); runDiff(diffA, e.target.value); }}>
+                              <option value="">Version B…</option>
+                              {selectable.map((b) => <option key={b.path} value={b.path}>{`v${b.version} · ${fmtDate(b.mtime)}`}</option>)}
+                            </select>
+                          </>
+                        )}
+                      </div>
+                      {diffErr && <div className="diff-err">{diffErr}</div>}
+                      {diff && (diffA && diffB && diffA !== diffB) && (
+                        <div className="diff-result">
+                          {diff.added.length === 0 && diff.removed.length === 0 && diff.changed.length === 0 ? (
+                            <div className="diff-empty">No differences.</div>
+                          ) : (
+                            <>
+                              {diff.added.map((p) => <div key={`a${p}`} className="diff-line dl-add"><span>+</span>{p}</div>)}
+                              {diff.removed.map((p) => <div key={`r${p}`} className="diff-line dl-rem"><span>−</span>{p}</div>)}
+                              {diff.changed.map((c) => (
+                                <div key={`c${c.path}`} className="diff-line dl-chg">
+                                  <span>~</span>{c.path}
+                                  <em>{fmtSize(c.size_a)} → {fmtSize(c.size_b)}</em>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
 
               {view!.addons.length > 0 && (
                 <>

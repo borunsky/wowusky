@@ -57,6 +57,7 @@ def _normalise_addon(raw: dict) -> dict:
     out.setdefault("description", "")
     out.setdefault("depends", [])
     out.setdefault("tags", [])
+    out.setdefault("conflicts", [])
     if "provider" not in out and "source" in out:
         out["provider"] = out["source"]
     return out

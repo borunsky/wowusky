@@ -657,6 +657,34 @@ def dependency_preview(addon):
     }
 
 
+def conflict_check(addon):
+    """Return installed catalog addons that conflict with *addon*.
+
+    Conflicts are detected bidirectionally: either *addon* declares the other
+    in its ``conflicts`` list, or the other declares *addon*. Only conflicts
+    with currently-installed addons are reported (the UI only needs to warn
+    about active clashes).
+
+    Returns ``{"conflicts": [{"id", "name"}]}``.
+    """
+    inst = load_installed()
+    addon_id = addon.get("id")
+    declared = set(addon.get("conflicts", []) or [])
+
+    out: list[dict] = []
+    seen: set[str] = set()
+    for other_id in inst:
+        if other_id == addon_id or other_id in seen:
+            continue
+        other = find_addon_by_id(other_id)
+        reverse = bool(other and addon_id in (other.get("conflicts", []) or []))
+        if other_id in declared or reverse:
+            seen.add(other_id)
+            name = (other or {}).get("name") or inst.get(other_id, {}).get("name") or other_id
+            out.append({"id": other_id, "name": name})
+    return {"conflicts": out}
+
+
 def get_categories():
     return sorted({a["category"] for a in ADDON_CATALOG})
 

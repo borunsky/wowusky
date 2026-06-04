@@ -37,6 +37,8 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
   // Transitive catalog dependencies a fresh install would pull in.
   const [deps, setDeps] = useState<DepPreview[] | null>(null);
   const [depsMissing, setDepsMissing] = useState<string[]>([]);
+  // Installed addons that conflict with this one.
+  const [conflicts, setConflicts] = useState<{ id: string; name: string }[]>([]);
 
   // Sources that expose multiple selectable downloads.
   const versionable = addon?.source === "github" || addon?.source === "curse";
@@ -62,6 +64,16 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
     bridge
       .call<{ deps: DepPreview[]; missing: string[] }>("addon.deps", { id: addon.id })
       .then((r) => { setDeps(r.deps ?? []); setDepsMissing(r.missing ?? []); })
+      .catch(() => {});
+  }, [addon]);
+
+  // Fetch conflict warnings for not-yet-installed addons.
+  useEffect(() => {
+    setConflicts([]);
+    if (!addon || addon.installed) return;
+    bridge
+      .call<{ conflicts: { id: string; name: string }[] }>("addon.conflicts", { id: addon.id })
+      .then((r) => setConflicts(r.conflicts ?? []))
       .catch(() => {});
   }, [addon]);
 
@@ -120,6 +132,17 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
                 </svg>
                 Also installs {pendingDeps.length} {pendingDeps.length === 1 ? "dependency" : "dependencies"}:
                 {" "}{pendingDeps.map((d) => d.name).join(", ")}
+              </div>
+            )}
+
+            {!addon.installed && conflicts.length > 0 && (
+              <div className="conflict-note" title={conflicts.map((c) => c.name).join(", ")}>
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1.5 13 12.5H1L7 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M7 6v2.5M7 10.2v.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                Conflicts with {conflicts.length === 1 ? "an installed addon" : `${conflicts.length} installed addons`}:
+                {" "}{conflicts.map((c) => c.name).join(", ")}
               </div>
             )}
 

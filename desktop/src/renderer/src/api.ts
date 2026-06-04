@@ -10,6 +10,8 @@ interface WowuskyBridge {
   maximize(): void;
   close(): void;
   setBadgeCount?(count: number): void;
+  clipboardWrite?(text: string): Promise<boolean>;
+  clipboardRead?(): Promise<string>;
 }
 
 declare global {

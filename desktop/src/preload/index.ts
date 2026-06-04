@@ -27,6 +27,13 @@ const api = {
 
   /** Set the taskbar/dock badge count (0 clears it). */
   setBadgeCount: (count: number) => ipcRenderer.send("badge:set", count),
+
+  /** Write text to the system clipboard. */
+  clipboardWrite: (text: string): Promise<boolean> =>
+    ipcRenderer.invoke("clipboard:write", text),
+
+  /** Read text from the system clipboard. */
+  clipboardRead: (): Promise<string> => ipcRenderer.invoke("clipboard:read"),
 };
 
 contextBridge.exposeInMainWorld("wowusky", api);

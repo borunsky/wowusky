@@ -59,6 +59,8 @@ interface ImportPreview {
   preview: AddonPreviewItem[];
 }
 
+type SetPreviewItem = AddonPreviewItem;
+
 interface Props {
   theme: Theme;
   density: Density;
@@ -99,6 +101,59 @@ export function SettingsScreen({
   const [dlScanning, setDlScanning] = useState(false);
   const [dlBusy, setDlBusy] = useState<string | null>(null);
   const [dlNotice, setDlNotice] = useState<string | null>(null);
+  // Addon-set sharing (#44)
+  const [setNotice, setSetNotice] = useState<string | null>(null);
+  const [setPasteOpen, setSetPasteOpen] = useState(false);
+  const [setPaste, setSetPaste] = useState("");
+  const [setPreview, setSetPreview] = useState<SetPreviewItem[] | null>(null);
+  const [shareSkip, setShareSkip] = useState(true);
+  const [setBusy, setSetBusy] = useState(false);
+
+  function exportSet() {
+    setSetNotice(null);
+    bridge.call<{ data: string; count: number }>("set.export", {})
+      .then(async (r) => {
+        await window.wowusky?.clipboardWrite?.(r.data);
+        setSetNotice(`Copied ${r.count} addon${r.count === 1 ? "" : "s"} to clipboard`);
+      })
+      .catch((e) => setSetNotice(String(e)));
+  }
+
+  async function pasteFromClipboard() {
+    const text = await window.wowusky?.clipboardRead?.();
+    if (text) setSetPaste(text);
+  }
+
+  function previewSet() {
+    setSetNotice(null);
+    setSetPreview(null);
+    bridge.call<{ ok: boolean; items?: SetPreviewItem[]; error?: string }>("set.importPreview", { data: setPaste })
+      .then((r) => {
+        if (!r.ok) { setSetNotice(r.error ?? "invalid addon-set"); return; }
+        setSetPreview(r.items ?? []);
+      })
+      .catch((e) => setSetNotice(String(e)));
+  }
+
+  function applySet() {
+    if (!setPreview) return;
+    setSetBusy(true);
+    const skip_ids = shareSkip
+      ? setPreview.filter((i) => i.status === "conflict").map((i) => i.id)
+      : [];
+    bridge.call<{ ok: boolean; imported?: number; skipped?: number; error?: string }>(
+      "set.importApply", { data: setPaste, skip_ids })
+      .then((r) => {
+        if (!r.ok) { setSetNotice(r.error ?? "import failed"); return; }
+        setSetNotice(`Imported ${r.imported}, skipped ${r.skipped}`);
+        setSetPreview(null);
+        setSetPaste("");
+        setSetPasteOpen(false);
+        onProfileChange?.();
+      })
+      .catch((e) => setSetNotice(String(e)))
+      .finally(() => setSetBusy(false));
+  }
 
   function reload() {
     bridge.call<CoreSettings>("settings.get", {}).then((s) => {
@@ -349,6 +404,75 @@ export function SettingsScreen({
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Share addon set (#44) */}
+          <div className="set-group">
+            <h3>Share addon set</h3>
+            <p className="gdesc">Copy your installed addons as a shareable snapshot, or import one from a friend.</p>
+            <div className="set-card">
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Export current profile</div>
+                  <div className="sd">Copies a portable JSON snapshot of your installed addons to the clipboard.</div>
+                </div>
+                <div className="sr">
+                  <button className="btn btn-sm btn-primary" onClick={exportSet}>Copy to clipboard</button>
+                </div>
+              </div>
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Import a set</div>
+                  <div className="sd">Paste a snapshot, preview what changes, then apply.</div>
+                </div>
+                <div className="sr">
+                  <button className="btn btn-sm" onClick={() => { setSetPasteOpen((o) => !o); setSetPreview(null); }}>
+                    {setPasteOpen ? "Cancel" : "Paste set…"}
+                  </button>
+                </div>
+              </div>
+              {setPasteOpen && (
+                <div className="set-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
+                  <textarea
+                    className="set-paste"
+                    placeholder="Paste addon-set JSON here…"
+                    value={setPaste}
+                    onChange={(e) => setSetPaste(e.target.value)}
+                    rows={5}
+                  />
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button className="btn btn-sm" onClick={pasteFromClipboard}>Paste from clipboard</button>
+                    <button className="btn btn-sm btn-primary" disabled={!setPaste.trim()} onClick={previewSet}>Preview</button>
+                  </div>
+                  {setPreview && (
+                    <>
+                      <div className="set-preview-list">
+                        {setPreview.map((it) => (
+                          <div className="set-preview-row" key={it.id}>
+                            <span className="spn">{it.name}</span>
+                            <span className={`spbadge sp-${it.status}`}>{it.status}</span>
+                            <span className="spv">
+                              {it.status === "conflict" ? `${it.installed_version} → ${it.version}` : it.version}
+                            </span>
+                          </div>
+                        ))}
+                        {setPreview.length === 0 && <div className="sd">No addons in this set.</div>}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <label className="set-check">
+                          <input type="checkbox" checked={shareSkip} onChange={(e) => setShareSkip(e.target.checked)} />
+                          Skip conflicts
+                        </label>
+                        <button className="btn btn-sm btn-primary" disabled={setBusy || setPreview.length === 0} onClick={applySet}>
+                          {setBusy ? "Importing…" : "Apply"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {setNotice && <div className="set-row"><div className="sl"><div className="sd">{setNotice}</div></div></div>}
             </div>
           </div>
 

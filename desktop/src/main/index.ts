@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
+import { app, BrowserWindow, ipcMain, shell, dialog, clipboard } from "electron";
 import {
   spawn,
   spawnSync,
@@ -174,6 +174,13 @@ app.whenReady().then(() => {
   ipcMain.on("badge:set", (_e, count: number) => {
     app.setBadgeCount(Math.max(0, count | 0));
   });
+
+  // Clipboard access for addon-set sharing.
+  ipcMain.handle("clipboard:write", (_e, text: string) => {
+    clipboard.writeText(text ?? "");
+    return true;
+  });
+  ipcMain.handle("clipboard:read", () => clipboard.readText());
 
   // Window controls for the custom titlebar.
   ipcMain.on("win:minimize", () => mainWindow?.minimize());

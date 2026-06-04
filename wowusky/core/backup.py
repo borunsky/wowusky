@@ -257,6 +257,38 @@ def backup_addon_folders(
     return zip_base + ".zip"
 
 
+def _zip_index(zip_path: str) -> dict[str, int]:
+    """Map archive member path -> uncompressed size, skipping wowusky meta files."""
+    index: dict[str, int] = {}
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for info in zf.infolist():
+            if info.is_dir() or info.filename.startswith("wowusky-"):
+                continue
+            index[info.filename] = info.file_size
+    return index
+
+
+def diff_backups(path_a: str, path_b: str) -> dict:
+    """Compare two backup archives by their ZIP indices (no extraction).
+
+    Returns ``{added, removed, changed}`` where *added* are files present only
+    in B, *removed* only in A, and *changed* files whose uncompressed size
+    differs between A and B.
+    """
+    if not os.path.isfile(path_a) or not os.path.isfile(path_b):
+        raise RuntimeError("backup ZIP not found")
+    idx_a = _zip_index(path_a)
+    idx_b = _zip_index(path_b)
+    added = sorted(set(idx_b) - set(idx_a))
+    removed = sorted(set(idx_a) - set(idx_b))
+    changed = [
+        {"path": p, "size_a": idx_a[p], "size_b": idx_b[p]}
+        for p in sorted(set(idx_a) & set(idx_b))
+        if idx_a[p] != idx_b[p]
+    ]
+    return {"added": added, "removed": removed, "changed": changed}
+
+
 def latest_backup_for_addon(addon_id: str) -> str | None:
     backups = list_addon_backups(addon_id)
     return backups[0]["path"] if backups else None
