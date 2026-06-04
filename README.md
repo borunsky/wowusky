@@ -15,14 +15,27 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.9.1
+## What's new in v0.9.2
+
+### Added
+- **Profile path management in the desktop Settings screen**: each profile now
+  has a **Set Path** button that opens a native directory picker
+  (`dialog.showOpenDialog`) to point it at an `Interface/AddOns` folder, and an
+  **Autoscan** button that scans common Steam / Lutris / Wine locations for WoW
+  installations and lets you add any of them as a profile with one click.
+- Bridge methods `profile.setPath`, `profiles.scan` and `profiles.addFromPath`,
+  plus a preload `openDirectory()` IPC for native folder selection.
 
 ### Fixed
-- The addon-details dialog's background version-lookup thread no longer touches
-  Tk from a non-main thread. On Python 3.14 that aborted the interpreter with a
-  fatal `Tcl_AsyncDelete: async handler deleted by the wrong thread` panic
-  during the test suite (breaking the AUR `check()` phase). The worker now only
-  computes version choices; the main thread polls the result and renders.
+- **Status bar** now shows the active profile's flavor and its real AddOns path,
+  refreshing on profile switches and rescans. Previously it could read a stale
+  source and display "path not set" even when the active profile had a path
+  configured.
+
+### Changed
+- The Desktop AppImage workflow only publishes the (zipped) workflow artifact on
+  manual `workflow_dispatch` runs; release runs attach the raw `.AppImage`
+  directly so the release assets no longer carry a wrapping `.zip`.
 <!-- WHATS-NEW:END -->
 
 ---
