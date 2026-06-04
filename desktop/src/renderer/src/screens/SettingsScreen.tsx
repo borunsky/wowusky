@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { bridge } from "../api";
 import type { Theme, Density, Accent } from "../App";
 
+interface ScanResult {
+  flavor: string;
+  flavor_name: string;
+  addons_path: string;
+}
+
 interface ProfileSummary {
   id: string;
   name: string;
@@ -45,6 +51,8 @@ export function SettingsScreen({
   const [addonsPath, setAddonsPath] = useState("");
   const [cfKey, setCfKey] = useState("");
   const [saved, setSaved] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResults, setScanResults] = useState<ScanResult[] | null>(null);
 
   function reload() {
     bridge.call<CoreSettings>("settings.get", {}).then((s) => {
@@ -74,7 +82,32 @@ export function SettingsScreen({
   }
   function switchProfile(id: string) {
     bridge.call<CoreSettings>("profile.setActive", { profile: id })
-      .then((s) => { setCore(s); onProfileChange(); }).catch(() => {});
+      .then((s) => { setCore(s); setAddonsPath(s.addons_path); onProfileChange(); }).catch(() => {});
+  }
+
+  function autoscan() {
+    setScanning(true);
+    setScanResults(null);
+    bridge.call<{ found: ScanResult[] }>("profiles.scan", {})
+      .then((r) => setScanResults(r.found))
+      .catch(() => setScanResults([]))
+      .finally(() => setScanning(false));
+  }
+
+  function addScannedProfile(p: ScanResult) {
+    bridge.call<CoreSettings>("profiles.addFromPath", { path: p.addons_path, name: p.flavor_name })
+      .then((s) => { setCore(s); setAddonsPath(s.addons_path); setScanResults(null); onProfileChange(); })
+      .catch(() => {});
+  }
+
+  async function setPathDialog(profileId?: string) {
+    const chosen = await bridge.openDirectory().catch(() => null);
+    if (!chosen) return;
+    const params: Record<string, string> = { path: chosen };
+    if (profileId) params.profile = profileId;
+    bridge.call<CoreSettings>("profile.setPath", params)
+      .then((s) => { setCore(s); setAddonsPath(s.addons_path); flash(); onProfileChange(); })
+      .catch(() => {});
   }
 
   return (
@@ -167,9 +200,14 @@ export function SettingsScreen({
                       </span>
                       {p.name}
                     </div>
-                    <div className="sd">{p.addons_path || "path not set"} · {p.count} addons</div>
+                    <div className="sd" style={{ color: p.addons_path ? undefined : "var(--red)" }}>
+                      {p.addons_path || "path not set"} · {p.count} addons
+                    </div>
                   </div>
-                  <div className="sr">
+                  <div className="sr" style={{ gap: 6, display: "flex", alignItems: "center" }}>
+                    <button className="btn btn-sm" title="Browse for AddOns folder" onClick={() => setPathDialog(p.id)}>
+                      Set Path
+                    </button>
                     {core?.active_profile === p.id ? (
                       <span className="installed-tag">Active</span>
                     ) : (
@@ -181,6 +219,41 @@ export function SettingsScreen({
               {core && core.profiles.length === 0 && (
                 <div className="set-row"><div className="sl"><div className="sd">No profiles configured.</div></div></div>
               )}
+              {/* Autoscan */}
+              <div className="set-row" style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 4 }}>
+                <div className="sl">
+                  <div className="st">Auto-detect WoW installations</div>
+                  <div className="sd">Scan common Steam / Lutris / Wine paths for WoW clients.</div>
+                </div>
+                <div className="sr">
+                  <button className="btn btn-sm btn-primary" onClick={autoscan} disabled={scanning}>
+                    {scanning ? "Scanning…" : "Autoscan"}
+                  </button>
+                </div>
+              </div>
+              {/* Scan results */}
+              {scanResults !== null && scanResults.length === 0 && (
+                <div className="set-row">
+                  <div className="sl"><div className="sd">No WoW installations found automatically.</div></div>
+                  <div className="sr">
+                    <button className="btn btn-sm" onClick={() => setPathDialog()}>Set Path manually</button>
+                  </div>
+                </div>
+              )}
+              {(scanResults ?? []).map((r) => (
+                <div className="set-row" key={r.addons_path}>
+                  <div className="sl">
+                    <div className="st" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="ptag">{r.flavor}</span>
+                      {r.flavor_name}
+                    </div>
+                    <div className="sd">{r.addons_path}</div>
+                  </div>
+                  <div className="sr">
+                    <button className="btn btn-sm btn-primary" onClick={() => addScannedProfile(r)}>Add</button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
