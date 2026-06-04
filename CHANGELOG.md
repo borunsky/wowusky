@@ -4,6 +4,25 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] — 2026-06-04
+
+### Added
+- **Desktop notifications** (#54): wowusky now sends a native OS notification
+  when addon updates are available on launch, even when the window is not in
+  focus. The notification fires at most once per session and only when
+  auto-update is off. Toggle it under **Settings → Advanced → Desktop
+  notifications**. Backed by the new `desktop_notifications` config option
+  (exposed through `settings.get` / `settings.update`) and an Electron
+  `notify` IPC bridge guarded by `Notification.isSupported()`.
+- **Cross-profile sync** (#55): copy installed addons from one WoW profile
+  into another without re-installing each by hand. **Settings → Profiles**
+  gains a **Sync from another profile** control: pick a source, preview what
+  is new / already installed / in conflict (and which addons are skipped
+  because they are not in the catalog), then apply with optional conflict
+  skipping. Backed by the new `profile.syncPreview` and `profile.syncApply`
+  bridge methods, which install into the target profile and restore the
+  active profile afterwards.
+
 ## [0.13.0] — 2026-06-04
 
 ### Added
@@ -1100,6 +1119,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.14.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.14.0
 [0.13.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.13.0
 [0.12.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.12.0
 [0.11.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.11.0
