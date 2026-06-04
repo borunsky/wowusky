@@ -53,6 +53,8 @@ export function SettingsScreen({
   const [saved, setSaved] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanResults, setScanResults] = useState<ScanResult[] | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
 
   function reload() {
     bridge.call<CoreSettings>("settings.get", {}).then((s) => {
@@ -96,7 +98,33 @@ export function SettingsScreen({
 
   function addScannedProfile(p: ScanResult) {
     bridge.call<CoreSettings>("profiles.addFromPath", { path: p.addons_path, name: p.flavor_name })
-      .then((s) => { setCore(s); setAddonsPath(s.addons_path); setScanResults(null); onProfileChange(); })
+      .then((s) => {
+        setCore(s);
+        setAddonsPath(s.addons_path);
+        // Drop the just-added install from the results; keep any others.
+        setScanResults((rs) => (rs ?? []).filter((r) => r.addons_path !== p.addons_path));
+        onProfileChange();
+      })
+      .catch(() => {});
+  }
+
+  function startRename(id: string, current: string) {
+    setEditingId(id);
+    setEditName(current);
+  }
+  function saveRename(id: string) {
+    const name = editName.trim();
+    if (!name) { setEditingId(null); return; }
+    bridge.call<CoreSettings>("profile.rename", { profile: id, name })
+      .then((s) => { setCore(s); setEditingId(null); flash(); onProfileChange(); })
+      .catch(() => setEditingId(null));
+  }
+  function deleteProfile(id: string, name: string) {
+    if (!window.confirm(`Delete profile "${name}"? Its installed list and backups on disk are kept.`)) {
+      return;
+    }
+    bridge.call<CoreSettings>("profile.delete", { profile: id })
+      .then((s) => { setCore(s); setAddonsPath(s.addons_path); onProfileChange(); })
       .catch(() => {});
   }
 
@@ -198,20 +226,50 @@ export function SettingsScreen({
                       >
                         {p.flavor}
                       </span>
-                      {p.name}
+                      {editingId === p.id ? (
+                        <span className="field" style={{ display: "inline-flex" }}>
+                          <input
+                            autoFocus
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveRename(p.id);
+                              if (e.key === "Escape") setEditingId(null);
+                            }}
+                            style={{ width: 180 }}
+                          />
+                        </span>
+                      ) : (
+                        p.name
+                      )}
                     </div>
                     <div className="sd" style={{ color: p.addons_path ? undefined : "var(--red)" }}>
                       {p.addons_path || "path not set"} · {p.count} addons
                     </div>
                   </div>
                   <div className="sr" style={{ gap: 6, display: "flex", alignItems: "center" }}>
-                    <button className="btn btn-sm" title="Browse for AddOns folder" onClick={() => setPathDialog(p.id)}>
-                      Set Path
-                    </button>
-                    {core?.active_profile === p.id ? (
-                      <span className="installed-tag">Active</span>
+                    {editingId === p.id ? (
+                      <>
+                        <button className="btn btn-sm btn-primary" onClick={() => saveRename(p.id)}>Save</button>
+                        <button className="btn btn-sm" onClick={() => setEditingId(null)}>Cancel</button>
+                      </>
                     ) : (
-                      <button className="btn btn-sm" onClick={() => switchProfile(p.id)}>Activate</button>
+                      <>
+                        <button className="btn btn-sm" title="Rename profile" onClick={() => startRename(p.id, p.name)}>
+                          Rename
+                        </button>
+                        <button className="btn btn-sm" title="Browse for AddOns folder" onClick={() => setPathDialog(p.id)}>
+                          Set Path
+                        </button>
+                        {core?.active_profile === p.id ? (
+                          <span className="installed-tag">Active</span>
+                        ) : (
+                          <button className="btn btn-sm" onClick={() => switchProfile(p.id)}>Activate</button>
+                        )}
+                        <button className="btn btn-sm btn-danger" title="Delete profile" onClick={() => deleteProfile(p.id, p.name)}>
+                          Delete
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
