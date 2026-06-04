@@ -18,11 +18,13 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ## What's new in v0.9.1
 
 ### Fixed
-- The addon-details dialog's background version-lookup thread no longer touches
-  Tk from a non-main thread. On Python 3.14 that aborted the interpreter with a
-  fatal `Tcl_AsyncDelete: async handler deleted by the wrong thread` panic
-  during the test suite (breaking the AUR `check()` phase). The worker now only
-  computes version choices; the main thread polls the result and renders.
+- Addon-details dialog: the asynchronous version-lookup worker no longer makes
+  any Tk calls from its background thread. On Python 3.14 the previous code
+  called `winfo_exists()` / `after()` off the main thread, which aborted the
+  interpreter with a fatal `Tcl_AsyncDelete: async handler deleted by the wrong
+  thread` panic during `pytest` — surfacing as a failed AUR `check()` phase on
+  fresh builds. The worker now only computes the version choices; a main-thread
+  `after()` poll renders the result, so all Tk access stays on the main thread.
 <!-- WHATS-NEW:END -->
 
 ---
