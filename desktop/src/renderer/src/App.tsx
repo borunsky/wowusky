@@ -127,7 +127,7 @@ export default function App(): JSX.Element {
         rescanning={rescanning}
       />
       <div className="body">
-        <Sidebar screen={screen} onNav={setScreen} addonCount={installedCount} />
+        <Sidebar screen={screen} onNav={setScreen} addonCount={installedCount} refreshKey={refreshKey} />
         <div className="content">
           {screen === "browse" ? (
             <BrowseScreen />
