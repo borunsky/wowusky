@@ -125,12 +125,14 @@ export default function App(): JSX.Element {
         onDensityChange={setDensity}
         onRescan={handleRescan}
         rescanning={rescanning}
+        refreshKey={refreshKey}
+        onProfileChange={() => setRefreshKey((k) => k + 1)}
       />
       <div className="body">
-        <Sidebar screen={screen} onNav={setScreen} addonCount={installedCount} />
+        <Sidebar screen={screen} onNav={setScreen} addonCount={installedCount} refreshKey={refreshKey} />
         <div className="content">
           {screen === "browse" ? (
-            <BrowseScreen />
+            <BrowseScreen refreshKey={refreshKey} />
           ) : screen === "installed" ? (
             <InstalledScreen
               refreshKey={refreshKey}

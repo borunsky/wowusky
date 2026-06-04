@@ -1,9 +1,12 @@
+import { useState, useEffect } from "react";
+import { bridge } from "../api";
 import type { Screen } from "../App";
 
 interface Props {
   screen: Screen;
   onNav: (s: Screen) => void;
   addonCount: number;
+  refreshKey?: number;
 }
 
 const NAV: { id: Screen; label: string; icon: JSX.Element }[] = [
@@ -67,7 +70,22 @@ const NAV: { id: Screen; label: string; icon: JSX.Element }[] = [
   },
 ];
 
-export function Sidebar({ screen, onNav, addonCount }: Props): JSX.Element {
+export function Sidebar({ screen, onNav, addonCount, refreshKey = 0 }: Props): JSX.Element {
+  const [flavor, setFlavor] = useState<string>("—");
+  const [addonsPath, setAddonsPath] = useState<string>("");
+
+  useEffect(() => {
+    bridge.call<{ active_profile: string; profiles: Array<{ id: string; flavor: string; addons_path: string }> }>(
+      "settings.get", {}
+    ).then((s) => {
+      const active = s.profiles.find((p) => p.id === s.active_profile);
+      if (active) {
+        setFlavor(active.flavor);
+        setAddonsPath(active.addons_path);
+      }
+    }).catch(() => {});
+  }, [refreshKey]);
+
   return (
     <nav className="sidebar">
       <div className="side-label">Library</div>
@@ -87,8 +105,8 @@ export function Sidebar({ screen, onNav, addonCount }: Props): JSX.Element {
       <div className="grow" />
       <div className="side-foot">
         <div className="frow">
-          <span>retail</span>
-          <span className="v">path not set</span>
+          <span>{flavor}</span>
+          <span className={`v${addonsPath ? "" : " missing"}`}>{addonsPath ? "active" : "path not set"}</span>
         </div>
         <div className="usage"><i style={{ width: "0%" }} /></div>
       </div>

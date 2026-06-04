@@ -323,15 +323,60 @@ def _profile_set_path(params: dict[str, Any]) -> dict[str, Any]:
     return _settings_get({})
 
 
+@method("profile.rename")
+def _profile_rename(params: dict[str, Any]) -> dict[str, Any]:
+    """Rename a profile's display name (id stays stable)."""
+    from wowusky.core import state as _state
+
+    pid = params.get("profile")
+    name = params.get("name")
+    if not pid:
+        raise ValueError("profile is required")
+    if not (name or "").strip():
+        raise ValueError("name is required")
+    _state.rename_profile(str(pid), str(name))
+    return _settings_get({})
+
+
+@method("profile.delete")
+def _profile_delete(params: dict[str, Any]) -> dict[str, Any]:
+    """Delete a profile. Its installed DB / backups on disk are kept."""
+    from wowusky.core import state as _state
+
+    pid = params.get("profile")
+    if not pid:
+        raise ValueError("profile is required")
+    _state.delete_profile(str(pid))
+    return _settings_get({})
+
+
 @method("profiles.scan")
 def _profiles_scan(_params: dict[str, Any]) -> dict[str, Any]:
-    """Scan the filesystem for WoW installations.
+    """Scan the filesystem for WoW installations not already configured.
+
+    Installations whose AddOns path matches an existing profile (compared by
+    real path) are dropped so Autoscan only surfaces genuinely new clients.
 
     returns: {count: int, found: [{flavor, flavor_name, addons_path}]}
     """
-    from wowusky.core import scan as _scan
+    import os
 
-    found = _scan.scan_wow_installations()
+    from wowusky.core import scan as _scan
+    from wowusky.core import state as _state
+
+    def _key(path: str) -> str:
+        return os.path.realpath(os.path.expanduser(path or ""))
+
+    existing = {
+        _key(p.get("addons_path", ""))
+        for p in _state.load_profiles().get("profiles", {}).values()
+        if p.get("addons_path")
+    }
+
+    found = [
+        inst for inst in _scan.scan_wow_installations()
+        if _key(inst.get("addons_path", "")) not in existing
+    ]
     return {"count": len(found), "found": found}
 
 

@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef } from "react";
+import { bridge } from "../api";
 import type { Theme, Density } from "../App";
 
-interface Flavor {
-  tag: string;
+interface ProfileSummary {
+  id: string;
   name: string;
+  flavor: string;
+  addons_path: string;
+  count: number;
 }
-
-const FLAVORS: Flavor[] = [
-  { tag: "retail", name: "World of Warcraft" },
-  { tag: "classic", name: "WoW Classic" },
-  { tag: "cata", name: "Cataclysm Classic" },
-];
 
 interface Props {
   version: string;
@@ -20,13 +18,32 @@ interface Props {
   onDensityChange: (d: Density) => void;
   onRescan: () => void;
   rescanning?: boolean;
+  /** Bumped elsewhere (rescan, settings) so the profile list reloads. */
+  refreshKey?: number;
+  /** Called after switching the active profile so the app refreshes. */
+  onProfileChange?: () => void;
 }
 
-export function AppBar({ version, theme, density: _density, onThemeChange, onDensityChange: _onDensityChange, onRescan, rescanning }: Props): JSX.Element {
-  const [flavorIdx, setFlavorIdx] = useState(0);
+export function AppBar({ version, theme, density: _density, onThemeChange, onDensityChange: _onDensityChange, onRescan, rescanning, refreshKey = 0, onProfileChange }: Props): JSX.Element {
+  const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const flavor = FLAVORS[flavorIdx];
+  const active = profiles.find((p) => p.id === activeId) ?? null;
+
+  useEffect(() => {
+    bridge.call<{ active_profile: string; profiles: ProfileSummary[] }>("settings.get", {})
+      .then((s) => { setProfiles(s.profiles); setActiveId(s.active_profile); })
+      .catch(() => {});
+  }, [refreshKey]);
+
+  function switchProfile(id: string) {
+    setMenuOpen(false);
+    if (id === activeId) return;
+    bridge.call("profile.setActive", { profile: id })
+      .then(() => { setActiveId(id); onProfileChange?.(); })
+      .catch(() => {});
+  }
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -50,26 +67,30 @@ export function AppBar({ version, theme, density: _density, onThemeChange, onDen
         <button
           className={`flavor-pick${menuOpen ? " on" : ""}`}
           onClick={() => setMenuOpen((o) => !o)}
+          disabled={profiles.length === 0}
         >
-          <span className="fp-tag">{flavor.tag}</span>
-          <span style={{ flex: 1 }}>{flavor.name}</span>
+          <span className="fp-tag">{active?.flavor ?? "—"}</span>
+          <span style={{ flex: 1 }}>{active?.name ?? "No profile"}</span>
           <svg className="chev" width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
         {menuOpen && (
           <div className="menu">
-            <div className="menu-label">Game version</div>
-            {FLAVORS.map((f, i) => (
+            <div className="menu-label">Profile</div>
+            {profiles.map((p) => (
               <button
-                key={f.tag}
-                className={`menu-item${i === flavorIdx ? " on" : ""}`}
-                onClick={() => { setFlavorIdx(i); setMenuOpen(false); }}
+                key={p.id}
+                className={`menu-item${p.id === activeId ? " on" : ""}`}
+                onClick={() => switchProfile(p.id)}
               >
-                {f.name}
-                <span className="fp-tag">{f.tag}</span>
+                {p.name}
+                <span className="fp-tag">{p.flavor}</span>
               </button>
             ))}
+            {profiles.length === 0 && (
+              <div className="menu-item" style={{ opacity: 0.6 }}>No profiles — add one in Settings</div>
+            )}
           </div>
         )}
       </div>

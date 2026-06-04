@@ -275,6 +275,35 @@ def set_active_profile(profile_id):
         save_profiles(data)
 
 
+def rename_profile(profile_id, new_name):
+    """Change a profile's display name. The id (and its installed DB file,
+    backups, etc.) stays stable so nothing has to be migrated."""
+    data = load_profiles()
+    prof = data.get("profiles", {}).get(profile_id)
+    if not prof:
+        return False
+    name = (new_name or "").strip()
+    if name:
+        prof["name"] = name
+        save_profiles(data)
+    return True
+
+
+def delete_profile(profile_id):
+    """Remove a profile. If it was active, fall back to another profile
+    (or None when none remain). The installed DB / backups on disk are left
+    untouched so re-adding the same path restores the inventory."""
+    data = load_profiles()
+    profiles = data.get("profiles", {})
+    if profile_id not in profiles:
+        return False
+    del profiles[profile_id]
+    if data.get("active") == profile_id:
+        data["active"] = next(iter(profiles), None)
+    save_profiles(data)
+    return True
+
+
 def add_or_update_profile(name, addons_path):
     data = load_profiles()
     prof = infer_profile_from_path(addons_path)
