@@ -6,6 +6,13 @@ import type { InstalledAddon, InstalledResult } from "./installedData";
 interface Props {
   /** Bumped by the AppBar rescan button to force a reload. */
   refreshKey: number;
+  /** Called after a successful update/remove so the sidebar count refreshes. */
+  onChanged?: () => void;
+}
+
+interface ActionResult extends InstalledResult {
+  ok: boolean;
+  error?: string;
 }
 
 function MonoBadge({ a, size = 34 }: { a: InstalledAddon; size?: number }): JSX.Element {
@@ -19,11 +26,14 @@ function MonoBadge({ a, size = 34 }: { a: InstalledAddon; size?: number }): JSX.
   );
 }
 
-export function InstalledScreen({ refreshKey }: Props): JSX.Element {
+export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
   const [result, setResult] = useState<InstalledResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  // id of the addon a mutation is currently running for ("" = none).
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -33,6 +43,29 @@ export function InstalledScreen({ refreshKey }: Props): JSX.Element {
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, [refreshKey]);
+
+  function runAction(method: "addon.update" | "addon.remove", a: InstalledAddon) {
+    if (busy) return;
+    if (method === "addon.remove" && !window.confirm(`Remove ${a.name}? A backup is taken first.`)) {
+      return;
+    }
+    setBusy(a.id);
+    setNotice(null);
+    bridge
+      .call<ActionResult>(method, { id: a.id })
+      .then((r) => {
+        if (!r.ok) {
+          setNotice(`${a.name}: ${r.error ?? "action failed"}`);
+          return;
+        }
+        // The action returns the refreshed installed list — apply it directly.
+        setResult({ profile: r.profile, count: r.count, addons_path: r.addons_path, items: r.items });
+        setNotice(`${a.name}: ${method === "addon.remove" ? "removed" : "updated"}`);
+        onChanged?.();
+      })
+      .catch((e) => setNotice(`${a.name}: ${String(e)}`))
+      .finally(() => setBusy(null));
+  }
 
   const all = result?.items ?? [];
   const q = query.trim().toLowerCase();
@@ -65,6 +98,7 @@ export function InstalledScreen({ refreshKey }: Props): JSX.Element {
             />
           </label>
         </div>
+        {notice && <div className="inst-notice">{notice}</div>}
       </div>
 
       <div className="page-body scroll">
@@ -119,8 +153,20 @@ export function InstalledScreen({ refreshKey }: Props): JSX.Element {
                   </span>
                   <span className="ver-mono">{a.version}</span>
                   <div className="iright">
-                    <button className="btn btn-sm">Update</button>
-                    <button className="btn btn-sm btn-danger">Remove</button>
+                    <button
+                      className="btn btn-sm"
+                      disabled={busy !== null}
+                      onClick={() => runAction("addon.update", a)}
+                    >
+                      {busy === a.id ? "…" : "Update"}
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      disabled={busy !== null}
+                      onClick={() => runAction("addon.remove", a)}
+                    >
+                      Remove
+                    </button>
                   </div>
               </div>
             ))}

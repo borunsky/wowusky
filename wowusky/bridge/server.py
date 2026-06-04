@@ -98,11 +98,18 @@ def _catalog_search(params: dict[str, Any]) -> dict[str, Any]:
     returns: {total: int, count: int, categories: [str], items: [addon]}
     """
     from wowusky.catalog import load_catalog
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
 
     catalog = load_catalog()
     query = str(params.get("query", "")).strip().lower()
     category = params.get("category") or "All"
     limit = int(params.get("limit", 200))
+
+    try:
+        installed_ids = set(_installed.load(_state.get_active_profile_id()).keys())
+    except Exception:  # noqa: BLE001 — search must work even without a profile
+        installed_ids = set()
 
     categories = sorted({e.get("category", "Other") for e in catalog})
 
@@ -114,7 +121,9 @@ def _catalog_search(params: dict[str, Any]) -> dict[str, Any]:
             hay = f"{entry.get('name', '')} {entry.get('description', '')}".lower()
             if query not in hay:
                 continue
-        items.append(_entry_to_addon(entry))
+        addon = _entry_to_addon(entry)
+        addon["installed"] = addon["id"] in installed_ids
+        items.append(addon)
 
     total = len(items)
     items.sort(key=lambda a: a["name"].lower())
@@ -362,6 +371,119 @@ def _backups_list(_params: dict[str, Any]) -> dict[str, Any]:
         "full_count": len(full),
         "addon_count": len(addon_backups),
     }
+
+
+# ---------------------------------------------------------------------------
+# Addon actions (install / update / remove)
+# ---------------------------------------------------------------------------
+
+
+def _collect_log() -> tuple[Callable[..., None], list[str]]:
+    """Return a ``log`` callable and the list it appends formatted lines to."""
+    lines: list[str] = []
+
+    def _log_line(*args: Any) -> None:
+        lines.append(" ".join(str(a) for a in args))
+
+    return _log_line, lines
+
+
+@method("addon.install")
+def _addon_install(params: dict[str, Any]) -> dict[str, Any]:
+    """Install (or reinstall) a catalog addon by id for the active profile.
+
+    params: {id: str}
+    returns: {ok: bool, log: [str], error?: str, installed?: {...}}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import state as _state
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+
+    entry = _orch.find_addon_by_id(addon_id)
+    if entry is None:
+        return {"ok": False, "error": f"addon not in catalog: {addon_id}"}
+
+    addons_path = _state.get_addons_path()
+    log_fn, lines = _collect_log()
+    try:
+        _orch.install_addon(entry, addons_path, log=log_fn)
+    except Exception as exc:  # noqa: BLE001 — report install failure to the UI
+        _log("install error:", traceback.format_exc())
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}", "log": lines}
+
+    profile = _state.get_active_profile_id()
+    return {"ok": True, "log": lines, **_installed_list({"profile": profile})}
+
+
+# An update is an install of the latest version over the existing folders;
+# the core installer backs up the current copy first.
+_METHODS["addon.update"] = _addon_install
+
+
+@method("addon.remove")
+def _addon_remove(params: dict[str, Any]) -> dict[str, Any]:
+    """Uninstall an addon (folders + DB entry) for the active profile.
+
+    A backup is taken automatically by the core uninstall logic.
+    params: {id: str}
+    returns: {ok: bool, log: [str], error?: str, installed?: {...}}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import state as _state
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+
+    addons_path = _state.get_addons_path()
+    log_fn, lines = _collect_log()
+    try:
+        _orch.uninstall_addon(addon_id, addons_path, log=log_fn)
+    except Exception as exc:  # noqa: BLE001 — report removal failure to the UI
+        _log("remove error:", traceback.format_exc())
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}", "log": lines}
+
+    profile = _state.get_active_profile_id()
+    return {"ok": True, "log": lines, **_installed_list({"profile": profile})}
+
+
+# ---------------------------------------------------------------------------
+# Backup restore
+# ---------------------------------------------------------------------------
+
+
+@method("backups.restore")
+def _backups_restore(params: dict[str, Any]) -> dict[str, Any]:
+    """Restore a backup ZIP.
+
+    params: {path: str, addon_id?: str}
+      - with addon_id  -> restore a per-addon snapshot (rollback)
+      - without        -> restore a full-profile backup
+    returns: {ok: bool, log: [str], error?: str}
+    """
+    from wowusky.core import backup as _backup
+    from wowusky.core import state as _state
+
+    path = params.get("path")
+    if not path:
+        raise ValueError("path is required")
+    addon_id = params.get("addon_id")
+
+    log_fn, lines = _collect_log()
+    try:
+        addons_path = _state.get_addons_path()
+        if addon_id:
+            ok = _backup.rollback_addon_to_backup(addon_id, path, addons_path, log=log_fn)
+        else:
+            ok = _backup.restore_full_backup(path, log=log_fn)
+    except Exception as exc:  # noqa: BLE001 — report restore failure to the UI
+        _log("restore error:", traceback.format_exc())
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}", "log": lines}
+
+    return {"ok": bool(ok), "log": lines}
 
 
 # ---------------------------------------------------------------------------

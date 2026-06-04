@@ -48,7 +48,21 @@ function fmtDate(mtime: number): string {
   return d.toLocaleString();
 }
 
-function BackupCard({ icon, title, meta }: { icon: JSX.Element; title: string; meta: string[] }): JSX.Element {
+function BackupCard({
+  icon,
+  title,
+  meta,
+  busy,
+  disabled,
+  onRestore,
+}: {
+  icon: JSX.Element;
+  title: string;
+  meta: string[];
+  busy?: boolean;
+  disabled?: boolean;
+  onRestore?: () => void;
+}): JSX.Element {
   return (
     <div className="bcard">
       <div className="bicon">{icon}</div>
@@ -59,7 +73,9 @@ function BackupCard({ icon, title, meta }: { icon: JSX.Element; title: string; m
         </div>
       </div>
       <div className="br">
-        <button className="btn btn-sm">Restore</button>
+        <button className="btn btn-sm" disabled={disabled} onClick={onRestore}>
+          {busy ? "…" : "Restore"}
+        </button>
       </div>
     </div>
   );
@@ -69,6 +85,8 @@ export function BackupsScreen(): JSX.Element {
   const [result, setResult] = useState<BackupsResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   function reload() {
     setLoading(true);
@@ -79,6 +97,23 @@ export function BackupsScreen(): JSX.Element {
       .finally(() => setLoading(false));
   }
   useEffect(reload, []);
+
+  function restore(path: string, label: string, addonId?: string) {
+    if (busy) return;
+    if (!window.confirm(`Restore ${label}? This overwrites the current files.`)) return;
+    setBusy(path);
+    setNotice(null);
+    bridge
+      .call<{ ok: boolean; error?: string }>("backups.restore", {
+        path,
+        ...(addonId ? { addon_id: addonId } : {}),
+      })
+      .then((r) => {
+        setNotice(r.ok ? `${label}: restored` : `${label}: ${r.error ?? "restore failed"}`);
+      })
+      .catch((e) => setNotice(`${label}: ${String(e)}`))
+      .finally(() => setBusy(null));
+  }
 
   const realEmpty = !!result && result.full_count === 0 && result.addon_count === 0;
   // Show demo data when the profile has none yet, or when the bridge call
@@ -97,6 +132,8 @@ export function BackupsScreen(): JSX.Element {
         </div>
         <div className="page-sub">Snapshots of your addons and full installations</div>
       </div>
+
+      {notice && <div className="inst-toolbar"><div className="inst-notice">{notice}</div></div>}
 
       <div className="page-body scroll">
         <div className="page-pad">
@@ -142,6 +179,9 @@ export function BackupsScreen(): JSX.Element {
                           </svg>
                         }
                         meta={[fmtDate(b.mtime), fmtSize(b.size)]}
+                        busy={busy === b.path}
+                        disabled={isDemo || busy !== null}
+                        onRestore={isDemo ? undefined : () => restore(b.path, b.name)}
                       />
                     ))}
                   </div>
@@ -165,6 +205,9 @@ export function BackupsScreen(): JSX.Element {
                           </svg>
                         }
                         meta={[`v${b.version}`, fmtDate(b.mtime), fmtSize(b.size)]}
+                        busy={busy === b.path}
+                        disabled={isDemo || busy !== null}
+                        onRestore={isDemo ? undefined : () => restore(b.path, b.addon_name, b.addon_id)}
                       />
                     ))}
                   </div>

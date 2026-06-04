@@ -24,7 +24,17 @@ function SourcePill({ source }: { source: Addon["source"] }): JSX.Element {
   );
 }
 
-function InstallButton({ installed }: { installed?: boolean }): JSX.Element {
+function InstallButton({
+  installed,
+  busy,
+  disabled,
+  onInstall,
+}: {
+  installed?: boolean;
+  busy?: boolean;
+  disabled?: boolean;
+  onInstall: () => void;
+}): JSX.Element {
   if (installed) {
     return (
       <span className="installed-tag">
@@ -35,7 +45,11 @@ function InstallButton({ installed }: { installed?: boolean }): JSX.Element {
       </span>
     );
   }
-  return <button className="btn btn-primary btn-sm">Install</button>;
+  return (
+    <button className="btn btn-primary btn-sm" disabled={disabled} onClick={onInstall}>
+      {busy ? "…" : "Install"}
+    </button>
+  );
 }
 
 export function BrowseScreen(): JSX.Element {
@@ -49,7 +63,35 @@ export function BrowseScreen(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Addon | null>(null);
   const [catMenuOpen, setCatMenuOpen] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const catMenuRef = useRef<HTMLDivElement>(null);
+
+  // Re-run the current search so the installed flag refreshes after a change.
+  function refetch() {
+    bridge
+      .call<SearchResult>("catalog.search", { query, category })
+      .then((r) => setResult(r))
+      .catch(() => {});
+  }
+
+  function installAddon(a: Addon) {
+    if (busyId) return;
+    setBusyId(a.id);
+    setNotice(null);
+    bridge
+      .call<{ ok: boolean; error?: string }>("addon.install", { id: a.id })
+      .then((r) => {
+        if (!r.ok) {
+          setNotice(`${a.name}: ${r.error ?? "install failed"}`);
+          return;
+        }
+        setNotice(`${a.name}: installed`);
+        refetch();
+      })
+      .catch((e) => setNotice(`${a.name}: ${String(e)}`))
+      .finally(() => setBusyId(null));
+  }
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -156,6 +198,7 @@ export function BrowseScreen(): JSX.Element {
             </div>
           </div>
         </div>
+        {notice && <div className="inst-notice">{notice}</div>}
       </div>
 
       <div className="page-body scroll">
@@ -206,7 +249,12 @@ export function BrowseScreen(): JSX.Element {
                     </div>
                   </div>
                   <div className="right" onClick={(e) => e.stopPropagation()}>
-                    <InstallButton installed={a.installed} />
+                    <InstallButton
+                      installed={a.installed}
+                      busy={busyId === a.id}
+                      disabled={busyId !== null}
+                      onInstall={() => installAddon(a)}
+                    />
                   </div>
                 </div>
               ))}
@@ -236,7 +284,12 @@ export function BrowseScreen(): JSX.Element {
                         <span className="s">{a.category}</span>
                       </span>
                       <span onClick={(e) => e.stopPropagation()}>
-                        <InstallButton installed={a.installed} />
+                        <InstallButton
+                          installed={a.installed}
+                          busy={busyId === a.id}
+                          disabled={busyId !== null}
+                          onInstall={() => installAddon(a)}
+                        />
                       </span>
                     </div>
                   </div>
@@ -247,7 +300,29 @@ export function BrowseScreen(): JSX.Element {
         </div>
       </div>
 
-      <DetailPanel addon={selected} onClose={() => setSelected(null)} />
+      <DetailPanel
+        addon={selected}
+        busy={selected ? busyId === selected.id : false}
+        disabled={busyId !== null}
+        onClose={() => setSelected(null)}
+        onInstall={() => selected && installAddon(selected)}
+        onRemove={() => {
+          if (!selected) return;
+          if (busyId) return;
+          if (!window.confirm(`Remove ${selected.name}? A backup is taken first.`)) return;
+          setBusyId(selected.id);
+          setNotice(null);
+          bridge
+            .call<{ ok: boolean; error?: string }>("addon.remove", { id: selected.id })
+            .then((r) => {
+              if (!r.ok) { setNotice(`${selected.name}: ${r.error ?? "remove failed"}`); return; }
+              setNotice(`${selected.name}: removed`);
+              refetch();
+            })
+            .catch((e) => setNotice(`${selected.name}: ${String(e)}`))
+            .finally(() => setBusyId(null));
+        }}
+      />
     </div>
   );
 }

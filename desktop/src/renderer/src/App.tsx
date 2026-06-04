@@ -132,7 +132,10 @@ export default function App(): JSX.Element {
           {screen === "browse" ? (
             <BrowseScreen />
           ) : screen === "installed" ? (
-            <InstalledScreen refreshKey={refreshKey} />
+            <InstalledScreen
+              refreshKey={refreshKey}
+              onChanged={() => setRefreshKey((k) => k + 1)}
+            />
           ) : screen === "weakauras" ? (
             <WeakAurasScreen />
           ) : screen === "backups" ? (

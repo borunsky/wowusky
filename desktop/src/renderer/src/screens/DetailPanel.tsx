@@ -2,10 +2,14 @@ import { sourceLabel, rarityFor, type Addon } from "./browseData";
 
 interface Props {
   addon: Addon | null;
+  busy?: boolean;
+  disabled?: boolean;
   onClose: () => void;
+  onInstall: () => void;
+  onRemove: () => void;
 }
 
-export function DetailPanel({ addon, onClose }: Props): JSX.Element {
+export function DetailPanel({ addon, busy, disabled, onClose, onInstall, onRemove }: Props): JSX.Element {
   const open = addon !== null;
   return (
     <div className={`detail${open ? " open" : ""}`}>
@@ -33,11 +37,17 @@ export function DetailPanel({ addon, onClose }: Props): JSX.Element {
             <div className="detail-cta">
               {addon.installed ? (
                 <>
-                  <button className="btn" style={{ flex: 1 }}>Update</button>
-                  <button className="btn btn-danger">Remove</button>
+                  <button className="btn" style={{ flex: 1 }} disabled={disabled} onClick={onInstall}>
+                    {busy ? "…" : "Update"}
+                  </button>
+                  <button className="btn btn-danger" disabled={disabled} onClick={onRemove}>
+                    Remove
+                  </button>
                 </>
               ) : (
-                <button className="btn btn-primary" style={{ flex: 1 }}>Install</button>
+                <button className="btn btn-primary" style={{ flex: 1 }} disabled={disabled} onClick={onInstall}>
+                  {busy ? "…" : "Install"}
+                </button>
               )}
             </div>
           </div>
