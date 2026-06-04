@@ -17,16 +17,29 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
      Edit CHANGELOG.md, not the text between these markers. -->
 ## What's new in v0.9.0
 
+Feature release — desktop app. wowusky now ships a redesigned Electron + React
+desktop UI on top of the existing Python engine, exposed through a JSON-RPC
+bridge.
+
 ### Added
-- **Desktop app (Electron + React)** — a redesigned window-chrome UI with
-  Browse, Installed, WeakAuras, Backups, Health and Settings screens, light/dark
-  themes, accent colors and a compact density mode. It talks to the existing
-  Python engine through a JSON-RPC bridge (`python -m wowusky.bridge`).
-- **Live actions with streaming progress** — Install / Update / Remove and
-  backup Restore run through the bridge and stream per-step log lines and
-  download percentages to the UI.
-- **AppImage packaging** via electron-builder, plus an updated AUR `PKGBUILD`
-  that builds and installs the desktop shell alongside the Python package.
+- **Desktop shell (`desktop/`)**: Electron + React + Vite app with a custom
+  titlebar, sidebar navigation and Browse / Installed / WeakAuras / Backups /
+  Health / Settings screens. Light & dark themes, four accent colors and a
+  compact density mode, all persisted locally.
+- **JSON-RPC bridge (`wowusky/bridge`)**: newline-delimited JSON-RPC 2.0 server
+  over stdin/stdout (`python -m wowusky.bridge`) exposing catalog search,
+  installed list, rescan, settings/profiles, WeakAuras, backups and an offline
+  health check — all reusing the existing `wowusky.core` / `orchestrator` logic.
+- **Live actions**: Install, Update, Remove and backup Restore run through the
+  bridge and stream per-step log lines plus download progress to the UI via
+  `action.progress` / `action.done` notifications.
+- **Packaging**: electron-builder AppImage target and an updated AUR `PKGBUILD`
+  that builds the desktop shell and installs it next to the Python package.
+
+### Fixed
+- `scan.sync_filesystem_with_db` no longer raises `KeyError: 'source'` when a
+  discovered folder matches a catalog entry that uses the `provider` field
+  (the shape the bundled catalog actually ships).
 <!-- WHATS-NEW:END -->
 
 ---
