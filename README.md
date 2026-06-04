@@ -238,18 +238,21 @@ The v0.4 refactor was the prerequisite. Now planned:
   `wowusky profile switch retail`, `wowusky set curseforge-key <key>`,
   `--json`/`--quiet`, shell completion, and a systemd user timer for daily
   update checks.~~ ✅ done
-- **v0.9.0** — *Portability & diagnostics*:
-  - **Addon-set export/import** — export a profile's full addon list (with
-    versions and sources) to a shareable JSON file, and import it back into a
-    new or existing profile with per-addon conflict resolution. Available from
-    both the GUI and the CLI (`wowusky export <profile> <file>`,
-    `wowusky import-set <file>`).
-  - **`wowusky health` command + Health tab** — surface the existing
-    `tools/health_check` engine as a first-class CLI command and a GUI tab
-    (offline/online check, results table, error filter, JSON export).
+- ~~**v0.9.0** — *Portability & diagnostics*: addon-set export/import (GUI +
+  CLI `export` / `import-set`, with per-addon conflict resolution) and the
+  `wowusky health` command plus a Health tab.~~ ✅ done
 - ~~**v0.9.4** — auto-update on launch + in-app "updates available" indicator
   (wires up the per-profile `auto_update` flag), and CurseForge/GitHub ZIP
   version selection in the addon detail panel.~~ ✅ done
+- **v0.9.5** — *Workflow polish*:
+  - **Dependency preview** — the addon detail panel lists which dependencies
+    will be co-installed *before* you click Install.
+  - **Bulk operations** — select multiple addons on the Installed tab and
+    update or remove them in one action.
+  - **Scheduled-update visibility** — show the systemd update-timer status in
+    the desktop Settings screen.
+  - **Sturdier "Import from Downloads"** — handle multiple matching ZIPs and
+    auto-associate them with catalog entries.
 - **Later** — see [issues](https://github.com/borunsky/wowusky/issues)
   or open one with a request.
 
