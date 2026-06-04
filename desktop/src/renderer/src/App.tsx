@@ -55,6 +55,7 @@ export default function App(): JSX.Element {
   const [toast, setToast] = useState<string | null>(null);
   // Auto-update runs at most once per session, only for the active profile.
   const autoUpdateRan = useRef(false);
+  const notifiedUpdates = useRef(false);
 
   function handleRescan() {
     setRescanning(true);
@@ -95,10 +96,20 @@ export default function App(): JSX.Element {
         setUpdateCount(ids.length);
         if (ids.length === 0 || autoUpdateRan.current) return;
         return bridge
-          .call<{ active_profile: string; auto_update_on_launch?: boolean; profiles: Array<{ id: string; auto_update?: boolean }> }>("settings.get", {})
+          .call<{ active_profile: string; auto_update_on_launch?: boolean; desktop_notifications?: boolean; profiles: Array<{ id: string; auto_update?: boolean }> }>("settings.get", {})
           .then((s) => {
             const active = s.profiles.find((p) => p.id === s.active_profile);
-            if (!active?.auto_update && !s.auto_update_on_launch) return;
+            if (!active?.auto_update && !s.auto_update_on_launch) {
+              // Not auto-updating — surface a one-shot desktop notification (#54).
+              if (s.desktop_notifications !== false && !notifiedUpdates.current) {
+                notifiedUpdates.current = true;
+                window.wowusky?.notify?.(
+                  "wowusky — updates available",
+                  `${ids.length} addon${ids.length === 1 ? "" : "s"} can be updated.`,
+                );
+              }
+              return;
+            }
             autoUpdateRan.current = true;
             setToast(`Auto-updating ${ids.length} addon${ids.length === 1 ? "" : "s"}…`);
             return bridge

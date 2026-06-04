@@ -91,6 +91,12 @@ def get_auto_update_on_launch() -> bool:
 def set_auto_update_on_launch(value: bool) -> None:
     set_key("auto_update_on_launch", bool(value))
 
+def get_desktop_notifications() -> bool:
+    return bool(get("desktop_notifications", True))
+
+def set_desktop_notifications(value: bool) -> None:
+    set_key("desktop_notifications", bool(value))
+
 
 def migrate_legacy_installed(target_profile_id: str) -> bool:
     """Move the pre-0.4 ``installed.json`` into the per-profile location.

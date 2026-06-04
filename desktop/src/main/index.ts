@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog, clipboard } from "electron";
+import { app, BrowserWindow, ipcMain, shell, dialog, clipboard, Notification } from "electron";
 import {
   spawn,
   spawnSync,
@@ -173,6 +173,15 @@ app.whenReady().then(() => {
   // Update badge (Linux/macOS taskbar; no-op on platforms without badge support).
   ipcMain.on("badge:set", (_e, count: number) => {
     app.setBadgeCount(Math.max(0, count | 0));
+  });
+
+  // Native desktop notification for available updates (#54).
+  ipcMain.on("notify", (_e, payload: { title: string; body: string }) => {
+    if (!Notification.isSupported()) return;
+    new Notification({
+      title: payload?.title || "wowusky",
+      body: payload?.body || "",
+    }).show();
   });
 
   // Clipboard access for addon-set sharing.

@@ -318,6 +318,7 @@ def _settings_get(_params: dict[str, Any]) -> dict[str, Any]:
         "dry_run": bool(_state.is_dry_run()),
         "curseforge_api_key_set": bool(cf_key),
         "auto_update_on_launch": bool(_config.get_auto_update_on_launch()),
+        "desktop_notifications": bool(_config.get_desktop_notifications()),
         "active_profile": _state.get_active_profile_id(),
         "profiles": _profile_summaries(),
     }
@@ -340,6 +341,9 @@ def _settings_update(params: dict[str, Any]) -> dict[str, Any]:
     if "auto_update_on_launch" in params:
         from wowusky.core import config as _config
         _config.set_auto_update_on_launch(bool(params["auto_update_on_launch"]))
+    if "desktop_notifications" in params:
+        from wowusky.core import config as _config
+        _config.set_desktop_notifications(bool(params["desktop_notifications"]))
 
     return _settings_get({})
 
@@ -412,6 +416,116 @@ def _profile_set_auto_update(params: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("profile is required")
     _state.set_auto_update(str(pid), bool(params.get("enabled")))
     return _settings_get({})
+
+
+def _sync_diff(source: str, target: str) -> dict[str, Any]:
+    """Compare the source and target installed DBs.
+
+    Returns the source profile's catalog addons bucketed by how they relate
+    to the target: ``new`` (absent), ``conflict`` (present, different version)
+    or ``same`` (present, identical version). Non-catalog (orphan/imported)
+    addons can't be reinstalled elsewhere and are reported separately.
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import installed as _installed
+
+    src_db = _installed.load(source)
+    tgt_db = _installed.load(target)
+
+    new: list[dict[str, Any]] = []
+    conflict: list[dict[str, Any]] = []
+    same: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for addon_id, entry in sorted(src_db.items(), key=lambda kv: (kv[1].get("name") or kv[0]).lower()):
+        name = entry.get("name") or addon_id
+        if _orch.find_addon_by_id(addon_id) is None:
+            skipped.append({"id": addon_id, "name": name, "reason": "not in catalog"})
+            continue
+        row = {
+            "id": addon_id,
+            "name": name,
+            "version": entry.get("version") or "",
+        }
+        if addon_id not in tgt_db:
+            new.append(row)
+        elif (tgt_db[addon_id].get("version") or "") != row["version"]:
+            conflict.append({**row, "target_version": tgt_db[addon_id].get("version") or ""})
+        else:
+            same.append(row)
+    return {"new": new, "conflict": conflict, "same": same, "skipped": skipped}
+
+
+@method("profile.syncPreview")
+def _profile_sync_preview(params: dict[str, Any]) -> dict[str, Any]:
+    """Preview a cross-profile sync without changing anything.
+
+    params: {source: str, target?: str}  (target defaults to the active profile)
+    returns: {source, target, new: [...], conflict: [...], same: [...], skipped: [...]}
+    """
+    from wowusky.core import state as _state
+
+    source = params.get("source")
+    if not source:
+        raise ValueError("source is required")
+    target = params.get("target") or _state.get_active_profile_id()
+    if source == target:
+        raise ValueError("source and target must differ")
+    return {"source": source, "target": target, **_sync_diff(source, target)}
+
+
+@method("profile.syncApply")
+def _profile_sync_apply(params: dict[str, Any]) -> dict[str, Any]:
+    """Install the source profile's addons into the target profile.
+
+    Installs every catalog addon present in *source* into *target* unless its
+    id is listed in ``skip_ids``. Addons already at the same version are
+    skipped automatically. The active profile is restored afterwards.
+
+    params: {source: str, target?: str, skip_ids?: [str]}
+    returns: {ok, installed: [str], failed: [{id, error}], log: [str]}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import state as _state
+
+    source = params.get("source")
+    if not source:
+        raise ValueError("source is required")
+    target = params.get("target") or _state.get_active_profile_id()
+    if source == target:
+        raise ValueError("source and target must differ")
+    skip = set(params.get("skip_ids") or [])
+
+    diff = _sync_diff(source, target)
+    # Sync new + conflicting addons; "same" needs no work.
+    candidates = [r["id"] for r in (diff["new"] + diff["conflict"]) if r["id"] not in skip]
+
+    previous_active = _state.get_active_profile_id()
+    installed_ok: list[str] = []
+    failed: list[dict[str, str]] = []
+    log: list[str] = []
+    try:
+        _state.set_active_profile(target)
+        addons_path = _state.get_addons_path()
+        for addon_id in candidates:
+            entry = _orch.find_addon_by_id(addon_id)
+            if entry is None:
+                failed.append({"id": addon_id, "error": "not in catalog"})
+                continue
+            try:
+                _orch.install_addon(entry, addons_path, log=log.append)
+                installed_ok.append(addon_id)
+            except Exception as exc:  # noqa: BLE001 — keep syncing the rest
+                _log("sync install error:", traceback.format_exc())
+                failed.append({"id": addon_id, "error": f"{type(exc).__name__}: {exc}"})
+    finally:
+        _state.set_active_profile(previous_active)
+
+    return {
+        "ok": not failed,
+        "installed": installed_ok,
+        "failed": failed,
+        "log": log,
+    }
 
 
 @method("profiles.scan")

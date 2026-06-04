@@ -23,6 +23,7 @@ interface CoreSettings {
   wtf_path: string;
   dry_run: boolean;
   auto_update_on_launch: boolean;
+  desktop_notifications: boolean;
   curseforge_api_key_set: boolean;
   active_profile: string;
   profiles: ProfileSummary[];
@@ -62,6 +63,21 @@ interface ImportPreview {
 }
 
 type SetPreviewItem = AddonPreviewItem;
+
+interface SyncRow {
+  id: string;
+  name: string;
+  version: string;
+  target_version?: string;
+}
+interface SyncPreview {
+  source: string;
+  target: string;
+  new: SyncRow[];
+  conflict: SyncRow[];
+  same: SyncRow[];
+  skipped: { id: string; name: string; reason: string }[];
+}
 
 interface Props {
   theme: Theme;
@@ -108,6 +124,12 @@ export function SettingsScreen({
   const [dlScanning, setDlScanning] = useState(false);
   const [dlBusy, setDlBusy] = useState<string | null>(null);
   const [dlNotice, setDlNotice] = useState<string | null>(null);
+  // Cross-profile sync (#55)
+  const [syncSource, setSyncSource] = useState<string>("");
+  const [syncPreview, setSyncPreview] = useState<SyncPreview | null>(null);
+  const [syncSkipConflicts, setSyncSkipConflicts] = useState(true);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   // Addon-set sharing (#44)
   const [setNotice, setSetNotice] = useState<string | null>(null);
   const [setPasteOpen, setSetPasteOpen] = useState(false);
@@ -257,6 +279,11 @@ export function SettingsScreen({
     bridge.call<CoreSettings>("settings.update", { auto_update_on_launch: !core.auto_update_on_launch })
       .then(setCore).catch(() => {});
   }
+  function toggleDesktopNotifications() {
+    if (!core) return;
+    bridge.call<CoreSettings>("settings.update", { desktop_notifications: !core.desktop_notifications })
+      .then(setCore).catch(() => {});
+  }
   function switchProfile(id: string) {
     bridge.call<CoreSettings>("profile.setActive", { profile: id })
       .then((s) => { setCore(s); setAddonsPath(s.addons_path); onProfileChange(); }).catch(() => {});
@@ -264,6 +291,32 @@ export function SettingsScreen({
   function toggleAutoUpdate(id: string, enabled: boolean) {
     bridge.call<CoreSettings>("profile.setAutoUpdate", { profile: id, enabled })
       .then((s) => { setCore(s); onProfileChange(); }).catch(() => {});
+  }
+
+  function previewSync(source: string) {
+    setSyncSource(source);
+    setSyncPreview(null);
+    setSyncNotice(null);
+    if (!source) return;
+    bridge.call<SyncPreview>("profile.syncPreview", { source })
+      .then(setSyncPreview)
+      .catch((e) => setSyncNotice(String(e)));
+  }
+  function applySync() {
+    if (!syncPreview) return;
+    setSyncBusy(true);
+    setSyncNotice(null);
+    const skip_ids = syncSkipConflicts ? syncPreview.conflict.map((r) => r.id) : [];
+    bridge.call<{ ok: boolean; installed: string[]; failed: { id: string; error: string }[] }>(
+      "profile.syncApply", { source: syncPreview.source, skip_ids })
+      .then((r) => {
+        setSyncNotice(`Synced ${r.installed.length} addon${r.installed.length === 1 ? "" : "s"}${r.failed.length ? `, ${r.failed.length} failed` : ""}`);
+        setSyncPreview(null);
+        setSyncSource("");
+        onProfileChange();
+      })
+      .catch((e) => setSyncNotice(String(e)))
+      .finally(() => setSyncBusy(false));
   }
 
   function autoscan() {
@@ -584,6 +637,70 @@ export function SettingsScreen({
               {core && core.profiles.length === 0 && (
                 <div className="set-row"><div className="sl"><div className="sd">No profiles configured.</div></div></div>
               )}
+              {/* Cross-profile sync (#55) */}
+              {core && core.profiles.length >= 2 && (
+                <div className="set-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 10, borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 4 }}>
+                  <div className="sl">
+                    <div className="st">Sync from another profile</div>
+                    <div className="sd">
+                      Copy addons into the active profile
+                      {core.profiles.find((p) => p.id === core.active_profile)?.name
+                        ? ` (${core.profiles.find((p) => p.id === core.active_profile)?.name})`
+                        : ""}.
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <div className="field" style={{ flex: "none" }}>
+                      <select value={syncSource} onChange={(e) => previewSync(e.target.value)}>
+                        <option value="">Choose source…</option>
+                        {core.profiles.filter((p) => p.id !== core.active_profile).map((p) => (
+                          <option key={p.id} value={p.id}>{p.name} ({p.count})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  {syncPreview && (
+                    <>
+                      <div className="sd">
+                        <span style={{ color: "var(--green)" }}>{syncPreview.new.length} new</span>
+                        {syncPreview.conflict.length > 0 && <span style={{ color: "var(--red)", marginLeft: 6 }}>{syncPreview.conflict.length} conflict(s)</span>}
+                        {syncPreview.same.length > 0 && <span style={{ color: "var(--text-faint)", marginLeft: 6 }}>{syncPreview.same.length} already installed</span>}
+                        {syncPreview.skipped.length > 0 && <span style={{ color: "var(--text-faint)", marginLeft: 6 }}>{syncPreview.skipped.length} not in catalog</span>}
+                      </div>
+                      <div className="set-preview-list">
+                        {[...syncPreview.new, ...syncPreview.conflict].map((it) => {
+                          const conflict = syncPreview.conflict.includes(it);
+                          return (
+                            <div className="set-preview-row" key={it.id}>
+                              <span className="spn">{it.name}</span>
+                              <span className={`spbadge sp-${conflict ? "conflict" : "new"}`}>{conflict ? "conflict" : "new"}</span>
+                              <span className="spv">{conflict ? `${it.target_version || "?"} → ${it.version}` : it.version}</span>
+                            </div>
+                          );
+                        })}
+                        {syncPreview.new.length + syncPreview.conflict.length === 0 && (
+                          <div className="sd">Nothing to sync — the active profile is already up to date.</div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <label className="set-check">
+                          <input type="checkbox" checked={syncSkipConflicts} onChange={(e) => setSyncSkipConflicts(e.target.checked)} />
+                          Skip conflicts
+                        </label>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          disabled={syncBusy || syncPreview.new.length + syncPreview.conflict.length === 0}
+                          onClick={applySync}
+                        >
+                          {syncBusy ? "Syncing…" : "Sync"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {syncNotice && <div className="sd" style={{ color: "var(--accent)" }}>{syncNotice}</div>}
+                </div>
+              )}
+
               {/* Autoscan */}
               <div className="set-row" style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 4 }}>
                 <div className="sl">
@@ -933,6 +1050,15 @@ export function SettingsScreen({
                 </div>
                 <div className="sr">
                   <div className={`switch${core?.auto_update_on_launch ? " on" : ""}`} onClick={toggleAutoUpdateOnLaunch}><i /></div>
+                </div>
+              </div>
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Desktop notifications</div>
+                  <div className="sd">Show a native notification when addon updates are available on launch.</div>
+                </div>
+                <div className="sr">
+                  <div className={`switch${core?.desktop_notifications ? " on" : ""}`} onClick={toggleDesktopNotifications}><i /></div>
                 </div>
               </div>
               <div className="set-row">

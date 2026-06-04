@@ -34,6 +34,10 @@ const api = {
 
   /** Read text from the system clipboard. */
   clipboardRead: (): Promise<string> => ipcRenderer.invoke("clipboard:read"),
+
+  /** Show a native desktop notification. */
+  notify: (title: string, body: string) =>
+    ipcRenderer.send("notify", { title, body }),
 };
 
 contextBridge.exposeInMainWorld("wowusky", api);
