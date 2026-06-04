@@ -35,14 +35,27 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
   // id of the addon a mutation is currently running for ("" = none).
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Map of addon id -> latest version, for addons that have an update available.
+  const [updates, setUpdates] = useState<Record<string, string>>({});
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
   const progress = useActionProgress();
   const liveLabel = busy ? progressLabel(progress[busy]) : null;
 
+  function checkUpdates() {
+    setCheckingUpdates(true);
+    bridge
+      .call<{ updates: Record<string, string> }>("installed.updates", {})
+      .then((r) => setUpdates(r.updates ?? {}))
+      .catch(() => {})
+      .finally(() => setCheckingUpdates(false));
+  }
+
   useEffect(() => {
     setLoading(true);
+    setUpdates({});
     bridge
       .call<InstalledResult>("installed.list", {})
-      .then((r) => { setResult(r); setError(null); })
+      .then((r) => { setResult(r); setError(null); checkUpdates(); })
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, [refreshKey]);
@@ -63,6 +76,12 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
         }
         // The action returns the refreshed installed list — apply it directly.
         setResult({ profile: r.profile, count: r.count, addons_path: r.addons_path, items: r.items });
+        // The addon is now current (or gone) — clear its pending-update marker.
+        setUpdates((u) => {
+          const next = { ...u };
+          delete next[a.id];
+          return next;
+        });
         setNotice(`${a.name}: ${method === "addon.remove" ? "removed" : "updated"}`);
         onChanged?.();
       })
@@ -101,7 +120,9 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
             />
           </label>
         </div>
-        {(liveLabel || notice) && <div className="inst-notice">{liveLabel ?? notice}</div>}
+        {(liveLabel || notice || checkingUpdates) && (
+          <div className="inst-notice">{liveLabel ?? notice ?? "Checking for updates…"}</div>
+        )}
       </div>
 
       <div className="page-body scroll">
@@ -154,15 +175,24 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
                   <span className="dot" />
                   {sourceLabel(a.source)}
                   </span>
-                  <span className="ver-mono">{a.version}</span>
+                  <span className="ver-mono">
+                    {a.version}
+                    {updates[a.id] && (
+                      <span className="installed-tag" style={{ marginLeft: 8 }} title={`Latest: ${updates[a.id]}`}>
+                        → {updates[a.id]}
+                      </span>
+                    )}
+                  </span>
                   <div className="iright">
-                    <button
-                      className="btn btn-sm"
-                      disabled={busy !== null}
-                      onClick={() => runAction("addon.update", a)}
-                    >
-                      {busy === a.id ? (progressLabel(progress[a.id]) ?? "…") : "Update"}
-                    </button>
+                    {(updates[a.id] || busy === a.id) && (
+                      <button
+                        className="btn btn-sm btn-primary"
+                        disabled={busy !== null}
+                        onClick={() => runAction("addon.update", a)}
+                      >
+                        {busy === a.id ? (progressLabel(progress[a.id]) ?? "…") : "Update"}
+                      </button>
+                    )}
                     <button
                       className="btn btn-sm btn-danger"
                       disabled={busy !== null}

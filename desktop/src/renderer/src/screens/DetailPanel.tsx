@@ -5,12 +5,14 @@ interface Props {
   busy?: boolean;
   busyLabel?: string | null;
   disabled?: boolean;
+  /** Latest version when an update is available for this installed addon. */
+  updateVersion?: string | null;
   onClose: () => void;
   onInstall: () => void;
   onRemove: () => void;
 }
 
-export function DetailPanel({ addon, busy, busyLabel, disabled, onClose, onInstall, onRemove }: Props): JSX.Element {
+export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, onClose, onInstall, onRemove }: Props): JSX.Element {
   const open = addon !== null;
   return (
     <div className={`detail${open ? " open" : ""}`}>
@@ -38,10 +40,17 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, onClose, onInsta
             <div className="detail-cta">
               {addon.installed ? (
                 <>
-                  <button className="btn" style={{ flex: 1 }} disabled={disabled} onClick={onInstall}>
-                    {busy ? (busyLabel ?? "…") : "Update"}
-                  </button>
-                  <button className="btn btn-danger" disabled={disabled} onClick={onRemove}>
+                  {(updateVersion || busy) && (
+                    <button className="btn btn-primary" style={{ flex: 1 }} disabled={disabled} onClick={onInstall}>
+                      {busy ? (busyLabel ?? "…") : `Update → ${updateVersion}`}
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-danger"
+                    style={updateVersion || busy ? undefined : { flex: 1 }}
+                    disabled={disabled}
+                    onClick={onRemove}
+                  >
                     Remove
                   </button>
                 </>

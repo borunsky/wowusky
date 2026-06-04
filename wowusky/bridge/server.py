@@ -197,6 +197,42 @@ def _installed_list(params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+@method("installed.updates")
+def _installed_updates(params: dict[str, Any]) -> dict[str, Any]:
+    """Check installed addons for available updates (does network I/O).
+
+    Compares each installed addon's recorded version against the latest
+    version its provider reports. Only addons that are in the catalog, have a
+    known current version, and whose latest differs are reported.
+
+    params: {profile?: str}
+    returns: {profile: str, updates: {id: latest_version}}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    db = _installed.load(profile)
+
+    updates: dict[str, str] = {}
+    for addon_id, entry in db.items():
+        cat_entry = _orch.find_addon_by_id(addon_id)
+        if cat_entry is None:
+            continue
+        current = entry.get("version") or ""
+        if not current:
+            continue
+        try:
+            latest = _orch.get_latest_version(cat_entry)
+        except Exception:  # noqa: BLE001 — a single lookup failure shouldn't break the rest
+            latest = None
+        if latest and latest != current:
+            updates[addon_id] = latest
+
+    return {"profile": profile, "updates": updates}
+
+
 @method("app.rescan")
 def _app_rescan(_params: dict[str, Any]) -> dict[str, Any]:
     """Re-scan the filesystem and reconcile it with the installed DB.

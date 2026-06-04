@@ -73,6 +73,8 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
   const [catMenuOpen, setCatMenuOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Map of installed addon id -> latest version, when an update is available.
+  const [updates, setUpdates] = useState<Record<string, string>>({});
   const progress = useActionProgress();
   const catMenuRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +86,14 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
     bridge
       .call<SearchResult>("catalog.search", { query, category })
       .then((r) => setResult(r))
+      .catch(() => {});
+  }
+
+  // Which installed addons have an update available (background network check).
+  function checkUpdates() {
+    bridge
+      .call<{ updates: Record<string, string> }>("installed.updates", {})
+      .then((r) => setUpdates(r.updates ?? {}))
       .catch(() => {});
   }
 
@@ -99,6 +109,12 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
           return;
         }
         setNotice(`${a.name}: installed`);
+        // Freshly (re)installed → now current, drop any pending-update marker.
+        setUpdates((u) => {
+          const next = { ...u };
+          delete next[a.id];
+          return next;
+        });
         refetch();
       })
       .catch((e) => setNotice(`${a.name}: ${String(e)}`))
@@ -134,6 +150,9 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
     }, 160);
     return () => clearTimeout(debounceRef.current);
   }, [query, category, refreshKey]);
+
+  // Refresh update availability on profile switch / rescan.
+  useEffect(() => { checkUpdates(); }, [refreshKey]);
 
   const items = result?.items ?? [];
   const categories = result?.categories ?? ["All"];
@@ -319,6 +338,7 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
         busy={selected ? busyId === selected.id : false}
         busyLabel={selected ? progressLabel(progress[selected.id]) : null}
         disabled={busyId !== null}
+        updateVersion={selected ? updates[selected.id] ?? null : null}
         onClose={() => setSelected(null)}
         onInstall={() => selected && installAddon(selected)}
         onRemove={() => {

@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validation (no network); default mode also fetches latest versions. Exits
   non-zero when any entry fails.
 
+### Changed
+- **Update buttons only appear when an update is actually available.** The
+  Installed tab and the Browse detail panel now run a background update check
+  (`installed.updates` bridge method) and only show an **Update → \<version\>**
+  button for addons whose provider reports a newer version. Up-to-date addons
+  no longer show a pointless Update button.
+
 ## [0.9.3] — 2026-06-04
 
 ### Added
