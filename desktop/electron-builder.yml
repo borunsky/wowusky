@@ -1,15 +1,31 @@
-# Packaging config — wired up fully in the Phase 8 (packaging) work.
-# Linux targets chosen to match wowusky's existing distribution channels.
 appId: de.borunsky.wowusky
 productName: wowusky
+copyright: Copyright © 2026 wowusky contributors
+executableName: wowusky-desktop
+
 directories:
   output: dist
   buildResources: build
+
+# What goes into the AppImage / dir
 files:
   - out/**
+
+# The Python bridge is installed system-wide (via the AUR package or pip).
+# No extraResources needed — main process just calls `python -m wowusky.bridge`.
+
 linux:
   target:
     - AppImage
     - dir
   category: Game
   maintainer: Kevin <info@borunsky.de>
+  icon: build/icon.png
+  desktop:
+    Name: wowusky
+    GenericName: WoW Addon Manager
+    Comment: Minimalist World of Warcraft addon manager for Linux
+    Categories: Game;Utility;
+    Keywords: wow;warcraft;addon;elvui;tukui;weakauras;
+    StartupNotify: true
+    StartupWMClass: wowusky

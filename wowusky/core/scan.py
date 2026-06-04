@@ -149,7 +149,7 @@ def sync_filesystem_with_db(addons_path, catalog):
                 "name": catalog_addon["name"],
                 "version": toc.get("version") or "unknown",
                 "folders": actual_folders,
-                "source": catalog_addon["source"],
+                "source": catalog_addon.get("provider") or catalog_addon.get("source") or "unknown",
                 "interface": toc.get("interface"),
                 "discovered": True,
             }
