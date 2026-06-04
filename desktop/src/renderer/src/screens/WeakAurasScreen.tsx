@@ -133,7 +133,7 @@ export function WeakAurasScreen(): JSX.Element {
                 </svg>
               </div>
               <h3>No auras tracked</h3>
-              <p>Add Wago auras from the Import tab or via the WeakAuras Companion to see them here.</p>
+              <p>Install WeakAuras in WoW and use the WeakAuras Companion to sync your auras here automatically.</p>
             </div>
           ) : (
             <div className="wa-grid">
