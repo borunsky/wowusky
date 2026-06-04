@@ -38,6 +38,8 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
   // Map of addon id -> latest version, for addons that have an update available.
   const [updates, setUpdates] = useState<Record<string, string>>({});
   const [checkingUpdates, setCheckingUpdates] = useState(false);
+  // Multi-select for bulk update / remove.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const progress = useActionProgress();
   const liveLabel = busy ? progressLabel(progress[busy]) : null;
 
@@ -53,12 +55,61 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
   useEffect(() => {
     setLoading(true);
     setUpdates({});
+    setSelected(new Set());
     bridge
       .call<InstalledResult>("installed.list", {})
       .then((r) => { setResult(r); setError(null); checkUpdates(); })
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, [refreshKey]);
+
+  function toggleSelect(id: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function bulkUpdate() {
+    // Only the selected addons that actually have an update pending.
+    const ids = [...selected].filter((id) => updates[id]);
+    if (busy || ids.length === 0) return;
+    setBusy("__bulk__");
+    setNotice(null);
+    bridge
+      .call<ActionResult>("installed.updateAll", { ids })
+      .then((r) => {
+        setResult({ profile: r.profile, count: r.count, addons_path: r.addons_path, items: r.items });
+        setUpdates((u) => { const n = { ...u }; ids.forEach((id) => delete n[id]); return n; });
+        setSelected(new Set());
+        setNotice(`Updated ${ids.length} addon${ids.length === 1 ? "" : "s"}`);
+        onChanged?.();
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => { setBusy(null); checkUpdates(); });
+  }
+
+  function bulkRemove() {
+    const ids = [...selected];
+    if (busy || ids.length === 0) return;
+    if (!window.confirm(`Remove ${ids.length} addon${ids.length === 1 ? "" : "s"}? A backup is taken first.`)) {
+      return;
+    }
+    setBusy("__bulk__");
+    setNotice(null);
+    bridge
+      .call<ActionResult>("installed.removeMany", { ids })
+      .then((r) => {
+        setResult({ profile: r.profile, count: r.count, addons_path: r.addons_path, items: r.items });
+        setUpdates((u) => { const n = { ...u }; ids.forEach((id) => delete n[id]); return n; });
+        setSelected(new Set());
+        setNotice(`Removed ${ids.length} addon${ids.length === 1 ? "" : "s"}`);
+        onChanged?.();
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => setBusy(null));
+  }
 
   function updateAll() {
     const ids = Object.keys(updates);
@@ -136,7 +187,7 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
-          {Object.keys(updates).length > 0 && (
+          {selected.size === 0 && Object.keys(updates).length > 0 && (
             <button
               className="btn btn-sm btn-primary"
               style={{ marginLeft: 10 }}
@@ -145,6 +196,22 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
             >
               {busy === "__all__" ? "Updating…" : `Update all (${Object.keys(updates).length})`}
             </button>
+          )}
+          {selected.size > 0 && (
+            <div className="bulk-bar">
+              <span className="bulk-count">{selected.size} selected</span>
+              {[...selected].some((id) => updates[id]) && (
+                <button className="btn btn-sm btn-primary" disabled={busy !== null} onClick={bulkUpdate}>
+                  {busy === "__bulk__" ? "Working…" : `Update (${[...selected].filter((id) => updates[id]).length})`}
+                </button>
+              )}
+              <button className="btn btn-sm btn-danger" disabled={busy !== null} onClick={bulkRemove}>
+                {busy === "__bulk__" ? "Working…" : "Remove"}
+              </button>
+              <button className="btn btn-sm" disabled={busy !== null} onClick={() => setSelected(new Set())}>
+                Clear
+              </button>
+            </div>
           )}
         </div>
         {(liveLabel || notice || checkingUpdates) && (
@@ -182,6 +249,17 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
         ) : (
           <div style={{ padding: "0 10px 16px" }}>
             <div className="ihead">
+              <input
+                type="checkbox"
+                aria-label="Select all"
+                checked={items.length > 0 && items.every((a) => selected.has(a.id))}
+                ref={(el) => {
+                  if (el) el.indeterminate = items.some((a) => selected.has(a.id)) && !items.every((a) => selected.has(a.id));
+                }}
+                onChange={(e) =>
+                  setSelected(e.target.checked ? new Set(items.map((a) => a.id)) : new Set())
+                }
+              />
               <span />
               <span>Addon</span>
               <span>Source</span>
@@ -189,7 +267,13 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
               <span style={{ justifySelf: "end" }}>Actions</span>
             </div>
             {items.map((a) => (
-              <div key={a.id} className="irow">
+              <div key={a.id} className={`irow${selected.has(a.id) ? " sel" : ""}`}>
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${a.name}`}
+                  checked={selected.has(a.id)}
+                  onChange={() => toggleSelect(a.id)}
+                />
                 <MonoBadge a={a} />
                 <div style={{ minWidth: 0 }}>
                   <div className="iname">{a.name}</div>

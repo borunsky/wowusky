@@ -27,6 +27,22 @@ interface CoreSettings {
   profiles: ProfileSummary[];
 }
 
+interface DownloadZip {
+  path: string;
+  name: string;
+  mtime: number;
+  guess: { id: string; name: string } | null;
+}
+
+interface ScheduleStatus {
+  available: boolean;
+  installed: boolean;
+  enabled?: boolean;
+  active?: boolean;
+  interval?: string;
+  next_run?: string | null;
+}
+
 interface AddonPreviewItem {
   id: string;
   name: string;
@@ -76,14 +92,66 @@ export function SettingsScreen({
   const [importData, setImportData] = useState<object | null>(null);
   const [skipConflicts, setSkipConflicts] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [schedule, setSchedule] = useState<ScheduleStatus | null>(null);
+  const [scheduleInterval, setScheduleInterval] = useState<string>("daily");
+  const [scheduleWorking, setScheduleWorking] = useState(false);
+  const [dlZips, setDlZips] = useState<DownloadZip[] | null>(null);
+  const [dlScanning, setDlScanning] = useState(false);
+  const [dlBusy, setDlBusy] = useState<string | null>(null);
+  const [dlNotice, setDlNotice] = useState<string | null>(null);
 
   function reload() {
     bridge.call<CoreSettings>("settings.get", {}).then((s) => {
       setCore(s);
       setAddonsPath(s.addons_path);
     }).catch(() => {});
+    bridge.call<ScheduleStatus>("schedule.status", {}).then(setSchedule).catch(() => {});
   }
   useEffect(reload, []);
+
+  function enableSchedule() {
+    setScheduleWorking(true);
+    bridge.call<ScheduleStatus & { ok: boolean }>("schedule.enable", { interval: scheduleInterval })
+      .then((r) => setSchedule(r))
+      .catch(() => {})
+      .finally(() => setScheduleWorking(false));
+  }
+  function disableSchedule() {
+    setScheduleWorking(true);
+    bridge.call<ScheduleStatus & { ok: boolean }>("schedule.disable", {})
+      .then((r) => setSchedule(r))
+      .catch(() => {})
+      .finally(() => setScheduleWorking(false));
+  }
+
+  function scanDownloads() {
+    setDlScanning(true);
+    setDlNotice(null);
+    bridge.call<{ items: DownloadZip[] }>("downloads.scan", {})
+      .then((r) => setDlZips(r.items))
+      .catch(() => setDlZips([]))
+      .finally(() => setDlScanning(false));
+  }
+
+  function importDownloadZip(zip: DownloadZip) {
+    if (dlBusy) return;
+    setDlBusy(zip.path);
+    setDlNotice(null);
+    bridge.call<{ ok: boolean; error?: string }>("downloads.import", {
+      path: zip.path,
+      name: zip.guess?.name,
+    }).then((r) => {
+      if (r.ok) {
+        setDlZips((zips) => (zips ?? []).filter((z) => z.path !== zip.path));
+        setDlNotice(`Imported ${zip.guess?.name ?? zip.name}`);
+        onProfileChange();
+      } else {
+        setDlNotice(`Failed: ${r.error ?? "unknown error"}`);
+      }
+    })
+    .catch((e) => setDlNotice(String(e)))
+    .finally(() => setDlBusy(null));
+  }
 
   function flash() {
     setSaved(true);
@@ -453,6 +521,117 @@ export function SettingsScreen({
               })()}
             </div>
           </div>
+
+          {/* Import from Downloads */}
+          <div className="set-group">
+            <h3>Import from Downloads</h3>
+            <p className="gdesc">Install addon ZIPs directly from your Downloads folder. Catalog entries are guessed automatically.</p>
+            <div className="set-card">
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Scan Downloads folder</div>
+                  <div className="sd">Finds .zip files and matches them against the catalog.</div>
+                </div>
+                <div className="sr">
+                  <button className="btn btn-sm btn-primary" disabled={dlScanning} onClick={scanDownloads}>
+                    {dlScanning ? "Scanning…" : "Scan"}
+                  </button>
+                </div>
+              </div>
+              {dlNotice && (
+                <div className="sd" style={{ marginTop: 6, color: "var(--accent)" }}>{dlNotice}</div>
+              )}
+              {dlZips !== null && (
+                dlZips.length === 0 ? (
+                  <div className="sd" style={{ marginTop: 6 }}>No addon ZIPs found in Downloads.</div>
+                ) : (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {dlZips.map((z) => (
+                      <div key={z.path} className="set-row" style={{ alignItems: "center" }}>
+                        <div className="sl" style={{ minWidth: 0 }}>
+                          <div className="st" style={{ fontWeight: 500, fontSize: 13 }}>{z.name}</div>
+                          {z.guess && (
+                            <div className="sd">→ {z.guess.name}</div>
+                          )}
+                        </div>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          disabled={dlBusy !== null}
+                          onClick={() => importDownloadZip(z)}
+                        >
+                          {dlBusy === z.path ? "Installing…" : "Install"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Scheduled Updates */}
+          {schedule && (
+            <div className="set-group">
+              <h3>Scheduled Updates</h3>
+              <p className="gdesc">
+                Automatically check for addon updates via a systemd user timer — no GUI needed.
+                Runs <code>wowusky update -q</code> on the configured schedule.
+              </p>
+              <div className="set-card">
+                {!schedule.available ? (
+                  <div className="set-row">
+                    <div className="sl">
+                      <div className="st">Scheduled updates</div>
+                      <div className="sd">Not available — systemd user instance not detected.</div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="set-row">
+                      <div className="sl">
+                        <div className="st">
+                          Timer status
+                          {schedule.installed && (
+                            <span className={`installed-tag${schedule.enabled && schedule.active ? "" : " conflict"}`} style={{ marginLeft: 8 }}>
+                              {schedule.enabled && schedule.active ? `enabled · ${schedule.interval ?? "daily"}` : schedule.enabled ? "enabled, inactive" : "disabled"}
+                            </span>
+                          )}
+                        </div>
+                        {schedule.installed && schedule.next_run && (
+                          <div className="sd">Next run: {schedule.next_run}</div>
+                        )}
+                        {!schedule.installed && (
+                          <div className="sd">No timer installed.</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="set-row" style={{ gap: 10 }}>
+                      <div className="sl" style={{ flex: "none" }}>
+                        <select
+                          className="field"
+                          value={scheduleInterval}
+                          onChange={(e) => setScheduleInterval(e.target.value)}
+                          disabled={scheduleWorking}
+                        >
+                          <option value="hourly">Hourly</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                        </select>
+                      </div>
+                      <button className="btn btn-sm btn-primary" disabled={scheduleWorking} onClick={enableSchedule}>
+                        {scheduleWorking ? "…" : schedule.installed ? "Update timer" : "Enable"}
+                      </button>
+                      {schedule.installed && (
+                        <button className="btn btn-sm btn-danger" disabled={scheduleWorking} onClick={disableSchedule}>
+                          {scheduleWorking ? "…" : "Disable"}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Paths */}
           <div className="set-group">

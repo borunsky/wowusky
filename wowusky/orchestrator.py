@@ -224,6 +224,59 @@ def newest_download_zip():
     return zips[0] if zips else ""
 
 
+def _normalize_match_token(text):
+    """Lowercase a string down to its alphanumeric run for fuzzy matching."""
+    return "".join(ch for ch in str(text).lower() if ch.isalnum())
+
+
+def guess_catalog_match(zip_path):
+    """Best-effort guess of which catalog addon a downloaded ZIP belongs to.
+
+    Matches the ZIP's base filename against catalog ids and names by
+    comparing alphanumeric-only tokens (so ``ElvUI-13.5.zip`` →
+    ``elvui``). Returns ``{"id", "name"}`` of the best candidate, or
+    ``None`` when nothing plausibly matches.
+    """
+    stem = os.path.splitext(os.path.basename(zip_path))[0]
+    token = _normalize_match_token(stem)
+    if not token:
+        return None
+    best = None
+    best_len = 0
+    for a in ADDON_CATALOG:
+        for cand in (a.get("id", ""), a.get("name", "")):
+            ct = _normalize_match_token(cand)
+            # Require the catalog token to appear in the filename (or vice
+            # versa) and prefer the longest such match to avoid e.g. a
+            # 2-letter id matching everything.
+            if ct and len(ct) >= 3 and (ct in token or token in ct):
+                if len(ct) > best_len:
+                    best = {"id": a.get("id"), "name": a.get("name", a.get("id"))}
+                    best_len = len(ct)
+    return best
+
+
+def scan_download_zips_annotated(limit=25):
+    """Like :func:`scan_download_zips` but annotated for the import UI.
+
+    Returns a list of ``{"path", "name", "mtime", "guess": {id, name}|None}``
+    newest-first, so the desktop import screen can present several matching
+    ZIPs and pre-fill the catalog association.
+    """
+    out = []
+    for path in scan_download_zips(limit=limit):
+        mtime = 0.0
+        with contextlib.suppress(OSError):
+            mtime = os.path.getmtime(path)
+        out.append({
+            "path": path,
+            "name": os.path.basename(path),
+            "mtime": mtime,
+            "guess": guess_catalog_match(path),
+        })
+    return out
+
+
 def import_zip_file(zip_path, addons_path, name=None, source="manual", log=print, curseforge_slug=None, curseforge_url=None):
     """Import a manual / CurseForge ZIP and record it in the active profile.
 
@@ -576,6 +629,32 @@ def install_addon_version(addon, url, label, log=print, progress=None):
 
 def find_addon_by_id(aid):
     return next((a for a in ADDON_CATALOG if a["id"] == aid), None)
+
+
+def dependency_preview(addon):
+    """Return the catalog dependencies that installing *addon* would pull in.
+
+    Unlike :func:`resolve_dependencies` (which the installer uses and which
+    *skips* already-installed entries), this lists the full transitive set
+    so the UI can show the user exactly what a click on Install entails,
+    flagging which dependencies are already present.
+
+    Returns ``{"deps": [{"id", "name", "installed"}], "missing": [id, ...]}``.
+    """
+    inst = load_installed()
+    # is_installed=lambda _: False → resolve the complete transitive set,
+    # then annotate each entry with its real installed state for the UI.
+    deps, missing = resolve_dependencies(
+        addon, find_addon=find_addon_by_id, is_installed=lambda _aid: False
+    )
+    return {
+        "deps": [
+            {"id": d.get("id"), "name": d.get("name", d.get("id")),
+             "installed": d.get("id") in inst}
+            for d in deps
+        ],
+        "missing": missing,
+    }
 
 
 def get_categories():

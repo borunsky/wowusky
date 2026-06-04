@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.9.4    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.9.5    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,23 +15,24 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.9.4
+## What's new in v0.9.5
 
 ### Added
-- **Addon-set export / import**: export a profile's full addon list to a
-  shareable JSON file (`wowusky export <file.json>`) and import it back with
-  per-addon conflict resolution (`wowusky import-set <file.json> [-y]`).
-  Export and Import buttons are also available per-profile in the desktop
-  Settings screen → Addon Sets section.
-- **`wowusky health` command**: surface the existing catalog health-check
-  engine as a first-class CLI command. `--offline` for fast provider-resolve
-  validation; default mode fetches latest versions. Exits non-zero on failures.
-- **Version selection in the addon detail panel**: GitHub and CurseForge addons
-  expose a *Choose a specific version* list — install any release/tag or
-  CurseForge file directly, flavor-aware and newest-first.
-- **Auto-update + "updates available" indicator**: a per-profile **Auto-update
-  on launch** toggle, a live sidebar update badge, and an **Update all** button
-  on the Installed tab.
+- **Dependency preview in the detail panel**: before you install any addon that
+  has catalog dependencies, the detail panel now shows which deps would be
+  co-installed and which are already present — so you know exactly what a click
+  on Install does.
+- **Bulk update / remove on the Installed tab**: tick one or more addons with
+  the new row checkboxes and hit **Update** or **Remove** in the selection bar.
+  A header checkbox selects all visible rows.
+- **Scheduled-update timer (systemd)**: Settings → Scheduled Updates exposes a
+  new section to install, configure (hourly / daily / weekly) and remove a
+  systemd user timer that runs `wowusky update -q` on a schedule. Also
+  available via `wowusky schedule enable|disable|status`.
+- **Import from Downloads (desktop)**: Settings → Import from Downloads lists
+  all `.zip` files in `~/Downloads`, guesses which catalog addon each one
+  belongs to, and installs them with one click. Works for CurseForge ZIPs that
+  were downloaded manually.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -41,8 +42,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.9.4.zip
-cd wowusky-v0.9.4
+unzip wowusky-v0.9.5.zip
+cd wowusky-v0.9.5
 chmod +x install.sh
 ./install.sh
 ```
@@ -66,7 +67,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.9.4-py3-none-any.whl
+pip install dist/wowusky-0.9.5-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
@@ -244,15 +245,10 @@ The v0.4 refactor was the prerequisite. Now planned:
 - ~~**v0.9.4** — auto-update on launch + in-app "updates available" indicator
   (wires up the per-profile `auto_update` flag), and CurseForge/GitHub ZIP
   version selection in the addon detail panel.~~ ✅ done
-- **v0.9.5** — *Workflow polish*:
-  - **Dependency preview** — the addon detail panel lists which dependencies
-    will be co-installed *before* you click Install.
-  - **Bulk operations** — select multiple addons on the Installed tab and
-    update or remove them in one action.
-  - **Scheduled-update visibility** — show the systemd update-timer status in
-    the desktop Settings screen.
-  - **Sturdier "Import from Downloads"** — handle multiple matching ZIPs and
-    auto-associate them with catalog entries.
+- ~~**v0.9.5** — *Workflow polish*: dependency preview in detail panel, bulk
+  update/remove on the Installed tab, systemd scheduled-update timer (CLI +
+  Settings screen), and sturdier Import from Downloads with multi-ZIP listing
+  and auto catalog matching.~~ ✅ done
 - **Later** — see [issues](https://github.com/borunsky/wowusky/issues)
   or open one with a request.
 

@@ -78,6 +78,36 @@ def test_profile_switch_subcommand():
     assert args.name == "retail"
 
 
+def test_schedule_status_subcommand():
+    p = build_parser()
+    args = p.parse_args(["schedule", "status"])
+    assert args.command == "schedule"
+    assert args.schedule_action == "status"
+
+
+def test_schedule_enable_interval():
+    p = build_parser()
+    args = p.parse_args(["schedule", "enable", "--interval", "weekly"])
+    assert args.schedule_action == "enable"
+    assert args.interval == "weekly"
+
+
+def test_schedule_status_runs(capsys):
+    with patch("wowusky.core.schedule.status", return_value={"available": False, "installed": False}):
+        run_cli(["schedule", "status"])
+    out = capsys.readouterr().out
+    assert "not available" in out
+
+
+def test_schedule_enable_invokes_core(capsys):
+    with patch("wowusky.core.schedule.enable", return_value={"ok": True, "available": True,
+                                                             "installed": True, "enabled": True,
+                                                             "active": True, "interval": "daily"}) as m:
+        run_cli(["schedule", "enable"])
+    m.assert_called_once_with("daily")
+    assert "enabled" in capsys.readouterr().out
+
+
 # ---------------------------------------------------------------------------
 # cmd_version
 # ---------------------------------------------------------------------------

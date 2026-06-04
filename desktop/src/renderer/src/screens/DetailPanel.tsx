@@ -9,6 +9,12 @@ interface VersionChoice {
   type: string;
 }
 
+interface DepPreview {
+  id: string;
+  name: string;
+  installed: boolean;
+}
+
 interface Props {
   addon: Addon | null;
   busy?: boolean;
@@ -28,6 +34,9 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
   const [versions, setVersions] = useState<VersionChoice[] | null>(null);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
+  // Transitive catalog dependencies a fresh install would pull in.
+  const [deps, setDeps] = useState<DepPreview[] | null>(null);
+  const [depsMissing, setDepsMissing] = useState<string[]>([]);
 
   // Sources that expose multiple selectable downloads.
   const versionable = addon?.source === "github" || addon?.source === "curse";
@@ -44,6 +53,19 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
       .catch(() => setVersions([]))
       .finally(() => setLoadingVersions(false));
   }, [addon, onInstallVersion]);
+
+  // Fetch the dependency preview for not-yet-installed addons that declare any.
+  useEffect(() => {
+    setDeps(null);
+    setDepsMissing([]);
+    if (!addon || addon.installed || (addon.depends?.length ?? 0) === 0) return;
+    bridge
+      .call<{ deps: DepPreview[]; missing: string[] }>("addon.deps", { id: addon.id })
+      .then((r) => { setDeps(r.deps ?? []); setDepsMissing(r.missing ?? []); })
+      .catch(() => {});
+  }, [addon]);
+
+  const pendingDeps = (deps ?? []).filter((d) => !d.installed);
   return (
     <div className={`detail${open ? " open" : ""}`}>
       {addon && (
@@ -90,6 +112,16 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
                 </button>
               )}
             </div>
+
+            {!addon.installed && pendingDeps.length > 0 && (
+              <div className="dep-note" title={pendingDeps.map((d) => d.name).join(", ")}>
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1.5 12.5 4.5v5L7 12.5 1.5 9.5v-5L7 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                </svg>
+                Also installs {pendingDeps.length} {pendingDeps.length === 1 ? "dependency" : "dependencies"}:
+                {" "}{pendingDeps.map((d) => d.name).join(", ")}
+              </div>
+            )}
 
             {versionable && onInstallVersion && (
               <div className="detail-versions">
@@ -175,10 +207,18 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
               <>
                 <div className="dsec-title">Dependencies</div>
                 <div className="deps">
-                  {addon.depends.map((d) => (
+                  {(deps && deps.length > 0 ? deps : addon.depends.map((d) => ({ id: d, name: d, installed: false }))).map((d) => (
+                    <div key={d.id} className="dep">
+                      <span className="dn">{d.name}</span>
+                      <span className={`dm ver-mono${d.installed ? " dep-have" : ""}`}>
+                        {d.installed ? "installed" : "required"}
+                      </span>
+                    </div>
+                  ))}
+                  {depsMissing.map((d) => (
                     <div key={d} className="dep">
                       <span className="dn">{d}</span>
-                      <span className="dm ver-mono">required</span>
+                      <span className="dm ver-mono dep-missing">not in catalog</span>
                     </div>
                   ))}
                 </div>
