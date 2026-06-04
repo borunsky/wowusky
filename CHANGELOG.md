@@ -4,6 +4,17 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] — 2026-06-04
+
+### Fixed
+- Addon-details dialog: the asynchronous version-lookup worker no longer makes
+  any Tk calls from its background thread. On Python 3.14 the previous code
+  called `winfo_exists()` / `after()` off the main thread, which aborted the
+  interpreter with a fatal `Tcl_AsyncDelete: async handler deleted by the wrong
+  thread` panic during `pytest` — surfacing as a failed AUR `check()` phase on
+  fresh builds. The worker now only computes the version choices; a main-thread
+  `after()` poll renders the result, so all Tk access stays on the main thread.
+
 ## [0.9.0] — 2026-06-04
 
 Feature release — desktop app. wowusky now ships a redesigned Electron + React
@@ -888,6 +899,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.9.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.1
 [0.9.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.0
 [0.8.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.3
 [0.8.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.2

@@ -108,13 +108,47 @@ class AddonDetailsDialog:
                  bg=C["surface"], fg=C["text_muted"], font=FONT_SM).pack(
                      padx=12, pady=12, anchor="w")
 
+        # Version lookup runs off the UI thread, but the worker must never touch
+        # Tk — doing so from a non-main thread aborts the interpreter with
+        # "Tcl_AsyncDelete: async handler deleted by the wrong thread" on
+        # teardown (fatal, not catchable). The worker only computes the choices
+        # and signals completion; the main thread polls the result and renders.
+        self._versions_choices: list = []
+        self._versions_ready = threading.Event()
         threading.Thread(target=self._fill_versions, daemon=True).start()
+        dlg.after(50, self._poll_versions)
 
     # ------------------------------------------------------------------
     # Async version list
     # ------------------------------------------------------------------
 
     def _fill_versions(self) -> None:
+        """Worker thread: compute version choices only. No Tk access here."""
+        addon = self._addon
+        try:
+            if addon.get("source") == "github":
+                self._versions_choices = self._github_version_choices(addon) or []
+        except Exception:  # noqa: BLE001 — surface as "no choices", never crash the thread
+            self._versions_choices = []
+        finally:
+            self._versions_ready.set()
+
+    def _poll_versions(self) -> None:
+        """Main thread: wait for the worker, then render. Re-arms via ``after``."""
+        import tkinter as tk
+
+        # Runs on the main thread, so winfo_exists is safe here.
+        try:
+            if not self.dialog.winfo_exists():
+                return
+        except (RuntimeError, tk.TclError):
+            return
+        if not self._versions_ready.is_set():
+            self.dialog.after(50, self._poll_versions)
+            return
+        self._render_versions(self._versions_choices)
+
+    def _render_versions(self, choices: list) -> None:
         import tkinter as tk
 
         ctx = self._ctx
@@ -124,40 +158,24 @@ class AddonDetailsDialog:
         list_wrap = self._list_wrap
         dlg = self.dialog
 
-        choices = []
-        if addon.get("source") == "github":
-            choices = self._github_version_choices(addon)
-
-        def ui():
-            for w in list_wrap.winfo_children():
-                w.destroy()
-            if not choices:
-                msg = ("Direct version selection is only available when the "
-                       "provider exposes downloadable ZIP versions. For "
-                       "CurseForge/WoWInterface use Open page + ZIP import.")
-                tk.Label(list_wrap, text=msg, bg=C["surface"], fg=C["text_dim"],
-                         font=FONT_SM, wraplength=480, justify="left").pack(
-                             anchor="w", padx=12, pady=12)
-                return
-            for ch in choices:
-                row = tk.Frame(list_wrap, bg=C["surface"])
-                row.pack(fill="x", padx=8, pady=4)
-                tk.Label(row, text=ch["label"], bg=C["surface"], fg=C["text"],
-                         font=FONT_SM, anchor="w").pack(
-                             side="left", fill="x", expand=True)
-                ctx.make_button(
-                    row, "Install",
-                    lambda c=ch: (dlg.destroy(),
-                                  self._on_install_version(addon, c["url"], c["label"])),
-                    variant="primary", compact=True).pack(side="right")
-
-        # The dialog may have been closed (or the whole app torn down) while
-        # this background thread was running. Scheduling onto a dead Tk root
-        # raises RuntimeError ("main thread is not in main loop") / TclError,
-        # so only dispatch when the root is still alive.
-        try:
-            if not ctx.root.winfo_exists():
-                return
-            ctx.root.after(0, ui)
-        except (RuntimeError, tk.TclError):
-            pass
+        for w in list_wrap.winfo_children():
+            w.destroy()
+        if not choices:
+            msg = ("Direct version selection is only available when the "
+                   "provider exposes downloadable ZIP versions. For "
+                   "CurseForge/WoWInterface use Open page + ZIP import.")
+            tk.Label(list_wrap, text=msg, bg=C["surface"], fg=C["text_dim"],
+                     font=FONT_SM, wraplength=480, justify="left").pack(
+                         anchor="w", padx=12, pady=12)
+            return
+        for ch in choices:
+            row = tk.Frame(list_wrap, bg=C["surface"])
+            row.pack(fill="x", padx=8, pady=4)
+            tk.Label(row, text=ch["label"], bg=C["surface"], fg=C["text"],
+                     font=FONT_SM, anchor="w").pack(
+                         side="left", fill="x", expand=True)
+            ctx.make_button(
+                row, "Install",
+                lambda c=ch: (dlg.destroy(),
+                              self._on_install_version(addon, c["url"], c["label"])),
+                variant="primary", compact=True).pack(side="right")

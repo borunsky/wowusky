@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.9.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.9.1    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,18 +15,14 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.9.0
+## What's new in v0.9.1
 
-### Added
-- **Desktop app (Electron + React)** — a redesigned window-chrome UI with
-  Browse, Installed, WeakAuras, Backups, Health and Settings screens, light/dark
-  themes, accent colors and a compact density mode. It talks to the existing
-  Python engine through a JSON-RPC bridge (`python -m wowusky.bridge`).
-- **Live actions with streaming progress** — Install / Update / Remove and
-  backup Restore run through the bridge and stream per-step log lines and
-  download percentages to the UI.
-- **AppImage packaging** via electron-builder, plus an updated AUR `PKGBUILD`
-  that builds and installs the desktop shell alongside the Python package.
+### Fixed
+- The addon-details dialog's background version-lookup thread no longer touches
+  Tk from a non-main thread. On Python 3.14 that aborted the interpreter with a
+  fatal `Tcl_AsyncDelete: async handler deleted by the wrong thread` panic
+  during the test suite (breaking the AUR `check()` phase). The worker now only
+  computes version choices; the main thread polls the result and renders.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -36,8 +32,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.9.0.zip
-cd wowusky-v0.9.0
+unzip wowusky-v0.9.1.zip
+cd wowusky-v0.9.1
 chmod +x install.sh
 ./install.sh
 ```
@@ -61,7 +57,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.9.0-py3-none-any.whl
+pip install dist/wowusky-0.9.1-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
