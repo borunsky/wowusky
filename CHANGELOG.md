@@ -4,6 +4,56 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] — 2026-06-04
+
+### Added
+- **Silent auto-update on launch** (#46): a new global setting
+  (**Settings → Advanced → Auto-update on launch**) that updates all
+  outdated addons automatically when the app starts. A non-blocking toast
+  shows progress and a completion summary, and the update runs at most once
+  per session. Works alongside the existing per-profile auto-update flag.
+  Backed by the new `auto_update_on_launch` config option exposed through
+  `settings.get` / `settings.update`.
+- **Extended WeakAuras / Wago tab** (#47): the WeakAuras screen is now a full
+  aura update manager. A **Check for Updates** button fetches the latest
+  version info from Wago.io, an **Update All (N)** bulk button appears when
+  auras are behind, and each card gets a per-aura update button, an update
+  highlight, and author + last-modified metadata. Backed by three new bridge
+  methods (`wago.checkUpdates`, `wago.update`, `wago.updateAll`) and an
+  enriched `weakauras.list` payload (`latest_version`, `has_update`, `author`,
+  `modified`).
+
+## [0.10.0] — 2026-06-04
+
+### Added
+- **Conflict detection** (#43): the detail panel warns when installing an
+  addon that conflicts with something already installed. Detection is
+  bidirectional — it honours both the addon's own `conflicts` list and any
+  reverse declaration. Backed by `orchestrator.conflict_check()` and the
+  `addon.conflicts` bridge method.
+- **Addon-set sharing** (#44): export your installed set to the clipboard and
+  import a shared set on another machine, with a preview that flags each item
+  as *new*, *same*, or *conflict* and an option to skip conflicts. Backed by
+  the `set.export`, `set.importPreview`, and `set.importApply` bridge methods.
+- **Backup diff** (#45): compare any two backups of the same addon and see
+  which files were added, removed, or changed in size — computed from the ZIP
+  index without extraction. Backed by `backup.diff_backups()` and the
+  `backups.diff` bridge method.
+
+## [0.9.6] — 2026-06-04
+
+### Added
+- **Update badge** (#40): the taskbar/dock badge and sidebar reflect the
+  number of addons with pending updates.
+- **Notes & favorites** (#41): star addons as favorites (persisted in
+  `favorites.json`) and attach inline notes to installed addons. Backed by
+  the `favorites.list` / `favorites.toggle` and `installed.setNote` bridge
+  methods.
+- **Fuzzy search + tags** (#42): the Browse catalog search is now score-based
+  (exact / prefix / substring / tag matches) with a `tag:` prefix syntax,
+  tag filter chips, and a favorites-only filter. Backed by
+  `wowusky/core/search.py`.
+
 ## [0.9.5] — 2026-06-04
 
 ### Added
@@ -1007,6 +1057,9 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.11.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.11.0
+[0.10.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.10.0
+[0.9.6]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.6
 [0.9.5]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.5
 [0.9.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.4
 [0.9.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.3
