@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.9.1    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.9.2    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -18,13 +18,11 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ## What's new in v0.9.1
 
 ### Fixed
-- Addon-details dialog: the asynchronous version-lookup worker no longer makes
-  any Tk calls from its background thread. On Python 3.14 the previous code
-  called `winfo_exists()` / `after()` off the main thread, which aborted the
-  interpreter with a fatal `Tcl_AsyncDelete: async handler deleted by the wrong
-  thread` panic during `pytest` — surfacing as a failed AUR `check()` phase on
-  fresh builds. The worker now only computes the version choices; a main-thread
-  `after()` poll renders the result, so all Tk access stays on the main thread.
+- The addon-details dialog's background version-lookup thread no longer touches
+  Tk from a non-main thread. On Python 3.14 that aborted the interpreter with a
+  fatal `Tcl_AsyncDelete: async handler deleted by the wrong thread` panic
+  during the test suite (breaking the AUR `check()` phase). The worker now only
+  computes version choices; the main thread polls the result and renders.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -34,8 +32,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.9.1.zip
-cd wowusky-v0.9.1
+unzip wowusky-v0.9.2.zip
+cd wowusky-v0.9.2
 chmod +x install.sh
 ./install.sh
 ```
@@ -59,7 +57,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.9.1-py3-none-any.whl
+pip install dist/wowusky-0.9.2-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)

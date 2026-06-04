@@ -16,6 +16,10 @@ const api = {
     return () => ipcRenderer.removeListener("bridge:notify", listener);
   },
 
+  /** Open a native directory picker, returns the chosen path or null. */
+  openDirectory: (): Promise<string | null> =>
+    ipcRenderer.invoke("dialog:openDirectory"),
+
   // Custom titlebar window controls.
   minimize: () => ipcRenderer.send("win:minimize"),
   maximize: () => ipcRenderer.send("win:maximize"),

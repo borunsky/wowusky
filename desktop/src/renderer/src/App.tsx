@@ -155,7 +155,7 @@ export default function App(): JSX.Element {
           ) : (
             <PlaceholderScreen name={meta.name} icon={meta.icon} description={meta.description} />
           )}
-          <StatusBar version={version} bridgeOk={bridgeOk} />
+          <StatusBar version={version} bridgeOk={bridgeOk} refreshKey={refreshKey} />
         </div>
       </div>
     </div>

@@ -4,6 +4,28 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] — 2026-06-04
+
+### Added
+- **Profile path management in the desktop Settings screen**: each profile now
+  has a **Set Path** button that opens a native directory picker
+  (`dialog.showOpenDialog`) to point it at an `Interface/AddOns` folder, and an
+  **Autoscan** button that scans common Steam / Lutris / Wine locations for WoW
+  installations and lets you add any of them as a profile with one click.
+- Bridge methods `profile.setPath`, `profiles.scan` and `profiles.addFromPath`,
+  plus a preload `openDirectory()` IPC for native folder selection.
+
+### Fixed
+- **Status bar** now shows the active profile's flavor and its real AddOns path,
+  refreshing on profile switches and rescans. Previously it could read a stale
+  source and display "path not set" even when the active profile had a path
+  configured.
+
+### Changed
+- The Desktop AppImage workflow only publishes the (zipped) workflow artifact on
+  manual `workflow_dispatch` runs; release runs attach the raw `.AppImage`
+  directly so the release assets no longer carry a wrapping `.zip`.
+
 ## [0.9.1] — 2026-06-04
 
 ### Fixed
@@ -899,6 +921,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.9.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.2
 [0.9.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.1
 [0.9.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.0
 [0.8.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.3

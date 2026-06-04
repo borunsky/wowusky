@@ -304,6 +304,54 @@ def _profile_set_active(params: dict[str, Any]) -> dict[str, Any]:
     return _settings_get({})
 
 
+@method("profile.setPath")
+def _profile_set_path(params: dict[str, Any]) -> dict[str, Any]:
+    """Set the addons_path for a specific profile (or the active one).
+
+    params: {path: str, profile?: str}
+    returns: updated settings
+    """
+    from wowusky.core import state as _state
+
+    path = params.get("path")
+    if not path:
+        raise ValueError("path is required")
+    pid = params.get("profile")
+    if pid:
+        _state.set_active_profile(str(pid))
+    _state.set_addons_path(str(path))
+    return _settings_get({})
+
+
+@method("profiles.scan")
+def _profiles_scan(_params: dict[str, Any]) -> dict[str, Any]:
+    """Scan the filesystem for WoW installations.
+
+    returns: {count: int, found: [{flavor, flavor_name, addons_path}]}
+    """
+    from wowusky.core import scan as _scan
+
+    found = _scan.scan_wow_installations()
+    return {"count": len(found), "found": found}
+
+
+@method("profiles.addFromPath")
+def _profiles_add_from_path(params: dict[str, Any]) -> dict[str, Any]:
+    """Create or update a profile for the given addons_path, make it active.
+
+    params: {path: str, name?: str}
+    returns: updated settings
+    """
+    from wowusky.core import state as _state
+
+    path = params.get("path")
+    if not path:
+        raise ValueError("path is required")
+    name = params.get("name") or ""
+    _state.add_or_update_profile(name, str(path))
+    return _settings_get({})
+
+
 # ---------------------------------------------------------------------------
 # WeakAuras (wago tracking)
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
 import {
   spawn,
   spawnSync,
@@ -158,6 +158,16 @@ app.whenReady().then(() => {
   // Renderer -> Python RPC.
   ipcMain.handle("bridge:call", async (_e, method: string, params) => {
     return bridge!.call(method, params || {});
+  });
+
+  // Directory picker (for Set Path in Settings).
+  ipcMain.handle("dialog:openDirectory", async () => {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ["openDirectory"],
+      title: "Select AddOns folder",
+    });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
   });
 
   // Window controls for the custom titlebar.
