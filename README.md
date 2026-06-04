@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.9.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.9.1    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,31 +15,14 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.9.0
-
-Feature release — desktop app. wowusky now ships a redesigned Electron + React
-desktop UI on top of the existing Python engine, exposed through a JSON-RPC
-bridge.
-
-### Added
-- **Desktop shell (`desktop/`)**: Electron + React + Vite app with a custom
-  titlebar, sidebar navigation and Browse / Installed / WeakAuras / Backups /
-  Health / Settings screens. Light & dark themes, four accent colors and a
-  compact density mode, all persisted locally.
-- **JSON-RPC bridge (`wowusky/bridge`)**: newline-delimited JSON-RPC 2.0 server
-  over stdin/stdout (`python -m wowusky.bridge`) exposing catalog search,
-  installed list, rescan, settings/profiles, WeakAuras, backups and an offline
-  health check — all reusing the existing `wowusky.core` / `orchestrator` logic.
-- **Live actions**: Install, Update, Remove and backup Restore run through the
-  bridge and stream per-step log lines plus download progress to the UI via
-  `action.progress` / `action.done` notifications.
-- **Packaging**: electron-builder AppImage target and an updated AUR `PKGBUILD`
-  that builds the desktop shell and installs it next to the Python package.
+## What's new in v0.9.1
 
 ### Fixed
-- `scan.sync_filesystem_with_db` no longer raises `KeyError: 'source'` when a
-  discovered folder matches a catalog entry that uses the `provider` field
-  (the shape the bundled catalog actually ships).
+- The addon-details dialog's background version-lookup thread no longer touches
+  Tk from a non-main thread. On Python 3.14 that aborted the interpreter with a
+  fatal `Tcl_AsyncDelete: async handler deleted by the wrong thread` panic
+  during the test suite (breaking the AUR `check()` phase). The worker now only
+  computes version choices; the main thread polls the result and renders.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -49,8 +32,8 @@ bridge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.9.0.zip
-cd wowusky-v0.9.0
+unzip wowusky-v0.9.1.zip
+cd wowusky-v0.9.1
 chmod +x install.sh
 ./install.sh
 ```
@@ -74,7 +57,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.9.0-py3-none-any.whl
+pip install dist/wowusky-0.9.1-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)

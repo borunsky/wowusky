@@ -138,8 +138,9 @@ def test_version_choices_rendered():
     try:
         choices = [{"label": "v13.5", "url": "u1"}, {"label": "v13.4", "url": "u2"}]
         dlg = _make_dialog(root, github_version_choices=lambda a: choices)
-        # Run the async fill synchronously, then pump the after() callback.
+        # Run the worker synchronously, then drive the main-thread poll/render.
         dlg._fill_versions()
+        dlg._poll_versions()
         root.update()
         texts = _all_label_text(dlg._list_wrap)
         assert any("v13.5" in t for t in texts)
@@ -154,6 +155,7 @@ def test_no_versions_shows_hint():
         dlg = _make_dialog(root, addon={**_ADDON, "source": "curseforge_web"},
                            github_version_choices=lambda a: [])
         dlg._fill_versions()
+        dlg._poll_versions()
         root.update()
         texts = _all_label_text(dlg._list_wrap)
         assert any("Direct version selection" in t for t in texts)
