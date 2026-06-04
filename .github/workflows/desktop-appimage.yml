@@ -1,0 +1,49 @@
+name: Desktop AppImage
+
+# Builds the Electron desktop shell into a Linux AppImage.
+#
+#  * workflow_dispatch — run it by hand to produce a downloadable artifact
+#    (Actions run → Artifacts → wowusky-appimage).
+#  * release: published — also attaches the AppImage to the GitHub release,
+#    so `wowusky-X.Y.Z.AppImage` shows up under the release assets.
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  appimage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build AppImage
+        working-directory: desktop
+        run: npm run dist:appimage
+
+      - name: Upload AppImage as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wowusky-appimage
+          path: desktop/dist/*.AppImage
+          if-no-files-found: error
+
+      - name: Attach AppImage to the release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/dist/*.AppImage
