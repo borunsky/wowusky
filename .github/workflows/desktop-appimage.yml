@@ -35,7 +35,11 @@ jobs:
         working-directory: desktop
         run: npm run dist:appimage
 
+      # Only on manual runs: expose the AppImage as a (zipped) workflow
+      # artifact so it can be grabbed from the Actions tab. Release runs skip
+      # this so the release shows the raw .AppImage, not a wrapping .zip.
       - name: Upload AppImage as a workflow artifact
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: wowusky-appimage

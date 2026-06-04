@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.9.1    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.9.2    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -32,8 +32,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.9.1.zip
-cd wowusky-v0.9.1
+unzip wowusky-v0.9.2.zip
+cd wowusky-v0.9.2
 chmod +x install.sh
 ./install.sh
 ```
@@ -57,7 +57,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.9.1-py3-none-any.whl
+pip install dist/wowusky-0.9.2-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
