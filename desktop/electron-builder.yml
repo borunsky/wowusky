@@ -29,6 +29,3 @@ linux:
     Keywords: wow;warcraft;addon;elvui;tukui;weakauras;
     StartupNotify: true
     StartupWMClass: wowusky
-
-appImage:
-  license: LICENSE

@@ -17,7 +17,7 @@ interface WaResult {
 
 // Dev-only placeholder data, shown when the profile has no tracked auras yet
 // so the layout can be eyeballed. Flip to false to disable.
-const SHOW_DEMO = true;
+const SHOW_DEMO = false;
 const DEMO_AURAS: Aura[] = [
   {
     slug: "demo-rotation",

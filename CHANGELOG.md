@@ -4,6 +4,32 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] — 2026-06-04
+
+Feature release — desktop app. wowusky now ships a redesigned Electron + React
+desktop UI on top of the existing Python engine, exposed through a JSON-RPC
+bridge.
+
+### Added
+- **Desktop shell (`desktop/`)**: Electron + React + Vite app with a custom
+  titlebar, sidebar navigation and Browse / Installed / WeakAuras / Backups /
+  Health / Settings screens. Light & dark themes, four accent colors and a
+  compact density mode, all persisted locally.
+- **JSON-RPC bridge (`wowusky/bridge`)**: newline-delimited JSON-RPC 2.0 server
+  over stdin/stdout (`python -m wowusky.bridge`) exposing catalog search,
+  installed list, rescan, settings/profiles, WeakAuras, backups and an offline
+  health check — all reusing the existing `wowusky.core` / `orchestrator` logic.
+- **Live actions**: Install, Update, Remove and backup Restore run through the
+  bridge and stream per-step log lines plus download progress to the UI via
+  `action.progress` / `action.done` notifications.
+- **Packaging**: electron-builder AppImage target and an updated AUR `PKGBUILD`
+  that builds the desktop shell and installs it next to the Python package.
+
+### Fixed
+- `scan.sync_filesystem_with_db` no longer raises `KeyError: 'source'` when a
+  discovered folder matches a catalog entry that uses the `provider` field
+  (the shape the bundled catalog actually ships).
+
 ## [0.8.3] — 2026-06-03
 
 ### Fixed
@@ -862,6 +888,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.9.0]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.0
 [0.8.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.3
 [0.8.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.2
 [0.8.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.8.1

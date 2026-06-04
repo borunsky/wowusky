@@ -24,7 +24,7 @@ interface BackupsResult {
 
 // Dev-only placeholder data, shown when the profile has no backups yet so the
 // layout can be eyeballed. Flip to false to disable.
-const SHOW_DEMO = true;
+const SHOW_DEMO = false;
 const _now = Date.now() / 1000;
 const DEMO_BACKUPS: BackupsResult = {
   full_count: 1,
