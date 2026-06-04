@@ -26,6 +26,22 @@ interface CoreSettings {
   profiles: ProfileSummary[];
 }
 
+interface AddonPreviewItem {
+  id: string;
+  name: string;
+  version: string;
+  installed_version: string;
+  source: string;
+  status: "new" | "same" | "conflict";
+}
+
+interface ImportPreview {
+  profile: string;
+  profile_name: string;
+  source_profile: string;
+  preview: AddonPreviewItem[];
+}
+
 interface Props {
   theme: Theme;
   density: Density;
@@ -55,6 +71,10 @@ export function SettingsScreen({
   const [scanResults, setScanResults] = useState<ScanResult[] | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importData, setImportData] = useState<object | null>(null);
+  const [skipConflicts, setSkipConflicts] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   function reload() {
     bridge.call<CoreSettings>("settings.get", {}).then((s) => {
@@ -126,6 +146,54 @@ export function SettingsScreen({
     bridge.call<CoreSettings>("profile.delete", { profile: id })
       .then((s) => { setCore(s); setAddonsPath(s.addons_path); onProfileChange(); })
       .catch(() => {});
+  }
+
+  function exportProfile(profileId: string) {
+    bridge.call<{ json: string; filename: string }>("addons.exportSet", { profile: profileId })
+      .then(({ json, filename }) => {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => {});
+  }
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        bridge.call<ImportPreview>("addons.importSet", { data })
+          .then((preview) => { setImportData(data); setImportPreview(preview); setSkipConflicts(false); })
+          .catch(() => {});
+      } catch { /* invalid JSON — ignore */ }
+    };
+    reader.readAsText(file);
+  }
+
+  function applyImport() {
+    if (!importData || !importPreview) return;
+    setImporting(true);
+    const skip = skipConflicts
+      ? (importPreview.preview ?? []).filter((p) => p.status === "conflict").map((p) => p.id)
+      : [];
+    bridge.call<CoreSettings & { imported: number; skipped: number }>(
+      "addons.importSet.apply",
+      { data: importData, profile: importPreview.profile, skip },
+    ).then((s) => {
+      setCore(s);
+      setImportPreview(null);
+      setImportData(null);
+      onProfileChange();
+      flash();
+    }).catch(() => {}).finally(() => setImporting(false));
   }
 
   async function setPathDialog(profileId?: string) {
@@ -266,6 +334,9 @@ export function SettingsScreen({
                         ) : (
                           <button className="btn btn-sm" onClick={() => switchProfile(p.id)}>Activate</button>
                         )}
+                        <button className="btn btn-sm" title="Export addon list" onClick={() => exportProfile(p.id)}>
+                          Export
+                        </button>
                         <button className="btn btn-sm btn-danger" title="Delete profile" onClick={() => deleteProfile(p.id, p.name)}>
                           Delete
                         </button>
@@ -312,6 +383,61 @@ export function SettingsScreen({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Addon Sets */}
+          <div className="set-group">
+            <h3>Addon Sets</h3>
+            <p className="gdesc">Export or import a profile's full addon list as a portable JSON file.</p>
+            <div className="set-card">
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Import addon set</div>
+                  <div className="sd">Load a previously exported addon list into the active profile.</div>
+                </div>
+                <div className="sr">
+                  <label className="btn btn-sm btn-primary" style={{ cursor: "pointer" }}>
+                    Choose file…
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      style={{ display: "none" }}
+                      onChange={handleImportFile}
+                    />
+                  </label>
+                </div>
+              </div>
+              {importPreview && (() => {
+                const newCount = importPreview.preview.filter((p) => p.status === "new").length;
+                const conflictCount = importPreview.preview.filter((p) => p.status === "conflict").length;
+                const sameCount = importPreview.preview.filter((p) => p.status === "same").length;
+                return (
+                  <div style={{ padding: "8px 0 4px", borderTop: "1px solid var(--border)", marginTop: 4 }}>
+                    <div className="sd" style={{ marginBottom: 8 }}>
+                      From <strong>{importPreview.source_profile}</strong> →{" "}
+                      <strong>{importPreview.profile_name}</strong>:{" "}
+                      <span style={{ color: "var(--green)" }}>{newCount} new</span>
+                      {conflictCount > 0 && <span style={{ color: "var(--red)", marginLeft: 6 }}>{conflictCount} conflict(s)</span>}
+                      {sameCount > 0 && <span style={{ color: "var(--text-faint)", marginLeft: 6 }}>{sameCount} already installed</span>}
+                    </div>
+                    {conflictCount > 0 && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer" }}>
+                        <input type="checkbox" checked={skipConflicts} onChange={(e) => setSkipConflicts(e.target.checked)} />
+                        <span className="sd">Skip conflicting addons</span>
+                      </label>
+                    )}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn btn-sm btn-primary" onClick={applyImport} disabled={importing}>
+                        {importing ? "Importing…" : "Apply import"}
+                      </button>
+                      <button className="btn btn-sm" onClick={() => { setImportPreview(null); setImportData(null); }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

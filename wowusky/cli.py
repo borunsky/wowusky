@@ -603,6 +603,143 @@ def _wa_companion(args: argparse.Namespace) -> None:
         _die(str(exc))
 
 
+def cmd_health(args: argparse.Namespace) -> None:
+    from wowusky.catalog import load_catalog
+    from wowusky.tools.health_check import check_addon, check_addon_offline
+
+    catalog = load_catalog()
+    offline = getattr(args, "offline", False)
+    as_json = getattr(args, "json", False)
+    limit = getattr(args, "limit", None)
+    if limit:
+        catalog = catalog[:limit]
+
+    check_fn = check_addon_offline if offline else check_addon
+    results = []
+    ok = 0
+    for entry in catalog:
+        if not as_json and not _QUIET:
+            print(f"  checking {entry.get('id', '?'):<40}", end="\r", flush=True)
+        r = check_fn(entry)
+        if "error" not in r:
+            ok += 1
+        results.append(r)
+
+    if not as_json and not _QUIET:
+        print(" " * 60, end="\r")
+
+    failed = len(results) - ok
+    if as_json:
+        _print_json({"total": len(results), "ok": ok, "failed": failed, "results": results})
+        return
+
+    mode = "offline" if offline else "online"
+    print(f"\n{ok}/{len(results)} catalog entries healthy ({mode})" +
+          (f", {failed} failed." if failed else "."))
+    for r in results:
+        if "error" in r:
+            print(f"  ✗ {r['id']}: {r['error']}")
+    if failed:
+        sys.exit(1)
+
+
+def cmd_export(args: argparse.Namespace) -> None:
+    import json as _json
+
+    from wowusky.core.addonset import export_addon_set
+    from wowusky.core.state import load_profiles
+
+    profile_arg = getattr(args, "profile", None)
+    profile_id = None
+    if profile_arg:
+        profiles = load_profiles().get("profiles", {})
+        for pid, prof in profiles.items():
+            if pid == profile_arg or (prof.get("name") or "").lower() == profile_arg.lower():
+                profile_id = pid
+                break
+        if profile_id is None:
+            _die(f"Profile '{profile_arg}' not found.")
+
+    snap = export_addon_set(profile_id)
+    output = _json.dumps(snap, indent=2, ensure_ascii=False)
+    with open(args.file, "w") as fh:
+        fh.write(output)
+
+    count = snap.get("count", 0)
+    name = snap["profile"].get("name", "profile")
+    _say(f"  ✓ Exported {count} addon(s) from '{name}' to {args.file}")
+
+
+def cmd_import_set(args: argparse.Namespace) -> None:
+    import json as _json
+
+    from wowusky.core.addonset import import_addon_set_apply, import_addon_set_preview
+    from wowusky.core.state import load_profiles
+
+    try:
+        with open(args.file) as fh:
+            data = _json.load(fh)
+    except (FileNotFoundError, _json.JSONDecodeError) as exc:
+        _die(str(exc))
+
+    profile_arg = getattr(args, "profile", None)
+    profile_id = None
+    if profile_arg:
+        profiles = load_profiles().get("profiles", {})
+        for pid, prof in profiles.items():
+            if pid == profile_arg or (prof.get("name") or "").lower() == profile_arg.lower():
+                profile_id = pid
+                break
+        if profile_id is None:
+            _die(f"Profile '{profile_arg}' not found.")
+
+    as_json = getattr(args, "json", False)
+
+    try:
+        preview = import_addon_set_preview(data, profile_id)
+    except ValueError as exc:
+        _die(str(exc))
+
+    new_count = sum(1 for p in preview if p["status"] == "new")
+    conflict_count = sum(1 for p in preview if p["status"] == "conflict")
+    same_count = sum(1 for p in preview if p["status"] == "same")
+
+    if as_json:
+        _print_json({
+            "preview": preview,
+            "new": new_count,
+            "conflicts": conflict_count,
+            "same": same_count,
+        })
+        return
+
+    if not _QUIET:
+        src = (data.get("profile") or {}).get("name", "?")
+        print(f"\nImporting addon set from '{src}': "
+              f"{new_count} new, {conflict_count} conflict(s), {same_count} already installed\n")
+        if conflict_count:
+            print("Conflicts (your version → import version):")
+            for p in preview:
+                if p["status"] == "conflict":
+                    print(f"  {p['id']:<30}  {p['installed_version']!s:<12} → {p['version']}")
+            print()
+
+    yes = getattr(args, "yes", False)
+    if not yes and not _QUIET:
+        try:
+            ans = input("Apply import? [y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            ans = ""
+        if ans not in ("y", "yes"):
+            print("Aborted.")
+            return
+
+    skip = [p["id"] for p in preview if p["status"] == "conflict"] if getattr(args, "skip_conflicts", False) else []
+    result = import_addon_set_apply(data, profile_id, skip)
+    _say(f"  ✓ Imported {result['imported']} addon(s), skipped {result['skipped']}.")
+
+
 def cmd_version(args: argparse.Namespace) -> None:
     from wowusky import __version__
     print(f"wowusky {__version__}")
@@ -619,7 +756,7 @@ _wowusky_completion() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     local commands="install uninstall update status search orphans import \
-backup rollback weakauras wa profile set version help completion"
+backup rollback weakauras wa profile set health export import-set version help completion"
     if [ "$COMP_CWORD" -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
         return
@@ -642,7 +779,7 @@ _ZSH_COMPLETION = r"""#compdef wowusky
 _wowusky() {
     local -a commands
     commands=(install uninstall update status search orphans import \
-backup rollback weakauras wa profile set version help completion)
+backup rollback weakauras wa profile set health export import-set version help completion)
     if (( CURRENT == 2 )); then
         _describe 'command' commands
         return
@@ -827,6 +964,53 @@ def cmd_help(args: argparse.Namespace) -> None:
                 ("wowusky weakauras companion",       "Regenerate WeakAurasCompanion."),
             ],
         },
+        "health": {
+            "syntax":   "wowusky health [--offline] [--json]",
+            "desc":     "Check every catalog entry against its provider.\n"
+                        "  --offline skips network calls and only verifies that each entry\n"
+                        "  resolves to a known provider reference. Default mode also pings\n"
+                        "  the provider API to fetch the latest version.",
+            "flags": [
+                ("--offline", "Provider-resolve only; no network calls."),
+                ("--json",    "Machine-readable JSON output."),
+                ("--limit N", "Check only the first N entries (for debugging)."),
+            ],
+            "examples": [
+                ("wowusky health --offline", "Fast offline check of all catalog entries."),
+                ("wowusky health",           "Full online check (fetches latest versions)."),
+                ("wowusky health --json",    "JSON output for scripting."),
+            ],
+        },
+        "export": {
+            "syntax":   "wowusky export <file.json> [--profile name|id]",
+            "desc":     "Export the installed addon list for the active (or given) profile\n"
+                        "  to a portable JSON file that can be imported on another machine.",
+            "flags": [
+                ("--profile name|id", "Profile to export (default: active profile)."),
+            ],
+            "examples": [
+                ("wowusky export my-addons.json",                    "Export the active profile."),
+                ("wowusky export retail.json --profile retail",      "Export a specific profile."),
+            ],
+        },
+        "import-set": {
+            "syntax":   "wowusky import-set <file.json> [--profile name|id] [-y] [--skip-conflicts]",
+            "desc":     "Import an addon set from a JSON export file into a profile.\n"
+                        "  Writes DB entries only — use 'update' afterwards to download the\n"
+                        "  actual addon files. Conflicts (same addon, different version) are\n"
+                        "  shown interactively unless --yes is given.",
+            "flags": [
+                ("--profile name|id",  "Target profile (default: active profile)."),
+                ("-y, --yes",          "Apply without a confirmation prompt."),
+                ("--skip-conflicts",   "Skip addons whose version conflicts with what is installed."),
+            ],
+            "examples": [
+                ("wowusky import-set my-addons.json",                       "Interactive import."),
+                ("wowusky import-set my-addons.json -y",                    "Import without prompting."),
+                ("wowusky import-set retail.json --profile retail -y",      "Import into a specific profile."),
+                ("wowusky import-set my-addons.json --skip-conflicts",      "Import new addons, skip conflicts."),
+            ],
+        },
         "completion": {
             "syntax":   "wowusky completion bash\n"
                         "  wowusky completion zsh",
@@ -886,6 +1070,9 @@ def cmd_help(args: argparse.Namespace) -> None:
         ("weakauras list|add|update|…",  "Track Wago.io WeakAuras + companion"),
         ("profile   list|switch <name>", "Manage WoW installation profiles"),
         ("set       curseforge-key [v]", "Configure wowusky settings"),
+        ("health    [--offline]",        "Check catalog entries against their providers"),
+        ("export    <file.json>",        "Export the active profile's addon list"),
+        ("import-set <file.json>",       "Import an addon list from a JSON export"),
         ("completion bash|zsh",          "Print a shell completion script"),
         ("version",                      "Print version and exit"),
         ("help      [<command>]",        "Show this help, or detailed help for one command"),
@@ -1052,6 +1239,27 @@ def build_parser() -> argparse.ArgumentParser:
                     help="New value. Omit or pass empty string to clear.")
     sp.set_defaults(func=cmd_set)
 
+    # health
+    sp = sub.add_parser("health", parents=[g], help="Check every catalog entry for provider issues.")
+    sp.add_argument("--offline", action="store_true", help="Skip network calls (provider-resolve only).")
+    sp.add_argument("--limit", type=int, default=None, metavar="N", help="Check only the first N entries (debug).")
+    sp.set_defaults(func=cmd_health)
+
+    # export
+    sp = sub.add_parser("export", parents=[g], help="Export the active profile's addon list to a JSON file.")
+    sp.add_argument("file", metavar="file.json")
+    sp.add_argument("--profile", default=None, metavar="name|id", help="Profile to export (default: active).")
+    sp.set_defaults(func=cmd_export)
+
+    # import-set
+    sp = sub.add_parser("import-set", parents=[g], help="Import an addon set from a JSON export file.")
+    sp.add_argument("file", metavar="file.json")
+    sp.add_argument("--profile", default=None, metavar="name|id", help="Target profile (default: active).")
+    sp.add_argument("-y", "--yes", action="store_true", help="Apply without confirmation prompt.")
+    sp.add_argument("--skip-conflicts", action="store_true",
+                    help="Skip addons whose version conflicts with what is already installed.")
+    sp.set_defaults(func=cmd_import_set)
+
     # version
     sp = sub.add_parser("version", help="Print the wowusky version and exit.")
     sp.set_defaults(func=cmd_version)
@@ -1072,7 +1280,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 # Commands that never touch the WoW install (no profile needed, no data at
 # risk), so the automatic backup is pointless and is skipped for them.
-_NO_BACKUP_COMMANDS = {"version", "help", "search", "set", "completion", None}
+_NO_BACKUP_COMMANDS = {"version", "help", "search", "set", "completion", "health", "export", None}
 
 
 def _maybe_auto_backup(args: argparse.Namespace) -> None:

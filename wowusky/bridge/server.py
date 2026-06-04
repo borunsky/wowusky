@@ -652,6 +652,79 @@ def _health_check(params: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Addon-set export / import
+# ---------------------------------------------------------------------------
+
+
+@method("addons.exportSet")
+def _addons_export_set(params: dict[str, Any]) -> dict[str, Any]:
+    """Export the installed addon list for a profile as a portable JSON snapshot.
+
+    params: {profile?: str}
+    returns: {data: {...}, filename: str, json: str}
+    """
+    import json as _json
+
+    from wowusky.core import addonset as _addonset
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    data = _addonset.export_addon_set(profile)
+    prof_name = data["profile"].get("name", profile).replace(" ", "-").lower()
+    filename = f"wowusky-{prof_name}-addons.json"
+    return {
+        "data": data,
+        "filename": filename,
+        "json": _json.dumps(data, indent=2, ensure_ascii=False),
+    }
+
+
+@method("addons.importSet")
+def _addons_import_set(params: dict[str, Any]) -> dict[str, Any]:
+    """Parse an exported addon set and return a per-addon conflict preview.
+
+    params: {data: object, profile?: str}
+    returns: {profile_name, profile, preview: [{id, name, version, installed_version, source, status}]}
+    """
+    from wowusky.core import addonset as _addonset
+    from wowusky.core import state as _state
+
+    raw = params.get("data")
+    if not isinstance(raw, dict):
+        raise ValueError("data must be an object")
+    profile = params.get("profile") or _state.get_active_profile_id()
+    preview = _addonset.import_addon_set_preview(raw, profile)
+    prof_data = _state.load_profiles()
+    prof = prof_data.get("profiles", {}).get(profile, {})
+    src_prof = raw.get("profile", {})
+    return {
+        "profile": profile,
+        "profile_name": prof.get("name", profile),
+        "source_profile": src_prof.get("name", src_prof.get("id", "")),
+        "preview": preview,
+    }
+
+
+@method("addons.importSet.apply")
+def _addons_import_set_apply(params: dict[str, Any]) -> dict[str, Any]:
+    """Apply an addon-set import (writes DB entries, no downloads).
+
+    params: {data: object, profile?: str, skip?: [str]}
+    returns: {imported, skipped, ...installed_list}
+    """
+    from wowusky.core import addonset as _addonset
+    from wowusky.core import state as _state
+
+    raw = params.get("data")
+    if not isinstance(raw, dict):
+        raise ValueError("data must be an object")
+    profile = params.get("profile") or _state.get_active_profile_id()
+    skip = list(params.get("skip") or [])
+    result = _addonset.import_addon_set_apply(raw, profile, skip)
+    return {**result, **_installed_list({"profile": profile})}
+
+
+# ---------------------------------------------------------------------------
 # Dispatch loop
 # ---------------------------------------------------------------------------
 

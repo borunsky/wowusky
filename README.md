@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.9.3    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.9.4    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,14 +15,17 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.9.1
+## What's new in v0.9.4
 
-### Fixed
-- The addon-details dialog's background version-lookup thread no longer touches
-  Tk from a non-main thread. On Python 3.14 that aborted the interpreter with a
-  fatal `Tcl_AsyncDelete: async handler deleted by the wrong thread` panic
-  during the test suite (breaking the AUR `check()` phase). The worker now only
-  computes version choices; the main thread polls the result and renders.
+### Added
+- **Addon-set export / import**: export a profile's full addon list to a
+  shareable JSON file (`wowusky export <file.json>`) and import it back with
+  per-addon conflict resolution (`wowusky import-set <file.json> [-y]`).
+  Export and Import buttons are also available per-profile in the desktop
+  Settings screen → Addon Sets section.
+- **`wowusky health` command**: surface the existing catalog health-check
+  engine as a first-class CLI command. `--offline` for fast provider-resolve
+  validation; default mode fetches latest versions. Exits non-zero on failures.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -32,8 +35,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.9.3.zip
-cd wowusky-v0.9.3
+unzip wowusky-v0.9.4.zip
+cd wowusky-v0.9.4
 chmod +x install.sh
 ./install.sh
 ```
@@ -57,7 +60,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.9.3-py3-none-any.whl
+pip install dist/wowusky-0.9.4-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)

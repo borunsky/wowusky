@@ -4,6 +4,20 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] — 2026-06-04
+
+### Added
+- **Addon-set export / import**: export a profile's full installed list to a
+  portable JSON file (`wowusky export <file.json>`) and import it back into
+  any profile with per-addon conflict resolution
+  (`wowusky import-set <file.json> [-y] [--skip-conflicts]`). The desktop
+  Settings screen gains an **Export** button per profile and an **Import**
+  section with an inline conflict-resolution preview.
+- **`wowusky health` command**: the existing catalog health-check engine is
+  now a first-class CLI command. `--offline` for fast provider-resolve
+  validation (no network); default mode also fetches latest versions. Exits
+  non-zero when any entry fails.
+
 ## [0.9.3] — 2026-06-04
 
 ### Added
@@ -944,6 +958,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.9.4]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.4
 [0.9.3]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.3
 [0.9.2]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.2
 [0.9.1]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.1
