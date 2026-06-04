@@ -18,21 +18,32 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ## What's new in v0.9.5
 
 ### Added
-- **Dependency preview in the detail panel**: before you install any addon that
-  has catalog dependencies, the detail panel now shows which deps would be
-  co-installed and which are already present — so you know exactly what a click
-  on Install does.
-- **Bulk update / remove on the Installed tab**: tick one or more addons with
-  the new row checkboxes and hit **Update** or **Remove** in the selection bar.
-  A header checkbox selects all visible rows.
-- **Scheduled-update timer (systemd)**: Settings → Scheduled Updates exposes a
-  new section to install, configure (hourly / daily / weekly) and remove a
-  systemd user timer that runs `wowusky update -q` on a schedule. Also
-  available via `wowusky schedule enable|disable|status`.
-- **Import from Downloads (desktop)**: Settings → Import from Downloads lists
-  all `.zip` files in `~/Downloads`, guesses which catalog addon each one
-  belongs to, and installs them with one click. Works for CurseForge ZIPs that
-  were downloaded manually.
+- **Dependency preview in the detail panel**: addons that declare catalog
+  dependencies now show a "Also installs N dependencies" hint in the Install
+  CTA area, and the Dependencies section in the scroll body labels each dep
+  as *installed* (accent-colored) or *required* — unknown ids are flagged as
+  *not in catalog*. Backed by the new `addon.deps` bridge method and
+  `orchestrator.dependency_preview()`.
+- **Bulk update / remove on the Installed tab**: every row now has a checkbox;
+  a header checkbox selects/deselects all visible rows. When rows are selected
+  a context bar appears in the toolbar with **Update (N)** (only for rows that
+  have a pending update) and **Remove** bulk actions. Backed by the new
+  `installed.removeMany` bridge method.
+- **Scheduled-update timer (systemd)**: a new `wowusky schedule` CLI command
+  (`status` / `enable [--interval hourly|daily|weekly]` / `disable`) installs
+  and manages a systemd *user* timer that runs `wowusky update -q` on a
+  schedule. The desktop Settings screen gains a **Scheduled Updates** section
+  that shows the current timer state and lets you enable, reconfigure, or
+  remove the timer — all in-app. Backed by `wowusky/core/schedule.py` and
+  three new bridge methods (`schedule.status`, `schedule.enable`,
+  `schedule.disable`). Degrades gracefully where systemd is unavailable.
+- **Import from Downloads (desktop)**: the Settings screen gains an **Import
+  from Downloads** section that scans `~/Downloads` for `.zip` files, guesses
+  the catalog match for each (by fuzzy-matching the filename against addon ids
+  and names), and installs them with one click. Multiple ZIPs are shown
+  newest-first. Backed by `orchestrator.scan_download_zips_annotated()` +
+  `guess_catalog_match()` and two new bridge methods (`downloads.scan`,
+  `downloads.import`).
 <!-- WHATS-NEW:END -->
 
 ---
