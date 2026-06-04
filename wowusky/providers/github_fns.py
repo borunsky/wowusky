@@ -68,6 +68,26 @@ def github_releases(repo):
     return []
 
 
+def github_release_notes(addon):
+    """Return ``{version, notes}`` for an addon's latest GitHub release.
+
+    ``notes`` is the release body (markdown). Returns ``None`` when no repo
+    or no release is resolvable, or on any network failure (degrade quietly).
+    """
+    repo = github_repo_for_addon(addon)
+    if not repo:
+        return None
+    rels = github_releases(repo)
+    if not rels:
+        return None
+    rel = rels[0]
+    tag = rel.get("tag_name") or rel.get("name") or ""
+    body = (rel.get("body") or "").strip()
+    if not tag and not body:
+        return None
+    return {"version": str(tag).lstrip("v"), "notes": body}
+
+
 def github_tags(repo):
     try:
         tags = http_get_json(f"https://api.github.com/repos/{repo}/tags?per_page=10")

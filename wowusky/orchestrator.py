@@ -550,6 +550,18 @@ def list_addon_versions(addon, limit=15):
     return []
 
 
+def update_notes(addon):
+    """Return ``{version, notes}`` release notes for *addon*, or ``None``.
+
+    Currently only GitHub-sourced addons expose machine-readable release
+    notes; other providers return ``None`` (no changelog endpoint).
+    """
+    source = addon.get("source") or addon.get("provider") or ""
+    if source == "github":
+        return _github_fns.github_release_notes(addon)
+    return None
+
+
 def install_addon_version(addon, url, label, log=print, progress=None):
     """Install a specific version of *addon* from a direct ZIP *url*.
 

@@ -20,6 +20,9 @@ import subprocess
 SERVICE_NAME = "wowusky-update.service"
 TIMER_NAME = "wowusky-update.timer"
 
+BACKUP_SERVICE_NAME = "wowusky-backup.service"
+BACKUP_TIMER_NAME = "wowusky-backup.timer"
+
 # systemd OnCalendar expressions for the intervals we expose.
 INTERVALS = {
     "hourly": "hourly",
@@ -80,8 +83,8 @@ def _systemctl(*args: str) -> tuple[int, str]:
     return proc.returncode, (proc.stdout + proc.stderr).strip()
 
 
-def _show(prop: str) -> str:
-    rc, out = _systemctl("show", TIMER_NAME, "-p", prop, "--value")
+def _show(prop: str, timer_name: str = TIMER_NAME) -> str:
+    rc, out = _systemctl("show", timer_name, "-p", prop, "--value")
     return out.strip() if rc == 0 else ""
 
 
@@ -185,3 +188,118 @@ def disable() -> dict:
             os.remove(path)
     _systemctl("daemon-reload")
     return {"ok": True, **status()}
+
+
+# ---------------------------------------------------------------------------
+# Scheduled full backups (a second, independent user timer)
+# ---------------------------------------------------------------------------
+
+def backup_service_path() -> str:
+    return os.path.join(_unit_dir(), BACKUP_SERVICE_NAME)
+
+
+def backup_timer_path() -> str:
+    return os.path.join(_unit_dir(), BACKUP_TIMER_NAME)
+
+
+def _read_backup_keep() -> int:
+    """Recover the configured ``--keep N`` from the on-disk service unit."""
+    try:
+        with open(backup_service_path(), encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("ExecStart=") and "--keep" in line:
+                    parts = line.split()
+                    if "--keep" in parts:
+                        idx = parts.index("--keep")
+                        if idx + 1 < len(parts):
+                            with contextlib.suppress(ValueError):
+                                return int(parts[idx + 1])
+    except OSError:
+        pass
+    return 5
+
+
+def backup_status() -> dict:
+    """Report the current scheduled-backup state (mirrors :func:`status`)."""
+    if not available():
+        return {"available": False, "installed": False}
+    if not os.path.isfile(backup_timer_path()):
+        return {"available": True, "installed": False}
+    enabled = _show("UnitFileState", BACKUP_TIMER_NAME) in ("enabled", "enabled-runtime")
+    active = _show("ActiveState", BACKUP_TIMER_NAME) == "active"
+    interval = "daily"
+    try:
+        with open(backup_timer_path(), encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("OnCalendar="):
+                    val = line.split("=", 1)[1].strip()
+                    interval = next((n for n, e in INTERVALS.items() if e == val), val)
+                    break
+    except OSError:
+        pass
+    return {
+        "available": True,
+        "installed": True,
+        "enabled": enabled,
+        "active": active,
+        "interval": interval,
+        "keep": _read_backup_keep(),
+        "next_run": _show("NextElapseUSecRealtime", BACKUP_TIMER_NAME) or None,
+        "last_run": _show("LastTriggerUSec", BACKUP_TIMER_NAME) or None,
+    }
+
+
+def _write_backup_units(interval: str, keep: int) -> None:
+    oncal = INTERVALS.get(interval, INTERVALS["daily"])
+    os.makedirs(_unit_dir(), exist_ok=True)
+    service = (
+        "[Unit]\n"
+        "Description=wowusky scheduled full backup\n"
+        "\n"
+        "[Service]\n"
+        "Type=oneshot\n"
+        f"ExecStart={_wowusky_exec()} backup auto --keep {int(keep)}\n"
+    )
+    timer = (
+        "[Unit]\n"
+        "Description=wowusky scheduled full backup timer\n"
+        "\n"
+        "[Timer]\n"
+        f"OnCalendar={oncal}\n"
+        "Persistent=true\n"
+        "\n"
+        "[Install]\n"
+        "WantedBy=timers.target\n"
+    )
+    with open(backup_service_path(), "w", encoding="utf-8") as fh:
+        fh.write(service)
+    with open(backup_timer_path(), "w", encoding="utf-8") as fh:
+        fh.write(timer)
+
+
+def backup_enable(interval: str = "daily", keep: int = 5) -> dict:
+    """Install + enable the scheduled-backup timer."""
+    if not available():
+        return {"ok": False, "error": "systemd user instance not available"}
+    if interval not in INTERVALS:
+        interval = "daily"
+    _write_backup_units(interval, max(1, int(keep)))
+    _systemctl("daemon-reload")
+    rc, out = _systemctl("enable", "--now", BACKUP_TIMER_NAME)
+    if rc != 0:
+        return {"ok": False, "error": out or "failed to enable backup timer"}
+    return {"ok": True, **backup_status()}
+
+
+def backup_disable() -> dict:
+    """Stop, disable and remove the scheduled-backup timer + service units."""
+    if not available():
+        return {"ok": False, "error": "systemd user instance not available"}
+    _systemctl("disable", "--now", BACKUP_TIMER_NAME)
+    for path in (backup_timer_path(), backup_service_path()):
+        with contextlib.suppress(OSError):
+            os.remove(path)
+    _systemctl("daemon-reload")
+    return {"ok": True, **backup_status()}

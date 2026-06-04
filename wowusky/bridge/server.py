@@ -665,6 +665,93 @@ def _wago_generate_companion(_params: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Release notes (#53)
+# ---------------------------------------------------------------------------
+
+
+@method("addon.releaseNotes")
+def _addon_release_notes(params: dict[str, Any]) -> dict[str, Any]:
+    """Return the source's release notes for an installed/catalog addon."""
+    from wowusky import orchestrator as _orch
+    from wowusky.catalog import load_catalog
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+
+    addon = None
+    for entry in load_catalog():
+        if entry.get("id") == addon_id:
+            addon = entry
+            break
+    if addon is None:
+        inst = _orch.load_installed().get(addon_id)
+        if inst:
+            addon = {**inst, "id": addon_id}
+    if addon is None:
+        return {"version": "", "notes": ""}
+
+    try:
+        notes = _orch.update_notes(addon)
+    except Exception:  # noqa: BLE001
+        notes = None
+    if not notes:
+        return {"version": "", "notes": ""}
+    return {"version": notes.get("version", ""), "notes": notes.get("notes", "")}
+
+
+# ---------------------------------------------------------------------------
+# Storage overview & cleanup (#52)
+# ---------------------------------------------------------------------------
+
+
+@method("storage.summary")
+def _storage_summary(_params: dict[str, Any]) -> dict[str, Any]:
+    """Report disk usage for the active profile's backups and addons."""
+    from wowusky.core import backup as _backup
+
+    return _backup.storage_summary()
+
+
+@method("storage.cleanup")
+def _storage_cleanup(params: dict[str, Any]) -> dict[str, Any]:
+    """Prune old backups down to the newest *keep* per addon and full set."""
+    from wowusky.core import backup as _backup
+
+    keep = int(params.get("keep", 5) or 5)
+    result = _backup.cleanup_old_backups(keep)
+    return {"ok": True, **result}
+
+
+# ---------------------------------------------------------------------------
+# Scheduled backups (#51)
+# ---------------------------------------------------------------------------
+
+
+@method("backupSchedule.status")
+def _backup_schedule_status(_params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import schedule as _schedule
+
+    return _schedule.backup_status()
+
+
+@method("backupSchedule.enable")
+def _backup_schedule_enable(params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import schedule as _schedule
+
+    interval = str(params.get("interval", "daily") or "daily")
+    keep = int(params.get("keep", 5) or 5)
+    return _schedule.backup_enable(interval, keep)
+
+
+@method("backupSchedule.disable")
+def _backup_schedule_disable(_params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import schedule as _schedule
+
+    return _schedule.backup_disable()
+
+
+# ---------------------------------------------------------------------------
 # Backups
 # ---------------------------------------------------------------------------
 

@@ -374,10 +374,23 @@ def cmd_backup(args: argparse.Namespace) -> None:
     sub = getattr(args, "backup_cmd", None) or "list"
     if sub == "create":
         _backup_create(args)
+    elif sub == "auto":
+        _backup_auto(args)
     elif sub == "restore":
         _backup_restore(args)
     else:
         _backup_list(args)
+
+
+def _backup_auto(args: argparse.Namespace) -> None:
+    from wowusky.core.backup import auto_full_backup
+    _addons_path()  # validate a profile is configured
+    keep = getattr(args, "keep", None) or 5
+    try:
+        path = auto_full_backup(keep=keep, log=print)
+        print(f"  ✓ {path}")
+    except Exception as exc:
+        _die(str(exc))
 
 
 def _backup_create(args: argparse.Namespace) -> None:
@@ -1246,6 +1259,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp_bk = sub.add_parser("backup", parents=[g], help="Manage full profile backups.")
     bk_sub = sp_bk.add_subparsers(dest="backup_cmd", metavar="<subcommand>")
     bk_sub.add_parser("create", parents=[g], help="Create a full profile backup now.").set_defaults(func=cmd_backup)
+    sp_bk_auto = bk_sub.add_parser("auto", parents=[g],
+                                   help="Create a full backup and prune to the newest --keep.")
+    sp_bk_auto.add_argument("--keep", type=int, default=5, help="How many full backups to retain.")
+    sp_bk_auto.set_defaults(func=cmd_backup)
     bk_sub.add_parser("list", parents=[g], help="List full profile backups.").set_defaults(func=cmd_backup)
     sp_bk2 = bk_sub.add_parser("restore", parents=[g], help="Restore a full profile backup.")
     sp_bk2.add_argument("backup", metavar="index|name|path")

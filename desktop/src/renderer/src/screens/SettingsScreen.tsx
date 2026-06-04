@@ -41,6 +41,7 @@ interface ScheduleStatus {
   enabled?: boolean;
   active?: boolean;
   interval?: string;
+  keep?: number;
   next_run?: string | null;
 }
 
@@ -98,6 +99,11 @@ export function SettingsScreen({
   const [schedule, setSchedule] = useState<ScheduleStatus | null>(null);
   const [scheduleInterval, setScheduleInterval] = useState<string>("daily");
   const [scheduleWorking, setScheduleWorking] = useState(false);
+  // Scheduled backups (#51)
+  const [bkSchedule, setBkSchedule] = useState<ScheduleStatus | null>(null);
+  const [bkInterval, setBkInterval] = useState<string>("daily");
+  const [bkKeep, setBkKeep] = useState<number>(5);
+  const [bkWorking, setBkWorking] = useState(false);
   const [dlZips, setDlZips] = useState<DownloadZip[] | null>(null);
   const [dlScanning, setDlScanning] = useState(false);
   const [dlBusy, setDlBusy] = useState<string | null>(null);
@@ -162,6 +168,11 @@ export function SettingsScreen({
       setAddonsPath(s.addons_path);
     }).catch(() => {});
     bridge.call<ScheduleStatus>("schedule.status", {}).then(setSchedule).catch(() => {});
+    bridge.call<ScheduleStatus>("backupSchedule.status", {}).then((s) => {
+      setBkSchedule(s);
+      if (s.interval) setBkInterval(s.interval);
+      if (s.keep) setBkKeep(s.keep);
+    }).catch(() => {});
   }
   useEffect(reload, []);
 
@@ -178,6 +189,20 @@ export function SettingsScreen({
       .then((r) => setSchedule(r))
       .catch(() => {})
       .finally(() => setScheduleWorking(false));
+  }
+  function enableBkSchedule() {
+    setBkWorking(true);
+    bridge.call<ScheduleStatus & { ok: boolean }>("backupSchedule.enable", { interval: bkInterval, keep: bkKeep })
+      .then((r) => setBkSchedule(r))
+      .catch(() => {})
+      .finally(() => setBkWorking(false));
+  }
+  function disableBkSchedule() {
+    setBkWorking(true);
+    bridge.call<ScheduleStatus & { ok: boolean }>("backupSchedule.disable", {})
+      .then((r) => setBkSchedule(r))
+      .catch(() => {})
+      .finally(() => setBkWorking(false));
   }
 
   function scanDownloads() {
@@ -754,6 +779,80 @@ export function SettingsScreen({
                       {schedule.installed && (
                         <button className="btn btn-sm btn-danger" disabled={scheduleWorking} onClick={disableSchedule}>
                           {scheduleWorking ? "…" : "Disable"}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Scheduled Backups (#51) */}
+          {bkSchedule && (
+            <div className="set-group">
+              <h3>Scheduled Backups</h3>
+              <p className="gdesc">
+                Automatically create a full profile backup via a systemd user timer, keeping only
+                the newest few. Runs <code>wowusky backup auto</code> on the configured schedule.
+              </p>
+              <div className="set-card">
+                {!bkSchedule.available ? (
+                  <div className="set-row">
+                    <div className="sl">
+                      <div className="st">Scheduled backups</div>
+                      <div className="sd">Not available — systemd user instance not detected.</div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="set-row">
+                      <div className="sl">
+                        <div className="st">
+                          Timer status
+                          {bkSchedule.installed && (
+                            <span className={`installed-tag${bkSchedule.enabled && bkSchedule.active ? "" : " conflict"}`} style={{ marginLeft: 8 }}>
+                              {bkSchedule.enabled && bkSchedule.active ? `enabled · ${bkSchedule.interval ?? "daily"} · keep ${bkSchedule.keep ?? 5}` : bkSchedule.enabled ? "enabled, inactive" : "disabled"}
+                            </span>
+                          )}
+                        </div>
+                        {bkSchedule.installed && bkSchedule.next_run && (
+                          <div className="sd">Next run: {bkSchedule.next_run}</div>
+                        )}
+                        {!bkSchedule.installed && (
+                          <div className="sd">No timer installed.</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="set-row" style={{ gap: 10 }}>
+                      <div className="sl" style={{ flex: "none" }}>
+                        <select
+                          className="field"
+                          value={bkInterval}
+                          onChange={(e) => setBkInterval(e.target.value)}
+                          disabled={bkWorking}
+                        >
+                          <option value="hourly">Hourly</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                        </select>
+                      </div>
+                      <label className="ss-keep" style={{ flex: "none" }}>
+                        Keep
+                        <input
+                          type="number"
+                          min={1}
+                          value={bkKeep}
+                          disabled={bkWorking}
+                          onChange={(e) => setBkKeep(Math.max(1, Number(e.target.value) || 1))}
+                        />
+                      </label>
+                      <button className="btn btn-sm btn-primary" disabled={bkWorking} onClick={enableBkSchedule}>
+                        {bkWorking ? "…" : bkSchedule.installed ? "Update timer" : "Enable"}
+                      </button>
+                      {bkSchedule.installed && (
+                        <button className="btn btn-sm btn-danger" disabled={bkWorking} onClick={disableBkSchedule}>
+                          {bkWorking ? "…" : "Disable"}
                         </button>
                       )}
                     </div>

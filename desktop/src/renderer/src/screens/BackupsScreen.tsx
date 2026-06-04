@@ -28,6 +28,13 @@ interface DiffResult {
   changed: { path: string; size_a: number; size_b: number }[];
 }
 
+interface StorageSummary {
+  backups_bytes: number;
+  backups_count: number;
+  addons_bytes: number;
+  by_addon: { addon_id: string; name: string; bytes: number; count: number }[];
+}
+
 // Dev-only placeholder data, shown when the profile has no backups yet so the
 // layout can be eyeballed. Flip to false to disable.
 const SHOW_DEMO = false;
@@ -100,6 +107,10 @@ export function BackupsScreen(): JSX.Element {
   const [diffB, setDiffB] = useState<string>("");
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [diffErr, setDiffErr] = useState<string | null>(null);
+  // Storage overview + cleanup (#52)
+  const [storage, setStorage] = useState<StorageSummary | null>(null);
+  const [keep, setKeep] = useState(5);
+  const [cleaning, setCleaning] = useState(false);
   const progress = useActionProgress();
   const liveLabel = busy ? progressLabel(progress[busy]) : null;
 
@@ -120,8 +131,24 @@ export function BackupsScreen(): JSX.Element {
       .then((r) => { setResult(r); setError(null); })
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
+    bridge.call<StorageSummary>("storage.summary", {}).then(setStorage).catch(() => {});
   }
   useEffect(reload, []);
+
+  function cleanup() {
+    if (cleaning) return;
+    if (!window.confirm(`Keep only the ${keep} newest backups per addon and full set? Older backups are deleted.`)) return;
+    setCleaning(true);
+    setNotice(null);
+    bridge
+      .call<{ ok: boolean; removed: number; freed_bytes: number }>("storage.cleanup", { keep })
+      .then((r) => {
+        setNotice(`Cleanup: removed ${r.removed} backup${r.removed === 1 ? "" : "s"}, freed ${fmtSize(r.freed_bytes)}`);
+        reload();
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => setCleaning(false));
+  }
 
   function restore(path: string, label: string, addonId?: string) {
     if (busy) return;
@@ -186,6 +213,42 @@ export function BackupsScreen(): JSX.Element {
             </div>
           ) : (
             <>
+              {!isDemo && storage && (
+                <div className="storage-card">
+                  <div className="storage-stats">
+                    <div className="storage-stat">
+                      <div className="ss-val">{fmtSize(storage.backups_bytes)}</div>
+                      <div className="ss-lbl">{storage.backups_count} backup{storage.backups_count === 1 ? "" : "s"}</div>
+                    </div>
+                    <div className="storage-stat">
+                      <div className="ss-val">{fmtSize(storage.addons_bytes)}</div>
+                      <div className="ss-lbl">addons on disk</div>
+                    </div>
+                    {storage.by_addon[0] && (
+                      <div className="storage-stat">
+                        <div className="ss-val">{fmtSize(storage.by_addon[0].bytes)}</div>
+                        <div className="ss-lbl">top: {storage.by_addon[0].name}</div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="storage-clean">
+                    <label className="ss-keep">
+                      Keep
+                      <input
+                        type="number"
+                        min={1}
+                        value={keep}
+                        onChange={(e) => setKeep(Math.max(1, Number(e.target.value) || 1))}
+                      />
+                      newest
+                    </label>
+                    <button className="btn btn-sm" onClick={cleanup} disabled={cleaning || storage.backups_count === 0}>
+                      {cleaning ? "Cleaning…" : "Clean up old backups"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {view!.full.length > 0 && (
                 <>
                   <div className="section-h">

@@ -77,6 +77,21 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
       .catch(() => {});
   }, [addon]);
 
+  // Release notes (#53): lazy-load on expand for addons with a pending update.
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notes, setNotes] = useState<{ version: string; notes: string } | null>(null);
+  const [notesLoading, setNotesLoading] = useState(false);
+  useEffect(() => { setNotesOpen(false); setNotes(null); }, [addon]);
+  useEffect(() => {
+    if (!notesOpen || notes || !addon) return;
+    setNotesLoading(true);
+    bridge
+      .call<{ version: string; notes: string }>("addon.releaseNotes", { id: addon.id })
+      .then((r) => setNotes(r))
+      .catch(() => setNotes({ version: "", notes: "" }))
+      .finally(() => setNotesLoading(false));
+  }, [notesOpen, addon, notes]);
+
   const pendingDeps = (deps ?? []).filter((d) => !d.installed);
   return (
     <div className={`detail${open ? " open" : ""}`}>
@@ -143,6 +158,32 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
                 </svg>
                 Conflicts with {conflicts.length === 1 ? "an installed addon" : `${conflicts.length} installed addons`}:
                 {" "}{conflicts.map((c) => c.name).join(", ")}
+              </div>
+            )}
+
+            {addon.installed && updateVersion && (
+              <div className="notes-box">
+                <button className="notes-toggle" onClick={() => setNotesOpen((v) => !v)}>
+                  <svg
+                    className="chev"
+                    width="13" height="13" viewBox="0 0 14 14" fill="none"
+                    style={{ transform: notesOpen ? "rotate(180deg)" : undefined }}
+                  >
+                    <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  What's new in v{updateVersion}
+                </button>
+                {notesOpen && (
+                  <div className="notes-body">
+                    {notesLoading ? (
+                      <div className="notes-muted">Loading release notes…</div>
+                    ) : notes && notes.notes ? (
+                      <pre className="notes-pre">{notes.notes}</pre>
+                    ) : (
+                      <div className="notes-muted">No release notes available from this source.</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

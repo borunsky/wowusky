@@ -418,6 +418,128 @@ def create_full_backup(log=print) -> str:
     return out
 
 
+def prune_full_backups(keep: int) -> int:
+    """Keep the *keep* newest full backups, delete the rest.
+
+    Returns the number of archives removed. ``keep <= 0`` is treated as
+    keep-at-least-1 to avoid wiping every backup by accident.
+    """
+    keep = max(1, int(keep))
+    archives = sorted(
+        Path(full_backup_dir()).glob("wowusky-full-*.zip"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    removed = 0
+    for old in archives[keep:]:
+        with contextlib.suppress(OSError):
+            old.unlink()
+            removed += 1
+    return removed
+
+
+def auto_full_backup(keep: int = 5, log=print) -> str:
+    """Create a full backup, then prune to the *keep* newest. Used by the timer."""
+    path = create_full_backup(log=log)
+    pruned = prune_full_backups(keep)
+    if pruned:
+        log(f"  ↺ pruned {pruned} old backup(s), keeping {keep}")
+    return path
+
+
+def _dir_size(path: str) -> int:
+    total = 0
+    if not path or not os.path.isdir(path):
+        return 0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            with contextlib.suppress(OSError):
+                total += os.path.getsize(os.path.join(root, name))
+    return total
+
+
+def storage_summary() -> dict:
+    """Summarise disk usage for the active profile's backups and addons.
+
+    Returns ``{backups_bytes, backups_count, addons_bytes, by_addon}`` where
+    ``by_addon`` lists the per-addon backup footprint, largest first.
+    """
+    from wowusky.core.state import (  # late import
+        get_active_profile_id,
+        get_addons_path,
+        load_installed,
+    )
+
+    profile_id = get_active_profile_id()
+    profile_dir = Path(str(BACKUP_DIR)) / profile_id
+
+    backups_bytes = 0
+    backups_count = 0
+    if profile_dir.exists():
+        for z in profile_dir.rglob("*.zip"):
+            with contextlib.suppress(OSError):
+                backups_bytes += z.stat().st_size
+                backups_count += 1
+
+    by_addon: list[dict] = []
+    installed = load_installed()
+    for addon_id in installed:
+        items = list_addon_backups(addon_id)
+        if not items:
+            continue
+        size = sum(b["size"] for b in items)
+        by_addon.append({
+            "addon_id": addon_id,
+            "name": installed[addon_id].get("name", addon_id),
+            "bytes": size,
+            "count": len(items),
+        })
+    by_addon.sort(key=lambda x: x["bytes"], reverse=True)
+
+    addons_path = ""
+    with contextlib.suppress(Exception):
+        addons_path = get_addons_path()
+
+    return {
+        "backups_bytes": backups_bytes,
+        "backups_count": backups_count,
+        "addons_bytes": _dir_size(addons_path),
+        "by_addon": by_addon,
+    }
+
+
+def cleanup_old_backups(keep: int) -> dict:
+    """Prune per-addon and full backups down to *keep* newest each.
+
+    Returns ``{removed, freed_bytes}`` summarising what was deleted.
+    """
+    from wowusky.core.state import get_active_profile_id, load_installed  # late import
+
+    keep = max(1, int(keep))
+    profile_id = get_active_profile_id()
+    profile_dir = Path(str(BACKUP_DIR)) / profile_id
+    removed = 0
+    freed = 0
+
+    def _prune_glob(paths: list[Path]) -> None:
+        nonlocal removed, freed
+        for old in sorted(paths, key=lambda p: p.stat().st_mtime, reverse=True)[keep:]:
+            with contextlib.suppress(OSError):
+                freed += old.stat().st_size
+                old.unlink()
+                removed += 1
+
+    # Per-addon archives (grouped by addon id prefix).
+    for addon_id in load_installed():
+        safe = _safe_addon_id(addon_id)
+        _prune_glob(list(profile_dir.glob(f"{safe}-*.zip")))
+
+    # Full backups.
+    _prune_glob(list(Path(full_backup_dir()).glob("wowusky-full-*.zip")))
+
+    return {"removed": removed, "freed_bytes": freed}
+
+
 def restore_full_backup(zip_path: str, log=print) -> bool:
     """Restore a full profile backup, overwriting current AddOns and WTF files."""
     from wowusky.core.state import (  # late import
