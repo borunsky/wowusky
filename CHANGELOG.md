@@ -4,6 +4,29 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] — 2026-06-04
+
+### Added
+- **Wago search & track from the WeakAuras tab** (#48): the WeakAuras tab
+  gains a wago.io search box; each result shows its name, type and author with
+  a **Track** button that adds it to the tracking list immediately. Backed by
+  the new `wago.search` (normalised results) and `wago.add` bridge methods.
+- **One-click import from WoW SavedVariables** (#49): an **Import from WoW**
+  button scans the active profile's WeakAuras SavedVariables, extracts all
+  Wago slugs and tracks them in one step, reporting how many were new, already
+  tracked, or failed. Backed by the new `wago.importFromSavedVariables` bridge
+  method wrapping `import_existing_weakauras_from_savedvariables()`.
+- **Generate the WeakAurasCompanion addon from the UI** (#50): a **Generate
+  Companion** button builds the WeakAurasCompanion addon from the tracked
+  auras so they flow back into the game (previously CLI-only). The bridge
+  resolves the active profile's addons path and flavor interface. Backed by
+  the new `wago.generateCompanion` bridge method.
+
+### Changed
+- The WeakAuras toolbar now always shows the search box plus the Import,
+  Generate and Check-for-Updates actions. The empty state points to search and
+  import instead of a non-existent "Import tab".
+
 ## [0.11.0] — 2026-06-04
 
 ### Added
@@ -1057,6 +1080,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.12.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.12.0
 [0.11.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.11.0
 [0.10.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.10.0
 [0.9.6]:         https://github.com/borunsky/wowusky/releases/tag/v0.9.6
