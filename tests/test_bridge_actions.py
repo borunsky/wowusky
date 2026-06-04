@@ -68,6 +68,22 @@ def test_remove_requires_id():
         _call("addon.remove", {})
 
 
+def test_remove_streams_progress_notifications(monkeypatch):
+    # The handler should emit no-id ``action.progress`` log events plus a final
+    # ``action.done`` while removing, so the UI can show live status.
+    state.save_installed({"elvui": {"name": "ElvUI", "version": "1",
+                                    "folders": [], "source": "tukui"}})
+    events: list[dict] = []
+    monkeypatch.setattr(server, "_write", lambda obj: events.append(obj))
+
+    _call("addon.remove", {"id": "elvui"})
+
+    notifications = [e for e in events if "id" not in e and e.get("method")]
+    assert any(e["method"] == "action.progress" for e in notifications)
+    done = [e for e in notifications if e["method"] == "action.done"]
+    assert done and done[-1]["params"] == {"id": "elvui", "ok": True}
+
+
 # ── restore ─────────────────────────────────────────────────────────
 
 def test_restore_missing_full_backup_errors():

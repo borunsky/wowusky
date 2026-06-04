@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { bridge } from "../api";
+import { useActionProgress, progressLabel } from "../useActionProgress";
 
 interface FullBackup {
   path: string;
@@ -87,6 +88,8 @@ export function BackupsScreen(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const progress = useActionProgress();
+  const liveLabel = busy ? progressLabel(progress[busy]) : null;
 
   function reload() {
     setLoading(true);
@@ -133,7 +136,7 @@ export function BackupsScreen(): JSX.Element {
         <div className="page-sub">Snapshots of your addons and full installations</div>
       </div>
 
-      {notice && <div className="inst-toolbar"><div className="inst-notice">{notice}</div></div>}
+      {(liveLabel || notice) && <div className="inst-toolbar"><div className="inst-notice">{liveLabel ?? notice}</div></div>}
 
       <div className="page-body scroll">
         <div className="page-pad">

@@ -378,14 +378,31 @@ def _backups_list(_params: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _collect_log() -> tuple[Callable[..., None], list[str]]:
-    """Return a ``log`` callable and the list it appends formatted lines to."""
+def _action_callbacks(
+    addon_id: str,
+) -> tuple[Callable[..., None], Callable[[int, int], None], list[str]]:
+    """Build ``(log, progress, lines)`` for an action handler.
+
+    ``log`` appends to ``lines`` *and* streams each line as an
+    ``action.progress`` notification (phase ``"log"``). ``progress`` streams
+    download byte counts (phase ``"download"``). Both tag events with
+    ``addon_id`` so the UI can correlate them to the in-flight action.
+    """
     lines: list[str] = []
 
     def _log_line(*args: Any) -> None:
-        lines.append(" ".join(str(a) for a in args))
+        msg = " ".join(str(a) for a in args)
+        lines.append(msg)
+        _notify("action.progress", {"id": addon_id, "phase": "log", "message": msg})
 
-    return _log_line, lines
+    def _progress(done: int, total: int) -> None:
+        pct = int(done * 100 / total) if total > 0 else 0
+        _notify(
+            "action.progress",
+            {"id": addon_id, "phase": "download", "done": done, "total": total, "pct": pct},
+        )
+
+    return _log_line, _progress, lines
 
 
 @method("addon.install")
@@ -407,13 +424,15 @@ def _addon_install(params: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "error": f"addon not in catalog: {addon_id}"}
 
     addons_path = _state.get_addons_path()
-    log_fn, lines = _collect_log()
+    log_fn, progress_fn, lines = _action_callbacks(addon_id)
     try:
-        _orch.install_addon(entry, addons_path, log=log_fn)
+        _orch.install_addon(entry, addons_path, log=log_fn, progress=progress_fn)
     except Exception as exc:  # noqa: BLE001 — report install failure to the UI
         _log("install error:", traceback.format_exc())
+        _notify("action.done", {"id": addon_id, "ok": False, "error": str(exc)})
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}", "log": lines}
 
+    _notify("action.done", {"id": addon_id, "ok": True})
     profile = _state.get_active_profile_id()
     return {"ok": True, "log": lines, **_installed_list({"profile": profile})}
 
@@ -439,13 +458,15 @@ def _addon_remove(params: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("id is required")
 
     addons_path = _state.get_addons_path()
-    log_fn, lines = _collect_log()
+    log_fn, _progress_fn, lines = _action_callbacks(addon_id)
     try:
         _orch.uninstall_addon(addon_id, addons_path, log=log_fn)
     except Exception as exc:  # noqa: BLE001 — report removal failure to the UI
         _log("remove error:", traceback.format_exc())
+        _notify("action.done", {"id": addon_id, "ok": False, "error": str(exc)})
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}", "log": lines}
 
+    _notify("action.done", {"id": addon_id, "ok": True})
     profile = _state.get_active_profile_id()
     return {"ok": True, "log": lines, **_installed_list({"profile": profile})}
 
@@ -471,8 +492,10 @@ def _backups_restore(params: dict[str, Any]) -> dict[str, Any]:
     if not path:
         raise ValueError("path is required")
     addon_id = params.get("addon_id")
+    # The UI correlates restore events by the backup path.
+    token = str(path)
 
-    log_fn, lines = _collect_log()
+    log_fn, _progress_fn, lines = _action_callbacks(token)
     try:
         addons_path = _state.get_addons_path()
         if addon_id:
@@ -481,8 +504,10 @@ def _backups_restore(params: dict[str, Any]) -> dict[str, Any]:
             ok = _backup.restore_full_backup(path, log=log_fn)
     except Exception as exc:  # noqa: BLE001 — report restore failure to the UI
         _log("restore error:", traceback.format_exc())
+        _notify("action.done", {"id": token, "ok": False, "error": str(exc)})
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}", "log": lines}
 
+    _notify("action.done", {"id": token, "ok": bool(ok)})
     return {"ok": bool(ok), "log": lines}
 
 
@@ -547,6 +572,15 @@ _INTERNAL_ERROR = -32603
 def _write(obj: dict[str, Any]) -> None:
     sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
     sys.stdout.flush()
+
+
+def _notify(notify_method: str, params: dict[str, Any]) -> None:
+    """Emit a JSON-RPC notification (no ``id``) — a streaming event.
+
+    The Electron main process forwards these to the renderer via
+    ``bridge:notify``; the UI uses them to show live install/restore progress.
+    """
+    _write({"jsonrpc": "2.0", "method": notify_method, "params": params})
 
 
 def _error(req_id: Any, code: int, message: str) -> None:

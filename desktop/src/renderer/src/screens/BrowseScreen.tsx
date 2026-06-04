@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";import { bridge } from "../api";
 import { sourceLabel, rarityFor, type Addon, type SearchResult } from "./browseData";
 import { DetailPanel } from "./DetailPanel";
+import { useActionProgress, progressLabel } from "../useActionProgress";
 
 type View = "list" | "grid";
 
@@ -27,11 +28,13 @@ function SourcePill({ source }: { source: Addon["source"] }): JSX.Element {
 function InstallButton({
   installed,
   busy,
+  busyLabel,
   disabled,
   onInstall,
 }: {
   installed?: boolean;
   busy?: boolean;
+  busyLabel?: string | null;
   disabled?: boolean;
   onInstall: () => void;
 }): JSX.Element {
@@ -47,7 +50,7 @@ function InstallButton({
   }
   return (
     <button className="btn btn-primary btn-sm" disabled={disabled} onClick={onInstall}>
-      {busy ? "…" : "Install"}
+      {busy ? (busyLabel ?? "…") : "Install"}
     </button>
   );
 }
@@ -65,7 +68,11 @@ export function BrowseScreen(): JSX.Element {
   const [catMenuOpen, setCatMenuOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const progress = useActionProgress();
   const catMenuRef = useRef<HTMLDivElement>(null);
+
+  // While an action runs, prefer the live streamed status over the static notice.
+  const liveLabel = busyId ? progressLabel(progress[busyId]) : null;
 
   // Re-run the current search so the installed flag refreshes after a change.
   function refetch() {
@@ -198,7 +205,7 @@ export function BrowseScreen(): JSX.Element {
             </div>
           </div>
         </div>
-        {notice && <div className="inst-notice">{notice}</div>}
+        {(liveLabel || notice) && <div className="inst-notice">{liveLabel ?? notice}</div>}
       </div>
 
       <div className="page-body scroll">
@@ -252,6 +259,7 @@ export function BrowseScreen(): JSX.Element {
                     <InstallButton
                       installed={a.installed}
                       busy={busyId === a.id}
+                      busyLabel={progressLabel(progress[a.id])}
                       disabled={busyId !== null}
                       onInstall={() => installAddon(a)}
                     />
@@ -287,6 +295,7 @@ export function BrowseScreen(): JSX.Element {
                         <InstallButton
                           installed={a.installed}
                           busy={busyId === a.id}
+                          busyLabel={progressLabel(progress[a.id])}
                           disabled={busyId !== null}
                           onInstall={() => installAddon(a)}
                         />
@@ -303,6 +312,7 @@ export function BrowseScreen(): JSX.Element {
       <DetailPanel
         addon={selected}
         busy={selected ? busyId === selected.id : false}
+        busyLabel={selected ? progressLabel(progress[selected.id]) : null}
         disabled={busyId !== null}
         onClose={() => setSelected(null)}
         onInstall={() => selected && installAddon(selected)}

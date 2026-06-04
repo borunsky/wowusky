@@ -3,13 +3,14 @@ import { sourceLabel, rarityFor, type Addon } from "./browseData";
 interface Props {
   addon: Addon | null;
   busy?: boolean;
+  busyLabel?: string | null;
   disabled?: boolean;
   onClose: () => void;
   onInstall: () => void;
   onRemove: () => void;
 }
 
-export function DetailPanel({ addon, busy, disabled, onClose, onInstall, onRemove }: Props): JSX.Element {
+export function DetailPanel({ addon, busy, busyLabel, disabled, onClose, onInstall, onRemove }: Props): JSX.Element {
   const open = addon !== null;
   return (
     <div className={`detail${open ? " open" : ""}`}>
@@ -38,7 +39,7 @@ export function DetailPanel({ addon, busy, disabled, onClose, onInstall, onRemov
               {addon.installed ? (
                 <>
                   <button className="btn" style={{ flex: 1 }} disabled={disabled} onClick={onInstall}>
-                    {busy ? "…" : "Update"}
+                    {busy ? (busyLabel ?? "…") : "Update"}
                   </button>
                   <button className="btn btn-danger" disabled={disabled} onClick={onRemove}>
                     Remove
@@ -46,7 +47,7 @@ export function DetailPanel({ addon, busy, disabled, onClose, onInstall, onRemov
                 </>
               ) : (
                 <button className="btn btn-primary" style={{ flex: 1 }} disabled={disabled} onClick={onInstall}>
-                  {busy ? "…" : "Install"}
+                  {busy ? (busyLabel ?? "…") : "Install"}
                 </button>
               )}
             </div>

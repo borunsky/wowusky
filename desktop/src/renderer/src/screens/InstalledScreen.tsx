@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { bridge } from "../api";
 import { sourceLabel, rarityFor } from "./browseData";
 import type { InstalledAddon, InstalledResult } from "./installedData";
+import { useActionProgress, progressLabel } from "../useActionProgress";
 
 interface Props {
   /** Bumped by the AppBar rescan button to force a reload. */
@@ -34,6 +35,8 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
   // id of the addon a mutation is currently running for ("" = none).
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const progress = useActionProgress();
+  const liveLabel = busy ? progressLabel(progress[busy]) : null;
 
   useEffect(() => {
     setLoading(true);
@@ -98,7 +101,7 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
             />
           </label>
         </div>
-        {notice && <div className="inst-notice">{notice}</div>}
+        {(liveLabel || notice) && <div className="inst-notice">{liveLabel ?? notice}</div>}
       </div>
 
       <div className="page-body scroll">
@@ -158,7 +161,7 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
                       disabled={busy !== null}
                       onClick={() => runAction("addon.update", a)}
                     >
-                      {busy === a.id ? "…" : "Update"}
+                      {busy === a.id ? (progressLabel(progress[a.id]) ?? "…") : "Update"}
                     </button>
                     <button
                       className="btn btn-sm btn-danger"
