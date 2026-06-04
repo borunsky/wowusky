@@ -18,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validation (no network); default mode also fetches latest versions. Exits
   non-zero when any entry fails.
 
+- **Version selection in the addon detail panel.** GitHub and CurseForge
+  addons now expose a *Choose a specific version* list in the Browse detail
+  panel — pick any release/tag (GitHub) or file (CurseForge, release/beta/alpha
+  labelled) and install it directly. Backed by the `addon.versions` and
+  `addon.installVersion` bridge methods; flavor-aware and newest-first.
+- **Auto-update + "updates available" indicator.** Each profile has an
+  **Auto-update on launch** toggle (Settings → Profiles). When enabled, the
+  active profile's pending updates are applied automatically on app start. The
+  sidebar shows a live **N ↑** badge of available updates, and the Installed
+  tab gains an **Update all** button. New bridge methods: `profile.setAutoUpdate`
+  and `installed.updateAll`.
+
 ### Changed
 - **Update buttons only appear when an update is actually available.** The
   Installed tab and the Browse detail panel now run a background update check

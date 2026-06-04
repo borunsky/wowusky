@@ -1,4 +1,13 @@
+import { useState, useEffect } from "react";
+import { bridge } from "../api";
 import { sourceLabel, rarityFor, type Addon } from "./browseData";
+
+interface VersionChoice {
+  label: string;
+  url: string;
+  version: string;
+  type: string;
+}
 
 interface Props {
   addon: Addon | null;
@@ -10,10 +19,31 @@ interface Props {
   onClose: () => void;
   onInstall: () => void;
   onRemove: () => void;
+  /** Install a specific version by direct ZIP url. */
+  onInstallVersion?: (url: string, label: string) => void;
 }
 
-export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, onClose, onInstall, onRemove }: Props): JSX.Element {
+export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, onClose, onInstall, onRemove, onInstallVersion }: Props): JSX.Element {
   const open = addon !== null;
+  const [versions, setVersions] = useState<VersionChoice[] | null>(null);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
+
+  // Sources that expose multiple selectable downloads.
+  const versionable = addon?.source === "github" || addon?.source === "curse";
+
+  useEffect(() => {
+    setVersions(null);
+    setShowVersions(false);
+    if (!addon || !onInstallVersion) return;
+    if (addon.source !== "github" && addon.source !== "curse") return;
+    setLoadingVersions(true);
+    bridge
+      .call<{ versions: VersionChoice[] }>("addon.versions", { id: addon.id })
+      .then((r) => setVersions(r.versions ?? []))
+      .catch(() => setVersions([]))
+      .finally(() => setLoadingVersions(false));
+  }, [addon, onInstallVersion]);
   return (
     <div className={`detail${open ? " open" : ""}`}>
       {addon && (
@@ -60,6 +90,50 @@ export function DetailPanel({ addon, busy, busyLabel, disabled, updateVersion, o
                 </button>
               )}
             </div>
+
+            {versionable && onInstallVersion && (
+              <div className="detail-versions">
+                <button
+                  className="versions-toggle"
+                  onClick={() => setShowVersions((v) => !v)}
+                  disabled={loadingVersions}
+                >
+                  <svg
+                    className="chev"
+                    width="13" height="13" viewBox="0 0 14 14" fill="none"
+                    style={{ transform: showVersions ? "rotate(180deg)" : undefined }}
+                  >
+                    <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  {loadingVersions
+                    ? "Loading versions…"
+                    : `Choose a specific version${versions ? ` (${versions.length})` : ""}`}
+                </button>
+                {showVersions && versions && (
+                  versions.length === 0 ? (
+                    <div className="idesc" style={{ padding: "4px 2px" }}>
+                      No selectable versions{addon.source === "curse" ? " (a CurseForge API key is required)" : ""}.
+                    </div>
+                  ) : (
+                    <div className="version-list">
+                      {versions.map((v) => (
+                        <div key={v.url} className="version-row">
+                          <span className="vlabel" title={v.label}>{v.label}</span>
+                          <span className={`vtype vt-${v.type}`}>{v.type}</span>
+                          <button
+                            className="btn btn-sm"
+                            disabled={disabled}
+                            onClick={() => onInstallVersion(v.url, v.label)}
+                          >
+                            Install
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
 
           <div className="detail-scroll scroll">

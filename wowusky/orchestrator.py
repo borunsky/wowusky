@@ -389,6 +389,189 @@ def uninstall_addon(addon_id, addons_path, log=print):
     )
 
 
+# ── version listing + install-by-version ─────────────────────────────
+
+# CurseForge releaseType ids → human label.
+_CF_RELEASE_TYPE = {1: "release", 2: "beta", 3: "alpha"}
+
+
+def _github_version_choices(addon, limit=15):
+    """List downloadable GitHub release/tag ZIPs for *addon*, newest first.
+
+    Mirrors the GUI version picker: prefer real releases (with a flavor-aware
+    asset pick), fall back to tags. Returns ``[{label, url, version, type}]``.
+    """
+    repo = _github_fns.github_repo_for_addon(addon)
+    if not repo:
+        return []
+    choices = []
+    try:
+        rels = _ws_http.get_json(
+            f"https://api.github.com/repos/{repo}/releases?per_page={limit}"
+        )
+    except Exception:
+        rels = []
+    for rel in rels if isinstance(rels, list) else []:
+        tag = rel.get("tag_name") or rel.get("name") or "release"
+        asset = _github_fns._github_pick_asset(rel.get("assets", []))
+        url = (asset or {}).get("browser_download_url") or rel.get("zipball_url")
+        if url:
+            choices.append({
+                "label": str(tag),
+                "url": url,
+                "version": str(tag).lstrip("v"),
+                "type": "beta" if rel.get("prerelease") else "release",
+            })
+    if not choices:
+        for tag in _github_fns.github_tags(repo)[:limit]:
+            name = tag.get("name")
+            if name:
+                choices.append({
+                    "label": str(name),
+                    "url": f"https://github.com/{repo}/archive/refs/tags/{name}.zip",
+                    "version": str(name).lstrip("v"),
+                    "type": "tag",
+                })
+    return choices[:limit]
+
+
+def _curseforge_version_choices(addon, limit=15):
+    """List downloadable CurseForge files for *addon*, flavor-matched first.
+
+    Requires a configured API key; returns ``[]`` when missing or on error.
+    Returns ``[{label, url, version, type}]``.
+    """
+    if not get_curseforge_api_key():
+        return []
+    mod_id = addon.get("curseforge_mod_id") or addon.get("project_id")
+    ref = mod_id or addon.get("curseforge_slug") or addon.get("id")
+    try:
+        mod = (
+            _cf_fns.curseforge_json(f"/mods/{mod_id}").get("data")
+            if mod_id else _cf_fns.curseforge_mod_from_ref(ref)
+        )
+        if not mod:
+            return []
+        mid = mod["id"]
+        files = _cf_fns.curseforge_get_files(mid)
+    except Exception:
+        return []
+
+    def _key(f):
+        return (
+            _cf_fns.curseforge_file_matches_flavor(f),
+            f.get("fileDate", ""),
+            int(f.get("id") or 0),
+        )
+
+    choices = []
+    for f in sorted(files, key=_key, reverse=True)[:limit]:
+        try:
+            url = _cf_fns.curseforge_download_url(mid, f)
+        except Exception:
+            url = None
+        if not url:
+            continue
+        label = f.get("displayName") or f.get("fileName") or str(f.get("id"))
+        choices.append({
+            "label": str(label),
+            "url": url,
+            "version": str(label),
+            "type": _CF_RELEASE_TYPE.get(f.get("releaseType"), "release"),
+        })
+    return choices
+
+
+def list_addon_versions(addon, limit=15):
+    """Return selectable download versions for a catalog/installed addon.
+
+    Supports GitHub and CurseForge sources; other providers return ``[]``
+    (they expose only a single "latest" download). Each entry is
+    ``{label, url, version, type}``.
+    """
+    source = addon.get("source") or addon.get("provider") or ""
+    if source == "github":
+        return _github_version_choices(addon, limit)
+    if source in ("curseforge", "curseforge_manual", "curseforge_web"):
+        return _curseforge_version_choices(addon, limit)
+    return []
+
+
+def install_addon_version(addon, url, label, log=print, progress=None):
+    """Install a specific version of *addon* from a direct ZIP *url*.
+
+    Backs up the currently-installed folders, swaps in the chosen version,
+    and records ``label`` as the installed version. Returns True on success.
+    """
+    import contextlib
+    import shutil
+    import tempfile
+
+    from wowusky.core.installer import append_version_history
+    from wowusky.core.toc import read_addon_toc
+    from wowusky.core.zipper import extract_addon_zip, sha256_file
+
+    addons_path = get_addons_path()
+    if not addons_path or not os.path.exists(addons_path):
+        log(f"  path invalid: {addons_path}")
+        return False
+    if is_dry_run():
+        log(f"  dry-run: would install {addon.get('name')} {label}")
+        return True
+
+    log(f"⟩ {addon['name']} {label}")
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        tmp_path = tmp.name
+    try:
+        http_download(url, tmp_path, progress=progress)
+        file_hash = sha256_file(tmp_path)
+        log(f"  done ({os.path.getsize(tmp_path) // 1024} KB)")
+
+        installed_before = load_installed().get(addon["id"])
+        backup_path = None
+        if installed_before:
+            backup_path = backup_addon_folders(addon["id"], installed_before, addons_path, log)
+
+        old_folders = (installed_before or {}).get("folders") or addon.get("folders", [])
+        for folder in old_folders:
+            p = os.path.join(addons_path, folder)
+            if os.path.exists(p):
+                shutil.rmtree(p)
+
+        folders = extract_addon_zip(tmp_path, addons_path)
+        interface = None
+        if folders:
+            toc = read_addon_toc(os.path.join(addons_path, folders[0]))
+            if toc:
+                interface = toc.get("interface")
+
+        installed = load_installed()
+        new_entry = {
+            "name":      addon["name"],
+            "version":   label,
+            "folders":   folders or addon.get("folders", []),
+            "source":    addon.get("source"),
+            "interface": interface,
+            "sha256":    file_hash,
+            "profile":   get_active_profile_id(),
+        }
+        for key in ("curseforge_mod_id", "curseforge_slug", "url"):
+            if addon.get(key):
+                new_entry[key] = addon[key]
+        installed[addon["id"]] = append_version_history(
+            new_entry, installed_before, backup_path=backup_path, action="install"
+        )
+        save_installed(installed)
+        log(f"  ✓ {addon['name']} {label}\n")
+        return True
+    except Exception as e:
+        log(f"  ✗ {e}\n")
+        return False
+    finally:
+        with contextlib.suppress(Exception):
+            os.unlink(tmp_path)
+
+
 # ── catalog queries ──────────────────────────────────────────────────
 
 def find_addon_by_id(aid):

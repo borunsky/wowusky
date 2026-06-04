@@ -121,6 +121,29 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
       .finally(() => setBusyId(null));
   }
 
+  function installVersion(a: Addon, url: string, label: string) {
+    if (busyId) return;
+    setBusyId(a.id);
+    setNotice(null);
+    bridge
+      .call<{ ok: boolean; error?: string }>("addon.installVersion", { id: a.id, url, label })
+      .then((r) => {
+        if (!r.ok) {
+          setNotice(`${a.name}: ${r.error ?? "install failed"}`);
+          return;
+        }
+        setNotice(`${a.name}: installed ${label}`);
+        setUpdates((u) => {
+          const next = { ...u };
+          delete next[a.id];
+          return next;
+        });
+        refetch();
+      })
+      .catch((e) => setNotice(`${a.name}: ${String(e)}`))
+      .finally(() => setBusyId(null));
+  }
+
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) {
@@ -339,6 +362,7 @@ export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
         busyLabel={selected ? progressLabel(progress[selected.id]) : null}
         disabled={busyId !== null}
         updateVersion={selected ? updates[selected.id] ?? null : null}
+        onInstallVersion={(url, label) => selected && installVersion(selected, url, label)}
         onClose={() => setSelected(null)}
         onInstall={() => selected && installAddon(selected)}
         onRemove={() => {

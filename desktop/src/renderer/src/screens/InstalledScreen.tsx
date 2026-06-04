@@ -60,6 +60,23 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
       .finally(() => setLoading(false));
   }, [refreshKey]);
 
+  function updateAll() {
+    const ids = Object.keys(updates);
+    if (busy || ids.length === 0) return;
+    setBusy("__all__");
+    setNotice(null);
+    bridge
+      .call<ActionResult>("installed.updateAll", { ids })
+      .then((r) => {
+        setResult({ profile: r.profile, count: r.count, addons_path: r.addons_path, items: r.items });
+        setUpdates({});
+        setNotice(`Updated ${ids.length} addon${ids.length === 1 ? "" : "s"}`);
+        onChanged?.();
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => { setBusy(null); checkUpdates(); });
+  }
+
   function runAction(method: "addon.update" | "addon.remove", a: InstalledAddon) {
     if (busy) return;
     if (method === "addon.remove" && !window.confirm(`Remove ${a.name}? A backup is taken first.`)) {
@@ -119,6 +136,16 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
+          {Object.keys(updates).length > 0 && (
+            <button
+              className="btn btn-sm btn-primary"
+              style={{ marginLeft: 10 }}
+              disabled={busy !== null}
+              onClick={updateAll}
+            >
+              {busy === "__all__" ? "Updating…" : `Update all (${Object.keys(updates).length})`}
+            </button>
+          )}
         </div>
         {(liveLabel || notice || checkingUpdates) && (
           <div className="inst-notice">{liveLabel ?? notice ?? "Checking for updates…"}</div>

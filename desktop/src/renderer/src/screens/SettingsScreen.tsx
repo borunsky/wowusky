@@ -15,6 +15,7 @@ interface ProfileSummary {
   addons_path: string;
   color_tag: string | null;
   count: number;
+  auto_update: boolean;
 }
 
 interface CoreSettings {
@@ -105,6 +106,10 @@ export function SettingsScreen({
   function switchProfile(id: string) {
     bridge.call<CoreSettings>("profile.setActive", { profile: id })
       .then((s) => { setCore(s); setAddonsPath(s.addons_path); onProfileChange(); }).catch(() => {});
+  }
+  function toggleAutoUpdate(id: string, enabled: boolean) {
+    bridge.call<CoreSettings>("profile.setAutoUpdate", { profile: id, enabled })
+      .then((s) => { setCore(s); onProfileChange(); }).catch(() => {});
   }
 
   function autoscan() {
@@ -314,6 +319,14 @@ export function SettingsScreen({
                     <div className="sd" style={{ color: p.addons_path ? undefined : "var(--red)" }}>
                       {p.addons_path || "path not set"} · {p.count} addons
                     </div>
+                    <label
+                      className="auto-update-row"
+                      style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, cursor: "pointer" }}
+                      title="Automatically update this profile's addons on launch"
+                    >
+                      <span className={`switch switch-sm${p.auto_update ? " on" : ""}`} onClick={(e) => { e.preventDefault(); toggleAutoUpdate(p.id, !p.auto_update); }}><i /></span>
+                      <span className="sd" style={{ margin: 0 }}>Auto-update on launch</span>
+                    </label>
                   </div>
                   <div className="sr" style={{ gap: 6, display: "flex", alignItems: "center" }}>
                     {editingId === p.id ? (

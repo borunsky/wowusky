@@ -101,6 +101,19 @@ def test_set_active_profile_only_if_exists():
     assert state.get_active_profile().get("name") == "A"
 
 
+def test_set_auto_update_toggles_flag():
+    pid = state.add_or_update_profile("A", "/wow/_retail_/Interface/AddOns")
+    assert state.get_active_profile().get("auto_update") is False
+    assert state.set_auto_update(pid, True) is True
+    assert state.load_profiles()["profiles"][pid]["auto_update"] is True
+    state.set_auto_update(pid, False)
+    assert state.load_profiles()["profiles"][pid]["auto_update"] is False
+
+
+def test_set_auto_update_unknown_profile_returns_false():
+    assert state.set_auto_update("nope", True) is False
+
+
 # ── installed DB ────────────────────────────────────────────────────
 
 def test_installed_roundtrip_per_profile():

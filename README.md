@@ -26,6 +26,12 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 - **`wowusky health` command**: surface the existing catalog health-check
   engine as a first-class CLI command. `--offline` for fast provider-resolve
   validation; default mode fetches latest versions. Exits non-zero on failures.
+- **Version selection in the addon detail panel**: GitHub and CurseForge addons
+  expose a *Choose a specific version* list — install any release/tag or
+  CurseForge file directly, flavor-aware and newest-first.
+- **Auto-update + "updates available" indicator**: a per-profile **Auto-update
+  on launch** toggle, a live sidebar update badge, and an **Update all** button
+  on the Installed tab.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -241,10 +247,9 @@ The v0.4 refactor was the prerequisite. Now planned:
   - **`wowusky health` command + Health tab** — surface the existing
     `tools/health_check` engine as a first-class CLI command and a GUI tab
     (offline/online check, results table, error filter, JSON export).
-- **v0.9.1 (tentative)** — auto-update polling + in-app "updates available"
-  indicator (the per-profile `auto_update` flag already exists but is unused),
-  and CurseForge ZIP version selection in the addon details dialog (parity
-  with the existing GitHub version picker).
+- ~~**v0.9.4** — auto-update on launch + in-app "updates available" indicator
+  (wires up the per-profile `auto_update` flag), and CurseForge/GitHub ZIP
+  version selection in the addon detail panel.~~ ✅ done
 - **Later** — see [issues](https://github.com/borunsky/wowusky/issues)
   or open one with a request.
 

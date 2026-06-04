@@ -101,6 +101,20 @@
 .detail-x:hover { color: var(--text); border-color: var(--border-2); }
 .detail-cta { display: flex; gap: 9px; margin-top: 14px; position: relative; z-index: 1; }
 .detail-cta .btn { flex: 1; height: 36px; white-space: nowrap; }
+
+.detail-versions { margin-top: 12px; position: relative; z-index: 1; }
+.versions-toggle { display: flex; align-items: center; gap: 7px; width: 100%; padding: 7px 4px; background: transparent; border: 0; color: var(--text-dim); font-family: var(--sans); font-size: 12.5px; cursor: pointer; }
+.versions-toggle:hover { color: var(--text); }
+.versions-toggle:disabled { opacity: .6; cursor: default; }
+.versions-toggle .chev { transition: transform .15s var(--ease); }
+.version-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; max-height: 220px; overflow-y: auto; }
+.version-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 8px; padding: 5px 8px; border-radius: var(--radius-sm); background: var(--panel-2); }
+.version-row .vlabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12px; color: var(--text); }
+.version-row .vtype { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); }
+.version-row .vtype.vt-beta { color: var(--orange, #ff9a5e); }
+.version-row .vtype.vt-alpha { color: var(--red); }
+.version-row .btn { height: 26px; }
+
 .detail-tabs { display: flex; gap: 4px; padding: 10px 14px 0; border-bottom: 1px solid var(--border); flex: none; }
 .detail-tab { padding: 8px 12px 11px; font-size: 12.5px; color: var(--text-dim); cursor: pointer; border: 0; background: transparent; font-family: var(--sans); position: relative; font-weight: 500; }
 .detail-tab.on { color: var(--text); }

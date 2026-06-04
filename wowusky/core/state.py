@@ -304,6 +304,17 @@ def delete_profile(profile_id):
     return True
 
 
+def set_auto_update(profile_id, value):
+    """Toggle a profile's auto_update flag. Returns False if it doesn't exist."""
+    data = load_profiles()
+    prof = data.get("profiles", {}).get(profile_id)
+    if not prof:
+        return False
+    prof["auto_update"] = bool(value)
+    save_profiles(data)
+    return True
+
+
 def add_or_update_profile(name, addons_path):
     data = load_profiles()
     prof = infer_profile_from_path(addons_path)

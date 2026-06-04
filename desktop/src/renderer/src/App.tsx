@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { bridge } from "./api";
 import { Titlebar } from "./components/Titlebar";
 import { AppBar } from "./components/AppBar";
@@ -51,6 +51,9 @@ export default function App(): JSX.Element {
   const [refreshKey, setRefreshKey] = useState(0);
   const [rescanning, setRescanning] = useState(false);
   const [installedCount, setInstalledCount] = useState(0);
+  const [updateCount, setUpdateCount] = useState(0);
+  // Auto-update runs at most once per session, only for the active profile.
+  const autoUpdateRan = useRef(false);
 
   function handleRescan() {
     setRescanning(true);
@@ -77,6 +80,32 @@ export default function App(): JSX.Element {
       .call<{ count: number }>("installed.list", {})
       .then((r) => setInstalledCount(r.count))
       .catch(() => {});
+  }, [refreshKey]);
+
+  // Background update check → "updates available" badge. If the active profile
+  // has auto-update enabled, apply them once per session, then re-check.
+  useEffect(() => {
+    let cancelled = false;
+    bridge
+      .call<{ updates: Record<string, string> }>("installed.updates", {})
+      .then((r) => {
+        if (cancelled) return;
+        const ids = Object.keys(r.updates ?? {});
+        setUpdateCount(ids.length);
+        if (ids.length === 0 || autoUpdateRan.current) return;
+        return bridge
+          .call<{ active_profile: string; profiles: Array<{ id: string; auto_update?: boolean }> }>("settings.get", {})
+          .then((s) => {
+            const active = s.profiles.find((p) => p.id === s.active_profile);
+            if (!active?.auto_update) return;
+            autoUpdateRan.current = true;
+            return bridge
+              .call("installed.updateAll", { ids })
+              .then(() => { if (!cancelled) { setUpdateCount(0); setRefreshKey((k) => k + 1); } });
+          });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [refreshKey]);
 
   // Apply theme to document
@@ -129,7 +158,7 @@ export default function App(): JSX.Element {
         onProfileChange={() => setRefreshKey((k) => k + 1)}
       />
       <div className="body">
-        <Sidebar screen={screen} onNav={setScreen} addonCount={installedCount} refreshKey={refreshKey} />
+        <Sidebar screen={screen} onNav={setScreen} addonCount={installedCount} updateCount={updateCount} refreshKey={refreshKey} />
         <div className="content">
           {screen === "browse" ? (
             <BrowseScreen refreshKey={refreshKey} />
