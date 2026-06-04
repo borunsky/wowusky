@@ -19,6 +19,13 @@ interface WaResult {
   items: Aura[];
 }
 
+interface SearchHit {
+  slug: string;
+  name: string;
+  author: string;
+  type: string;
+}
+
 export function WeakAurasScreen(): JSX.Element {
   const [result, setResult] = useState<WaResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +33,14 @@ export function WeakAurasScreen(): JSX.Element {
   const [checking, setChecking] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Search & track (#48)
+  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [hits, setHits] = useState<SearchHit[] | null>(null);
+  const [tracking, setTracking] = useState<string | null>(null);
+  // Import / companion (#49 / #50)
+  const [importing, setImporting] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   function reload() {
     setLoading(true);
@@ -36,6 +51,56 @@ export function WeakAurasScreen(): JSX.Element {
       .finally(() => setLoading(false));
   }
   useEffect(reload, []);
+
+  function runSearch() {
+    const q = query.trim();
+    if (!q) { setHits(null); return; }
+    setSearching(true);
+    setNotice(null);
+    bridge.call<{ items: SearchHit[] }>("wago.search", { query: q })
+      .then((r) => setHits(r.items ?? []))
+      .catch((e) => setNotice(String(e)))
+      .finally(() => setSearching(false));
+  }
+
+  function track(hit: SearchHit) {
+    setTracking(hit.slug);
+    bridge.call<{ ok: boolean; error?: string }>("wago.add", { slug: hit.slug, name: hit.name })
+      .then((r) => {
+        if (!r.ok) { setNotice(r.error ?? "could not track aura"); return; }
+        setNotice(`Now tracking ${hit.name}`);
+        setHits((hs) => (hs ?? []).filter((h) => h.slug !== hit.slug));
+        reload();
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => setTracking(null));
+  }
+
+  function importFromWow() {
+    setImporting(true);
+    setNotice(null);
+    bridge.call<{ ok: boolean; added: number; existing: number; failed: number; error?: string }>(
+      "wago.importFromSavedVariables", {})
+      .then((r) => {
+        if (!r.ok) { setNotice(r.error ?? "import failed"); return; }
+        setNotice(`Imported ${r.added} new (${r.existing} already tracked${r.failed ? `, ${r.failed} failed` : ""})`);
+        reload();
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => setImporting(false));
+  }
+
+  function generateCompanion() {
+    setGenerating(true);
+    setNotice(null);
+    bridge.call<{ ok: boolean; count: number; error?: string }>("wago.generateCompanion", {})
+      .then((r) => {
+        if (!r.ok) { setNotice(r.error ?? "generation failed"); return; }
+        setNotice(`Companion generated with ${r.count} aura${r.count === 1 ? "" : "s"} — run /reload in-game`);
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => setGenerating(false));
+  }
 
   function checkUpdates() {
     setChecking(true);
@@ -92,24 +157,64 @@ export function WeakAurasScreen(): JSX.Element {
         <div className="page-pad">
           {notice && <div className="wa-notice">{notice}</div>}
 
-          {/* Toolbar */}
-          {result && items.length > 0 && (
-            <div className="wa-toolbar">
-              <button
-                className="btn btn-sm"
-                onClick={checkUpdates}
-                disabled={checking || updating !== null}
-              >
+          {/* Toolbar — search + actions */}
+          <div className="wa-toolbar">
+            <div className="wa-search">
+              <input
+                type="text"
+                placeholder="Search wago.io…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
+              />
+              <button className="btn btn-sm" onClick={runSearch} disabled={searching || !query.trim()}>
+                {searching ? "…" : "Search"}
+              </button>
+              {hits !== null && (
+                <button className="btn btn-sm btn-ghost" onClick={() => { setHits(null); setQuery(""); }}>
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="wa-actions">
+              <button className="btn btn-sm" onClick={importFromWow} disabled={importing}>
+                {importing ? "Importing…" : "Import from WoW"}
+              </button>
+              <button className="btn btn-sm" onClick={generateCompanion} disabled={generating || items.length === 0}>
+                {generating ? "Generating…" : "Generate Companion"}
+              </button>
+              <button className="btn btn-sm" onClick={checkUpdates} disabled={checking || updating !== null}>
                 {checking ? "Checking…" : "Check for Updates"}
               </button>
               {updateCount > 0 && (
-                <button
-                  className="btn btn-sm btn-accent"
-                  onClick={updateAll}
-                  disabled={updating !== null}
-                >
+                <button className="btn btn-sm btn-accent" onClick={updateAll} disabled={updating !== null}>
                   {updating === "__all__" ? "Updating…" : `Update All (${updateCount})`}
                 </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search results (#48) */}
+          {hits !== null && (
+            <div className="wa-hits">
+              {hits.length === 0 ? (
+                <div className="wa-hits-empty">No auras found for “{query}”.</div>
+              ) : (
+                hits.map((h) => (
+                  <div className="wa-hit" key={h.slug}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="wa-nm">{h.name}</div>
+                      <div className="wa-au">{h.type}{h.author ? ` · by ${h.author}` : ""}</div>
+                    </div>
+                    <button
+                      className="btn btn-sm btn-accent"
+                      onClick={() => track(h)}
+                      disabled={tracking !== null}
+                    >
+                      {tracking === h.slug ? "…" : "Track"}
+                    </button>
+                  </div>
+                ))
               )}
             </div>
           )}
@@ -133,7 +238,10 @@ export function WeakAurasScreen(): JSX.Element {
                 </svg>
               </div>
               <h3>No auras tracked</h3>
-              <p>Install WeakAuras in WoW and use the WeakAuras Companion to sync your auras here automatically.</p>
+              <p>Search wago.io above to track auras, or import the ones you already use in WoW.</p>
+              <button className="btn" onClick={importFromWow} disabled={importing} style={{ marginTop: 12 }}>
+                {importing ? "Importing…" : "Import from WoW"}
+              </button>
             </div>
           ) : (
             <div className="wa-grid">

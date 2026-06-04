@@ -276,7 +276,14 @@
 .wa-sync { font-size: 11.5px; color: var(--green); display: inline-flex; align-items: center; gap: 6px; }
 .wa-sync.behind { color: var(--amber); }
 .wa-meta { font-size: 11px; color: var(--text-faint); }
-.wa-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.wa-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.wa-search { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px; }
+.wa-search input { flex: 1; height: 34px; padding: 0 12px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--sans); font-size: 13px; outline: none; }
+.wa-search input:focus { border-color: var(--accent-line); }
+.wa-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wa-hits { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.wa-hit { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; }
+.wa-hits-empty { font-size: 13px; color: var(--text-faint); padding: 8px 2px; }
 .wa-notice { font-size: 12.5px; color: var(--text-dim); background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 12px; }
 .wa-upd-btn { font-size: 11px; padding: 3px 9px; flex: none; }
 .badge-upd { font-size: 11px; font-weight: 600; background: var(--accent); color: #fff; border-radius: 999px; padding: 2px 8px; }

@@ -569,6 +569,101 @@ def _wago_update_all(_params: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "updated": updated, "failed": failed}
 
 
+@method("wago.search")
+def _wago_search(params: dict[str, Any]) -> dict[str, Any]:
+    """Search wago.io and return a normalised list of auras (#48)."""
+    from wowusky.core import wago as _wago
+
+    query = str(params.get("query", "")).strip()
+    if not query:
+        return {"items": []}
+    limit = int(params.get("limit", 20) or 20)
+
+    data = _wago.wago_search(query, limit=limit)
+    if isinstance(data, dict):
+        raw = data.get("data") or data.get("results") or []
+    elif isinstance(data, list):
+        raw = data
+    else:
+        raw = []
+
+    items = []
+    for r in raw:
+        if not isinstance(r, dict):
+            continue
+        slug = r.get("slug") or r.get("_id")
+        if not slug:
+            continue
+        items.append(
+            {
+                "slug": slug,
+                "name": r.get("name") or slug,
+                "author": r.get("username") or r.get("author") or "",
+                "type": r.get("type") or "WeakAura",
+            }
+        )
+    return {"items": items}
+
+
+@method("wago.add")
+def _wago_add(params: dict[str, Any]) -> dict[str, Any]:
+    """Track a wago aura by slug (#48)."""
+    from wowusky.core import wago as _wago
+
+    slug = str(params.get("slug", "")).strip()
+    if not slug:
+        raise ValueError("slug is required")
+    name = params.get("name")
+    note = params.get("note")
+    try:
+        entry = _wago.wago_add(slug, name=name, note=note)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "slug": slug, "name": (entry or {}).get("name", slug)}
+
+
+@method("wago.importFromSavedVariables")
+def _wago_import_sv(_params: dict[str, Any]) -> dict[str, Any]:
+    """Scan WoW SavedVariables and track all discovered auras (#49)."""
+    from wowusky.core import wago as _wago
+
+    try:
+        result = _wago.import_existing_weakauras_from_savedvariables(log=lambda *_: None)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+    return {
+        "ok": True,
+        "added": result.get("added", 0),
+        "existing": result.get("existing", 0),
+        "failed": result.get("failed", 0),
+        "slugs": result.get("slugs", []),
+    }
+
+
+@method("wago.generateCompanion")
+def _wago_generate_companion(_params: dict[str, Any]) -> dict[str, Any]:
+    """Generate the WeakAurasCompanion addon for the active profile (#50)."""
+    from wowusky.core import state as _state
+    from wowusky.core import wago as _wago
+    from wowusky.orchestrator import generate_wac_companion
+
+    try:
+        addons_path = _state.get_addons_path()
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"no addons path: {exc}"}
+    if not addons_path:
+        return {"ok": False, "error": "no addons path configured for the active profile"}
+
+    count = len(_wago.load_wago().get("auras", {}))
+    try:
+        ok = generate_wac_companion(addons_path)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+    if not ok:
+        return {"ok": False, "error": "companion generation failed"}
+    return {"ok": True, "count": count, "path": addons_path}
+
+
 # ---------------------------------------------------------------------------
 # Backups
 # ---------------------------------------------------------------------------

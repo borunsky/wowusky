@@ -6,7 +6,6 @@ import pytest
 
 from wowusky.core import config as _config
 
-
 # ── auto_update_on_launch ────────────────────────────────────────────
 
 
