@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.14.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.15.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,24 +15,20 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.14.0
+## What's new in v0.15.0
 
 ### Added
-- **Desktop notifications** (#54): wowusky now sends a native OS notification
-  when addon updates are available on launch, even when the window is not in
-  focus. The notification fires at most once per session and only when
-  auto-update is off. Toggle it under **Settings → Advanced → Desktop
-  notifications**. Backed by the new `desktop_notifications` config option
-  (exposed through `settings.get` / `settings.update`) and an Electron
-  `notify` IPC bridge guarded by `Notification.isSupported()`.
-- **Cross-profile sync** (#55): copy installed addons from one WoW profile
-  into another without re-installing each by hand. **Settings → Profiles**
-  gains a **Sync from another profile** control: pick a source, preview what
-  is new / already installed / in conflict (and which addons are skipped
-  because they are not in the catalog), then apply with optional conflict
-  skipping. Backed by the new `profile.syncPreview` and `profile.syncApply`
-  bridge methods, which install into the target profile and restore the
-  active profile afterwards.
+- **First-run wizard** (#56): starting wowusky with no configured profile now
+  shows a guided setup overlay that autoscans for WoW installations, lets you
+  adopt one with a single click (or set a path manually), and then drops you
+  on the Installed screen. No more empty Settings screen for new users.
+- **Search & filter on the Installed screen** (#57): the installed list gains
+  a source filter and an **Outdated only** toggle alongside the existing
+  text search (which now also matches addon ids). Filters combine and the
+  empty state adapts to the active filters.
+- **Keyboard shortcuts** (#58): global shortcuts for navigation and actions —
+  `B` Browse, `I` Installed, `W` WeakAuras, `S` Settings, `U` update all
+  outdated addons, `R` rescan. Ignored while typing in a field.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -42,8 +38,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.14.0.zip
-cd wowusky-v0.14.0
+unzip wowusky-v0.15.0.zip
+cd wowusky-v0.15.0
 chmod +x install.sh
 ./install.sh
 ```
@@ -67,7 +63,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.14.0-py3-none-any.whl
+pip install dist/wowusky-0.15.0-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)

@@ -4,6 +4,22 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] — 2026-06-04
+
+### Added
+- **First-run wizard** (#56): when wowusky starts with no configured profile,
+  a guided setup overlay appears — it autoscans for WoW installations, lets
+  you adopt one with one click or set a path manually, then hands control
+  back on the Installed screen. Reuses the existing `profiles.scan` /
+  `profiles.addFromPath` bridge methods; no new backend.
+- **Search & filter on the Installed screen** (#57): the installed list adds a
+  source filter and an **Outdated only** toggle next to the text search (now
+  matching ids as well as names). Filters combine and the empty state reflects
+  the active filters. Entirely renderer-side over the existing `installed.list`.
+- **Keyboard shortcuts** (#58): global shortcuts — `B` Browse, `I` Installed,
+  `W` WeakAuras, `S` Settings, `U` update all outdated addons, `R` rescan.
+  Suppressed while a text field is focused and when modifier keys are held.
+
 ## [0.14.0] — 2026-06-04
 
 ### Added
@@ -1119,6 +1135,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.15.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.15.0
 [0.14.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.14.0
 [0.13.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.13.0
 [0.12.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.12.0
