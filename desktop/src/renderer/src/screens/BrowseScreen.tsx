@@ -55,7 +55,12 @@ function InstallButton({
   );
 }
 
-export function BrowseScreen(): JSX.Element {
+interface Props {
+  /** Bumped on profile switch / rescan so installed markers refresh. */
+  refreshKey?: number;
+}
+
+export function BrowseScreen({ refreshKey = 0 }: Props): JSX.Element {
   const [view, setView] = useState<View>(() => {
     return (localStorage.getItem("wowusky:browseView") as View | null) ?? "list";
   });
@@ -128,7 +133,7 @@ export function BrowseScreen(): JSX.Element {
         .finally(() => setLoading(false));
     }, 160);
     return () => clearTimeout(debounceRef.current);
-  }, [query, category]);
+  }, [query, category, refreshKey]);
 
   const items = result?.items ?? [];
   const categories = result?.categories ?? ["All"];
