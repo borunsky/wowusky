@@ -4,6 +4,25 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] — 2026-06-05
+
+### Added
+- **Installation health in the UI** (#59): the Health screen gains an
+  **Installation** section that reconciles the profile's installed database
+  against the filesystem and reports missing folders, duplicate folder claims,
+  and orphan folders, with one-click fixes (re-sync with disk, remove a
+  dangling entry). Backed by the new `health.installed`, `health.fixResync`
+  and `health.removeEntry` bridge methods.
+- **Orphan management** (#60): addon folders on disk but not tracked in the DB
+  are surfaced with **Adopt** (register into the profile, catalog-matched where
+  possible, else recorded as external) and **Delete** (remove from disk, with a
+  backup) actions. Backed by `orphans.list`, `orphans.adopt`, `orphans.remove`.
+- **Update diff before install** (#61): an opt-in **Confirm update diff**
+  setting (Settings → Advanced) shows the folders an update would add or remove
+  plus the version transition, and requires confirmation before applying.
+  Backed by the new `addon.updateDiff` bridge method and the
+  `update_diff_before_install` config option.
+
 ## [0.15.0] — 2026-06-04
 
 ### Added
@@ -1135,6 +1154,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.16.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.16.0
 [0.15.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.15.0
 [0.14.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.14.0
 [0.13.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.13.0

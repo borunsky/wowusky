@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.15.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.16.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,21 +15,22 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.15.0
+## What's new in v0.16.0
 
 ### Added
-- **First-run wizard** (#56): when wowusky starts with no configured profile,
-  a guided setup overlay appears — it autoscans for WoW installations, lets
-  you adopt one with one click or set a path manually, then hands control
-  back on the Installed screen. Reuses the existing `profiles.scan` /
-  `profiles.addFromPath` bridge methods; no new backend.
-- **Search & filter on the Installed screen** (#57): the installed list adds a
-  source filter and an **Outdated only** toggle next to the text search (now
-  matching ids as well as names). Filters combine and the empty state reflects
-  the active filters. Entirely renderer-side over the existing `installed.list`.
-- **Keyboard shortcuts** (#58): global shortcuts — `B` Browse, `I` Installed,
-  `W` WeakAuras, `S` Settings, `U` update all outdated addons, `R` rescan.
-  Suppressed while a text field is focused and when modifier keys are held.
+- **Installation health in the UI** (#59): the Health screen now leads with an
+  **Installation** section that detects missing folders (tracked addons whose
+  files are gone), duplicate folder claims, and orphan folders — with one-click
+  fixes (re-sync with disk, remove dangling entry). Backed by the new
+  `health.installed`, `health.fixResync` and `health.removeEntry` bridge methods.
+- **Orphan management** (#60): addon folders present on disk but not tracked are
+  surfaced with **Adopt** (register into the profile, catalog-matched where
+  possible) and **Delete** (remove from disk, backup taken first) actions.
+  Backed by `orphans.list`, `orphans.adopt` and `orphans.remove`.
+- **Update diff before install** (#61): an opt-in **Confirm update diff**
+  setting (Settings → Advanced) shows which folders an update adds or removes,
+  plus the version transition, and asks for confirmation before applying.
+  Backed by the new `addon.updateDiff` bridge method.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -39,8 +40,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.15.0.zip
-cd wowusky-v0.15.0
+unzip wowusky-v0.16.0.zip
+cd wowusky-v0.16.0
 chmod +x install.sh
 ./install.sh
 ```
@@ -64,7 +65,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.15.0-py3-none-any.whl
+pip install dist/wowusky-0.16.0-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
