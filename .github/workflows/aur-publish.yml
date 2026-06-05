@@ -86,6 +86,19 @@ jobs:
           git config --global user.email "info@borunsky.de"
           git config --global --add safe.directory '*'
           git clone ssh://aur@aur.archlinux.org/wowusky.git aur-repo
+          # Downgrade guard: never let a (re)published older release clobber a
+          # newer pkgver already on the AUR. Re-publishing an old GitHub release
+          # re-fires this workflow with that old tag; without this check it would
+          # overwrite the AUR with the older version. A manual workflow_dispatch
+          # can still force any version (e.g. to repair a botched publish).
+          CUR="$(grep -m1 '^pkgver=' aur-repo/PKGBUILD | cut -d= -f2)"
+          echo "AUR current pkgver: ${CUR:-<none>} — incoming: ${VERSION}"
+          if [ "${{ github.event_name }}" = "release" ] && [ -n "$CUR" ]; then
+            if [ "$(vercmp "$VERSION" "$CUR")" -le 0 ]; then
+              echo "::warning::Incoming v${VERSION} is not newer than AUR v${CUR} — skipping to avoid a downgrade. Use a manual workflow_dispatch to force."
+              exit 0
+            fi
+          fi
           cp PKGBUILD .SRCINFO aur-repo/
           cd aur-repo
           git add PKGBUILD .SRCINFO
