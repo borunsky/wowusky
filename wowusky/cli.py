@@ -704,6 +704,53 @@ def cmd_schedule(args: argparse.Namespace) -> None:
         _say(_fmt_schedule_status(st))
 
 
+def cmd_sync(args: argparse.Namespace) -> None:
+    from wowusky.core import profile_bundle as _pb
+    from wowusky.core import sync as _sync
+
+    action = getattr(args, "sync_cmd", None) or "status"
+    as_json = getattr(args, "json", False)
+
+    if action == "set-repo":
+        _sync.set_repo_path(args.path)
+        st = _sync.status()
+        _print_json(st) if as_json else _say(f"  ✓ Sync repo set to {st.get('repo_path')}")
+        return
+
+    if action == "push":
+        res = _sync.push(log=_say)
+        if not res.get("ok"):
+            _die(res.get("error", "sync push failed"))
+        _print_json(res) if as_json else _say(
+            "  ✓ Pushed." if res.get("pushed") else f"  ✓ {res.get('message', 'nothing to push')}")
+        return
+
+    if action == "pull":
+        res = _sync.pull(log=_say)
+        if not res.get("ok"):
+            _die(res.get("error", "sync pull failed"))
+        applied = _pb.import_bundle_apply(res["bundle"])
+        if as_json:
+            _print_json({**res, "applied": applied})
+        else:
+            _say(f"  ✓ Pulled and applied: {applied['imported']} addons, "
+                 f"{applied['auras_added']} auras, {applied['settings_applied']} settings.")
+        return
+
+    # status (default)
+    st = _sync.status()
+    if as_json:
+        _print_json(st)
+    elif not st.get("available"):
+        _say("  git is not installed — sync unavailable.")
+    elif not st.get("configured"):
+        _say("  No sync repo configured. Use 'wowusky sync set-repo <path>'.")
+    else:
+        _say(f"  Sync repo: {st['repo_path']}")
+        _say(f"  git repo:  {'yes' if st.get('is_repo') else 'no'}")
+        _say(f"  bundle:    {'present' if st.get('has_bundle') else 'none'}")
+
+
 def cmd_export(args: argparse.Namespace) -> None:
     import json as _json
 
@@ -1358,6 +1405,21 @@ def build_parser() -> argparse.ArgumentParser:
     sched_sub.add_parser("disable", parents=[g],
                          help="Disable + remove the update timer.").set_defaults(func=cmd_schedule)
     sp_sched.set_defaults(func=cmd_schedule)
+
+    # sync (#66)
+    sp_sync = sub.add_parser("sync", parents=[g],
+                             help="Sync the active profile via a git repository.")
+    sync_sub = sp_sync.add_subparsers(dest="sync_cmd")
+    sync_sub.add_parser("status", parents=[g],
+                        help="Show sync repo status.").set_defaults(func=cmd_sync)
+    sp_sy = sync_sub.add_parser("set-repo", parents=[g], help="Set the local sync repo path.")
+    sp_sy.add_argument("path", metavar="path")
+    sp_sy.set_defaults(func=cmd_sync)
+    sync_sub.add_parser("push", parents=[g],
+                        help="Export the profile bundle and push it.").set_defaults(func=cmd_sync)
+    sync_sub.add_parser("pull", parents=[g],
+                        help="Pull and apply the latest profile bundle.").set_defaults(func=cmd_sync)
+    sp_sync.set_defaults(func=cmd_sync)
 
     # version
     sp = sub.add_parser("version", help="Print the wowusky version and exit.")

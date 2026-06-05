@@ -844,6 +844,134 @@ def _wago_add_collection(params: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Full profile bundle (#65)
+# ---------------------------------------------------------------------------
+
+
+@method("profile.exportBundle")
+def _profile_export_bundle(params: dict[str, Any]) -> dict[str, Any]:
+    """Return a full profile bundle (addons + auras + settings) as a dict."""
+    from wowusky.core import profile_bundle as _pb
+    from wowusky.core import state as _state
+
+    pid = params.get("profile") or _state.get_active_profile_id()
+    bundle = _pb.export_profile_bundle(pid)
+    return {"ok": True, "bundle": bundle}
+
+
+@method("profile.importBundlePreview")
+def _profile_import_bundle_preview(params: dict[str, Any]) -> dict[str, Any]:
+    """Summarise what applying a bundle would change."""
+    from wowusky.core import profile_bundle as _pb
+
+    data = params.get("bundle")
+    if not isinstance(data, dict):
+        raise ValueError("bundle is required")
+    try:
+        return {"ok": True, **_pb.import_bundle_preview(data)}
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@method("profile.importBundleApply")
+def _profile_import_bundle_apply(params: dict[str, Any]) -> dict[str, Any]:
+    """Apply a bundle into the active profile."""
+    from wowusky.core import profile_bundle as _pb
+
+    data = params.get("bundle")
+    if not isinstance(data, dict):
+        raise ValueError("bundle is required")
+    try:
+        result = _pb.import_bundle_apply(
+            data,
+            skip_ids=params.get("skip_ids"),
+            include_auras=params.get("include_auras", True),
+            include_settings=params.get("include_settings", True),
+        )
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, **result}
+
+
+# ---------------------------------------------------------------------------
+# Git-based profile sync (#66)
+# ---------------------------------------------------------------------------
+
+
+@method("sync.status")
+def _sync_status(_params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import sync as _sync
+
+    return _sync.status()
+
+
+@method("sync.setRepo")
+def _sync_set_repo(params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import sync as _sync
+
+    _sync.set_repo_path(str(params.get("path", "")))
+    return _sync.status()
+
+
+@method("sync.push")
+def _sync_push(_params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import sync as _sync
+
+    return _sync.push(log=_log)
+
+
+@method("sync.pull")
+def _sync_pull(_params: dict[str, Any]) -> dict[str, Any]:
+    """Pull the latest bundle and return it plus an apply-preview."""
+    from wowusky.core import profile_bundle as _pb
+    from wowusky.core import sync as _sync
+
+    result = _sync.pull(log=_log)
+    if not result.get("ok"):
+        return result
+    bundle = result.get("bundle") or {}
+    try:
+        preview = _pb.import_bundle_preview(bundle)
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "bundle": bundle, "preview": preview,
+            "pull_message": result.get("pull_message", "")}
+
+
+# ---------------------------------------------------------------------------
+# Change history / audit log (#67)
+# ---------------------------------------------------------------------------
+
+
+@method("history.list")
+def _history_list(params: dict[str, Any]) -> dict[str, Any]:
+    """Return the persistent change history for a profile, newest-first.
+
+    params: {profile?: str, addon?: str, limit?: int}
+    returns: {profile, items: [{ts, action, id, name, from, to}]}
+    """
+    from wowusky.core import history as _history
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    items = _history.list_history(
+        profile,
+        addon=params.get("addon"),
+        limit=int(params.get("limit", 500) or 500),
+    )
+    return {"profile": profile, "items": items}
+
+
+@method("history.clear")
+def _history_clear(params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import history as _history
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    return {"ok": _history.clear_history(profile)}
+
+
+# ---------------------------------------------------------------------------
 # Release notes (#53)
 # ---------------------------------------------------------------------------
 
@@ -1031,6 +1159,17 @@ def _action_callbacks(
     return _log_line, _progress, lines
 
 
+def _record_history(profile: str, action: str, addon_id: str, *,
+                    name: str = "", from_version: str = "", to_version: str = "") -> None:
+    """Best-effort append to the persistent change history (#67)."""
+    try:
+        from wowusky.core import history as _history
+        _history.record(profile, action, addon_id, name=name,
+                        from_version=from_version, to_version=to_version)
+    except Exception:  # noqa: BLE001 — history must never break an action
+        _log("history record failed:", traceback.format_exc())
+
+
 @method("addon.install")
 def _addon_install(params: dict[str, Any]) -> dict[str, Any]:
     """Install (or reinstall) a catalog addon by id for the active profile.
@@ -1050,6 +1189,9 @@ def _addon_install(params: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "error": f"addon not in catalog: {addon_id}"}
 
     addons_path = _state.get_addons_path()
+    from wowusky.core import installed as _installed
+    profile = _state.get_active_profile_id()
+    prior = _installed.load(profile).get(addon_id, {})
     log_fn, progress_fn, lines = _action_callbacks(addon_id)
     try:
         _orch.install_addon(entry, addons_path, log=log_fn, progress=progress_fn)
@@ -1060,6 +1202,13 @@ def _addon_install(params: dict[str, Any]) -> dict[str, Any]:
 
     _notify("action.done", {"id": addon_id, "ok": True})
     profile = _state.get_active_profile_id()
+    new_entry = _installed.load(profile).get(addon_id, {})
+    _record_history(
+        profile, "update" if prior else "install", addon_id,
+        name=new_entry.get("name") or entry.get("name") or addon_id,
+        from_version=prior.get("version", ""),
+        to_version=new_entry.get("version", ""),
+    )
     return {"ok": True, "log": lines, **_installed_list({"profile": profile})}
 
 
@@ -1084,6 +1233,9 @@ def _addon_remove(params: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("id is required")
 
     addons_path = _state.get_addons_path()
+    from wowusky.core import installed as _installed
+    profile = _state.get_active_profile_id()
+    prior = _installed.load(profile).get(addon_id, {})
     log_fn, _progress_fn, lines = _action_callbacks(addon_id)
     try:
         _orch.uninstall_addon(addon_id, addons_path, log=log_fn)
@@ -1094,6 +1246,9 @@ def _addon_remove(params: dict[str, Any]) -> dict[str, Any]:
 
     _notify("action.done", {"id": addon_id, "ok": True})
     profile = _state.get_active_profile_id()
+    _record_history(profile, "remove", addon_id,
+                    name=prior.get("name") or addon_id,
+                    from_version=prior.get("version", ""))
     return {"ok": True, "log": lines, **_installed_list({"profile": profile})}
 
 
@@ -1185,7 +1340,10 @@ def _installed_update_all(params: dict[str, Any]) -> dict[str, Any]:
     if not targets:
         targets = list(_installed_updates({}).get("updates", {}).keys())
 
+    from wowusky.core import installed as _installed
     addons_path = _state.get_addons_path()
+    profile = _state.get_active_profile_id()
+    before = _installed.load(profile)
     updated: list[str] = []
     failed: list[str] = []
     for addon_id in targets:
@@ -1204,6 +1362,12 @@ def _installed_update_all(params: dict[str, Any]) -> dict[str, Any]:
             _notify("action.done", {"id": addon_id, "ok": False, "error": str(exc)})
 
     profile = _state.get_active_profile_id()
+    after = _installed.load(profile)
+    for addon_id in updated:
+        _record_history(profile, "update", addon_id,
+                        name=after.get(addon_id, {}).get("name") or addon_id,
+                        from_version=before.get(addon_id, {}).get("version", ""),
+                        to_version=after.get(addon_id, {}).get("version", ""))
     return {"updated": updated, "failed": failed, **_installed_list({"profile": profile})}
 
 
@@ -1801,7 +1965,10 @@ def _installed_remove_many(params: dict[str, Any]) -> dict[str, Any]:
     if not ids:
         raise ValueError("ids is required")
 
+    from wowusky.core import installed as _installed
     addons_path = _state.get_addons_path()
+    profile = _state.get_active_profile_id()
+    before = _installed.load(profile)
     removed: list[str] = []
     failed: list[str] = []
     for addon_id in ids:
@@ -1816,6 +1983,10 @@ def _installed_remove_many(params: dict[str, Any]) -> dict[str, Any]:
             _notify("action.done", {"id": addon_id, "ok": False, "error": str(exc)})
 
     profile = _state.get_active_profile_id()
+    for addon_id in removed:
+        _record_history(profile, "remove", addon_id,
+                        name=before.get(addon_id, {}).get("name") or addon_id,
+                        from_version=before.get(addon_id, {}).get("version", ""))
     return {"removed": removed, "failed": failed, **_installed_list({"profile": profile})}
 
 

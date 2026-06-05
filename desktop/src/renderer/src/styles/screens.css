@@ -343,3 +343,9 @@
 /* WeakAuras card selection (#64) */
 .wa-check { margin-right: 2px; cursor: pointer; flex: none; }
 .wa-card.sel { border-color: var(--accent-line); box-shadow: 0 0 0 1px var(--accent-line) inset; }
+
+/* History screen action badges (#67) */
+.hist-action { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; width: fit-content; }
+.hist-action.ha-install { color: var(--green); background: color-mix(in oklab, var(--green), transparent 86%); }
+.hist-action.ha-update { color: var(--accent); background: color-mix(in oklab, var(--accent), transparent 86%); }
+.hist-action.ha-remove { color: var(--red); background: color-mix(in oklab, var(--red), transparent 86%); }

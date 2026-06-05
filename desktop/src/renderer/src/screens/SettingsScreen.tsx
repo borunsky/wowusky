@@ -129,12 +129,17 @@ export function SettingsScreen({
   const [dlScanning, setDlScanning] = useState(false);
   const [dlBusy, setDlBusy] = useState<string | null>(null);
   const [dlNotice, setDlNotice] = useState<string | null>(null);
+  // Profile sync & full bundle (#65/#66)
+  const [syncStatus, setSyncStatus] = useState<{ available?: boolean; configured?: boolean; repo_path?: string; is_repo?: boolean; has_bundle?: boolean } | null>(null);
+  const [syncRepo, setSyncRepo] = useState("");
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   // Cross-profile sync (#55)
   const [syncSource, setSyncSource] = useState<string>("");
   const [syncPreview, setSyncPreview] = useState<SyncPreview | null>(null);
   const [syncSkipConflicts, setSyncSkipConflicts] = useState(true);
-  const [syncBusy, setSyncBusy] = useState(false);
-  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [xsyncBusy, setXsyncBusy] = useState(false);
+  const [xsyncNotice, setXsyncNotice] = useState<string | null>(null);
   // Addon-set sharing (#44)
   const [setNotice, setSetNotice] = useState<string | null>(null);
   const [setPasteOpen, setSetPasteOpen] = useState(false);
@@ -204,8 +209,83 @@ export function SettingsScreen({
       setCoSchedule(s);
       if (s.interval) setCoInterval(s.interval);
     }).catch(() => {});
+    bridge.call<typeof syncStatus>("sync.status", {}).then((s) => {
+      setSyncStatus(s);
+      if (s?.repo_path) setSyncRepo(s.repo_path);
+    }).catch(() => {});
   }
   useEffect(reload, []);
+
+  function setSyncRepoPath() {
+    setSyncBusy(true);
+    setSyncNotice(null);
+    bridge.call<typeof syncStatus>("sync.setRepo", { path: syncRepo })
+      .then((s) => { setSyncStatus(s); setSyncNotice("Sync repo updated."); })
+      .catch((e) => setSyncNotice(String(e)))
+      .finally(() => setSyncBusy(false));
+  }
+  async function pickSyncRepo() {
+    const chosen = await bridge.openDirectory().catch(() => null);
+    if (chosen) setSyncRepo(chosen);
+  }
+  function syncPush() {
+    setSyncBusy(true);
+    setSyncNotice(null);
+    bridge.call<{ ok: boolean; pushed?: boolean; message?: string; error?: string }>("sync.push", {})
+      .then((r) => setSyncNotice(r.ok ? (r.pushed ? "Pushed to remote." : (r.message ?? "Nothing changed.")) : (r.error ?? "push failed")))
+      .catch((e) => setSyncNotice(String(e)))
+      .finally(() => setSyncBusy(false));
+  }
+  function syncPull() {
+    setSyncBusy(true);
+    setSyncNotice(null);
+    bridge.call<{ ok: boolean; bundle?: object; error?: string }>("sync.pull", {})
+      .then((r) => {
+        if (!r.ok || !r.bundle) { setSyncNotice(r.error ?? "pull failed"); return; }
+        return bridge.call<{ ok: boolean; imported: number; auras_added: number; settings_applied: number }>(
+          "profile.importBundleApply", { bundle: r.bundle })
+          .then((a) => {
+            setSyncNotice(`Pulled: ${a.imported} addons, ${a.auras_added} auras, ${a.settings_applied} settings.`);
+            onProfileChange();
+          });
+      })
+      .catch((e) => setSyncNotice(String(e)))
+      .finally(() => setSyncBusy(false));
+  }
+  function exportBundle() {
+    bridge.call<{ ok: boolean; bundle: object }>("profile.exportBundle", {})
+      .then(({ bundle }) => {
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "wowusky-profile-bundle.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => {});
+  }
+  function importBundleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const bundle = JSON.parse(ev.target?.result as string);
+        bridge.call<{ ok: boolean; imported?: number; auras_added?: number; settings_applied?: number; error?: string }>(
+          "profile.importBundleApply", { bundle })
+          .then((a) => {
+            setSyncNotice(a.ok
+              ? `Imported ${a.imported} addons, ${a.auras_added} auras, ${a.settings_applied} settings.`
+              : (a.error ?? "import failed"));
+            onProfileChange();
+          })
+          .catch((err) => setSyncNotice(String(err)));
+      } catch { setSyncNotice("invalid bundle file"); }
+    };
+    reader.readAsText(file);
+  }
 
   function enableSchedule() {
     setScheduleWorking(true);
@@ -324,27 +404,27 @@ export function SettingsScreen({
   function previewSync(source: string) {
     setSyncSource(source);
     setSyncPreview(null);
-    setSyncNotice(null);
+    setXsyncNotice(null);
     if (!source) return;
     bridge.call<SyncPreview>("profile.syncPreview", { source })
       .then(setSyncPreview)
-      .catch((e) => setSyncNotice(String(e)));
+      .catch((e) => setXsyncNotice(String(e)));
   }
   function applySync() {
     if (!syncPreview) return;
-    setSyncBusy(true);
-    setSyncNotice(null);
+    setXsyncBusy(true);
+    setXsyncNotice(null);
     const skip_ids = syncSkipConflicts ? syncPreview.conflict.map((r) => r.id) : [];
     bridge.call<{ ok: boolean; installed: string[]; failed: { id: string; error: string }[] }>(
       "profile.syncApply", { source: syncPreview.source, skip_ids })
       .then((r) => {
-        setSyncNotice(`Synced ${r.installed.length} addon${r.installed.length === 1 ? "" : "s"}${r.failed.length ? `, ${r.failed.length} failed` : ""}`);
+        setXsyncNotice(`Synced ${r.installed.length} addon${r.installed.length === 1 ? "" : "s"}${r.failed.length ? `, ${r.failed.length} failed` : ""}`);
         setSyncPreview(null);
         setSyncSource("");
         onProfileChange();
       })
-      .catch((e) => setSyncNotice(String(e)))
-      .finally(() => setSyncBusy(false));
+      .catch((e) => setXsyncNotice(String(e)))
+      .finally(() => setXsyncBusy(false));
   }
 
   function autoscan() {
@@ -717,15 +797,15 @@ export function SettingsScreen({
                         </label>
                         <button
                           className="btn btn-sm btn-primary"
-                          disabled={syncBusy || syncPreview.new.length + syncPreview.conflict.length === 0}
+                          disabled={xsyncBusy || syncPreview.new.length + syncPreview.conflict.length === 0}
                           onClick={applySync}
                         >
-                          {syncBusy ? "Syncing…" : "Sync"}
+                          {xsyncBusy ? "Syncing…" : "Sync"}
                         </button>
                       </div>
                     </>
                   )}
-                  {syncNotice && <div className="sd" style={{ color: "var(--accent)" }}>{syncNotice}</div>}
+                  {xsyncNotice && <div className="sd" style={{ color: "var(--accent)" }}>{xsyncNotice}</div>}
                 </div>
               )}
 
@@ -1006,6 +1086,66 @@ export function SettingsScreen({
               </div>
             </div>
           )}
+
+          {/* Profile Sync & Bundle (#65 / #66) */}
+          <div className="set-group">
+            <h3>Profile Sync &amp; Bundle</h3>
+            <p className="gdesc">Export your full profile (addons + tracked auras + settings) to a file, or sync it across machines via a git repository.</p>
+            <div className="set-card">
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Full profile bundle</div>
+                  <div className="sd">A portable snapshot you can restore on another machine or after a reinstall.</div>
+                </div>
+                <div className="sr" style={{ gap: 6, display: "flex" }}>
+                  <button className="btn btn-sm btn-primary" onClick={exportBundle}>Export…</button>
+                  <label className="btn btn-sm" style={{ cursor: "pointer" }}>
+                    Import…
+                    <input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={importBundleFile} />
+                  </label>
+                </div>
+              </div>
+              <div className="set-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 4 }}>
+                <div className="sl">
+                  <div className="st">Git sync repository</div>
+                  <div className="sd">
+                    {syncStatus && !syncStatus.available
+                      ? "git is not installed — sync unavailable."
+                      : "A local git repo (with a remote) used to push/pull the profile bundle."}
+                  </div>
+                </div>
+                {syncStatus?.available && (
+                  <>
+                    <div className="import-input">
+                      <div className="field" style={{ flex: 1 }}>
+                        <input
+                          value={syncRepo}
+                          onChange={(e) => setSyncRepo(e.target.value)}
+                          placeholder="/path/to/sync-repo"
+                        />
+                      </div>
+                      <button className="btn btn-sm" onClick={pickSyncRepo}>Browse…</button>
+                      <button className="btn btn-sm btn-primary" disabled={syncBusy || !syncRepo.trim()} onClick={setSyncRepoPath}>Set</button>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <button className="btn btn-sm" disabled={syncBusy || !syncStatus.configured} onClick={syncPush}>
+                        {syncBusy ? "…" : "Push"}
+                      </button>
+                      <button className="btn btn-sm" disabled={syncBusy || !syncStatus.configured} onClick={syncPull}>
+                        {syncBusy ? "…" : "Pull & apply"}
+                      </button>
+                      {syncStatus.configured && (
+                        <span className="sd" style={{ margin: 0 }}>
+                          {syncStatus.is_repo ? (syncStatus.has_bundle ? "repo ready · bundle present" : "repo ready") : "not a git repo yet"}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
+                {syncNotice && <div className="sd" style={{ color: "var(--accent)" }}>{syncNotice}</div>}
+              </div>
+            </div>
+          </div>
 
           {/* Companion Auto-Build (#63) */}
           {coSchedule && (

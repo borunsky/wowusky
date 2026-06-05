@@ -10,13 +10,14 @@ import { BrowseScreen } from "./screens/BrowseScreen";
 import { InstalledScreen } from "./screens/InstalledScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { HealthScreen } from "./screens/HealthScreen";
+import { HistoryScreen } from "./screens/HistoryScreen";
 import { WeakAurasScreen } from "./screens/WeakAurasScreen";
 import { BackupsScreen } from "./screens/BackupsScreen";
 
 export type Theme = "dark" | "light" | "system";
 export type Density = "comfortable" | "compact";
 export type Accent = "teal" | "blue" | "purple" | "orange";
-export type Screen = "browse" | "installed" | "weakauras" | "backups" | "health" | "settings";
+export type Screen = "browse" | "installed" | "weakauras" | "backups" | "health" | "history" | "settings";
 
 function resolveTheme(t: Theme): "dark" | "light" {
   if (t === "system") {
@@ -31,6 +32,7 @@ const SCREEN_META: Record<Screen, { name: string; icon: string; description: str
   weakauras: { name: "WeakAuras", icon: "⚡", description: "Import and manage WeakAura strings" },
   backups:   { name: "Backups",   icon: "💾", description: "Backup and restore addon configurations" },
   health:    { name: "Health",    icon: "♥",  description: "Diagnose addon conflicts and issues" },
+  history:   { name: "History",   icon: "🕑", description: "Persistent log of installs, updates and removals" },
   settings:  { name: "Settings",  icon: "⚙",  description: "Configure wowusky preferences" },
 };
 
@@ -263,6 +265,8 @@ export default function App(): JSX.Element {
             <BackupsScreen />
           ) : screen === "health" ? (
             <HealthScreen />
+          ) : screen === "history" ? (
+            <HistoryScreen refreshKey={refreshKey} />
           ) : screen === "settings" ? (
             <SettingsScreen
               theme={theme}
