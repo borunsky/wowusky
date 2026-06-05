@@ -319,6 +319,7 @@ def _settings_get(_params: dict[str, Any]) -> dict[str, Any]:
         "curseforge_api_key_set": bool(cf_key),
         "auto_update_on_launch": bool(_config.get_auto_update_on_launch()),
         "desktop_notifications": bool(_config.get_desktop_notifications()),
+        "update_diff_before_install": bool(_config.get_update_diff_before_install()),
         "active_profile": _state.get_active_profile_id(),
         "profiles": _profile_summaries(),
     }
@@ -344,6 +345,9 @@ def _settings_update(params: dict[str, Any]) -> dict[str, Any]:
     if "desktop_notifications" in params:
         from wowusky.core import config as _config
         _config.set_desktop_notifications(bool(params["desktop_notifications"]))
+    if "update_diff_before_install" in params:
+        from wowusky.core import config as _config
+        _config.set_update_diff_before_install(bool(params["update_diff_before_install"]))
 
     return _settings_get({})
 
@@ -1199,6 +1203,300 @@ def _health_check(params: dict[str, Any]) -> dict[str, Any]:
         "ok": ok,
         "failed": len(catalog) - ok,
         "results": results,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Installation health & orphan management (#59 / #60)
+# ---------------------------------------------------------------------------
+
+
+def _list_disk_addon_folders(addons_path: str) -> set[str]:
+    """Top-level AddOns subfolders that carry a readable .toc."""
+    import os
+
+    from wowusky.core.toc import read_addon_toc
+
+    out: set[str] = set()
+    if not addons_path or not os.path.isdir(addons_path):
+        return out
+    for f in os.listdir(addons_path):
+        full = os.path.join(addons_path, f)
+        if not os.path.isdir(full) or f.startswith("."):
+            continue
+        if read_addon_toc(full):
+            out.add(f)
+    return out
+
+
+def _compute_install_health(profile: str) -> dict[str, Any]:
+    """Reconcile the profile's installed DB against what is on disk.
+
+    Returns problems bucketed by kind:
+      * ``missing`` — DB entries whose folders are gone from disk
+      * ``duplicates`` — a folder claimed by more than one DB entry
+      * ``orphans`` — on-disk addon folders not tracked by any DB entry
+        (with a catalog-match guess where possible)
+    """
+    import os
+
+    from wowusky.catalog import load_catalog
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    try:
+        addons_path = _state.get_addons_path()
+    except Exception:  # noqa: BLE001
+        addons_path = ""
+
+    db = _installed.load(profile)
+    disk = _list_disk_addon_folders(addons_path) if addons_path else set()
+
+    # Missing: every recorded folder absent from disk.
+    missing: list[dict[str, Any]] = []
+    claimed: dict[str, list[str]] = {}
+    for aid, entry in db.items():
+        folders = entry.get("folders") or []
+        gone = [f for f in folders if not os.path.isdir(os.path.join(addons_path, f))] if addons_path else folders
+        if folders and gone and len(gone) == len(folders):
+            missing.append({"id": aid, "name": entry.get("name") or aid, "folders": folders})
+        for f in folders:
+            claimed.setdefault(f, []).append(aid)
+
+    # Duplicates: one folder claimed by 2+ DB entries.
+    duplicates = [
+        {"folder": f, "ids": ids}
+        for f, ids in sorted(claimed.items())
+        if len(ids) > 1
+    ]
+
+    # Orphans: on-disk addon folders not claimed by any DB entry.
+    known = set(claimed.keys())
+    catalog = load_catalog()
+    by_folder = {}
+    by_lower = {}
+    for addon in catalog:
+        for folder in addon.get("folders", []):
+            by_folder[folder] = addon
+            by_lower[folder.lower()] = addon
+    orphans: list[dict[str, Any]] = []
+    for f in sorted(disk - known):
+        match = by_folder.get(f) or by_lower.get(f.lower())
+        orphans.append({
+            "folder": f,
+            "match_id": match.get("id") if match else None,
+            "match_name": match.get("name") if match else None,
+        })
+
+    total = len(missing) + len(duplicates) + len(orphans)
+    return {
+        "profile": profile,
+        "addons_path": addons_path,
+        "missing": missing,
+        "duplicates": duplicates,
+        "orphans": orphans,
+        "problem_count": total,
+    }
+
+
+@method("health.installed")
+def _health_installed(params: dict[str, Any]) -> dict[str, Any]:
+    """Inspect the active (or given) profile's install for problems (#59).
+
+    params: {profile?: str}
+    returns: {profile, addons_path, missing, duplicates, orphans, problem_count}
+    """
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    return _compute_install_health(profile)
+
+
+@method("health.fixResync")
+def _health_fix_resync(_params: dict[str, Any]) -> dict[str, Any]:
+    """Reconcile the DB with the filesystem (drop missing, adopt orphans).
+
+    returns: {ok, ...health.installed}
+    """
+    from wowusky.catalog import load_catalog
+    from wowusky.core import scan as _scan
+    from wowusky.core import state as _state
+
+    try:
+        addons_path = _state.get_addons_path()
+        _scan.sync_filesystem_with_db(addons_path, load_catalog())
+    except Exception as exc:  # noqa: BLE001
+        _log("health resync error:", traceback.format_exc())
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+    profile = _state.get_active_profile_id()
+    return {"ok": True, **_compute_install_health(profile)}
+
+
+@method("health.removeEntry")
+def _health_remove_entry(params: dict[str, Any]) -> dict[str, Any]:
+    """Drop a dangling DB entry (folders already gone) without touching disk.
+
+    params: {id: str}
+    returns: {ok, ...health.installed}
+    """
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+    profile = _state.get_active_profile_id()
+    db = _installed.load(profile)
+    if addon_id in db:
+        del db[addon_id]
+        _installed.save(profile, db)
+    return {"ok": True, **_compute_install_health(profile)}
+
+
+@method("orphans.list")
+def _orphans_list(params: dict[str, Any]) -> dict[str, Any]:
+    """List on-disk addon folders not tracked in the DB (#60).
+
+    params: {profile?: str}
+    returns: {profile, orphans: [{folder, match_id, match_name}]}
+    """
+    from wowusky.core import state as _state
+
+    profile = params.get("profile") or _state.get_active_profile_id()
+    health = _compute_install_health(profile)
+    return {"profile": profile, "orphans": health["orphans"]}
+
+
+@method("orphans.adopt")
+def _orphans_adopt(params: dict[str, Any]) -> dict[str, Any]:
+    """Register an orphan folder into the installed DB.
+
+    Matches the folder to the catalog where possible (recording the real
+    catalog id), otherwise records it as an ``external`` discovery.
+    params: {folder: str}
+    returns: {ok, adopted_id, ...installed_list}
+    """
+    import os
+
+    from wowusky.catalog import load_catalog
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+    from wowusky.core.toc import read_addon_toc
+
+    folder = params.get("folder")
+    if not folder:
+        raise ValueError("folder is required")
+    addons_path = _state.get_addons_path()
+    full = os.path.join(addons_path, folder)
+    toc = read_addon_toc(full)
+    if not toc:
+        return {"ok": False, "error": f"no readable .toc in {folder}"}
+
+    catalog = load_catalog()
+    by_folder = {}
+    by_lower = {}
+    for addon in catalog:
+        for fol in addon.get("folders", []):
+            by_folder[fol] = addon
+            by_lower[fol.lower()] = addon
+    match = by_folder.get(folder) or by_lower.get(folder.lower())
+
+    profile = _state.get_active_profile_id()
+    db = _installed.load(profile)
+    if match:
+        actual = [f for f in match.get("folders", []) if os.path.isdir(os.path.join(addons_path, f))]
+        adopted_id = match["id"]
+        db[adopted_id] = {
+            "name": match.get("name", folder),
+            "version": toc.get("version") or "unknown",
+            "folders": actual or [folder],
+            "source": match.get("provider") or match.get("source") or "unknown",
+            "interface": toc.get("interface"),
+            "discovered": True,
+        }
+    else:
+        adopted_id = "fs_" + folder.lower().replace(" ", "_")
+        db[adopted_id] = {
+            "name": toc.get("title") or folder,
+            "version": toc.get("version") or "unknown",
+            "folders": [folder],
+            "source": "external",
+            "interface": toc.get("interface"),
+            "discovered": True,
+        }
+    _installed.save(profile, db)
+    return {"ok": True, "adopted_id": adopted_id, **_installed_list({"profile": profile})}
+
+
+@method("orphans.remove")
+def _orphans_remove(params: dict[str, Any]) -> dict[str, Any]:
+    """Delete an orphan folder from disk (a backup is taken first).
+
+    params: {folder: str}
+    returns: {ok, orphans: [...]}
+    """
+    import os
+    import shutil
+
+    from wowusky.core import state as _state
+    from wowusky.core.backup import backup_addon_folders
+
+    folder = params.get("folder")
+    if not folder:
+        raise ValueError("folder is required")
+    addons_path = _state.get_addons_path()
+    full = os.path.join(addons_path, folder)
+    if not os.path.isdir(full):
+        return {"ok": False, "error": f"no such folder: {folder}"}
+    try:
+        backup_addon_folders("orphan_" + folder, {"folders": [folder]}, addons_path, _log)
+        if not _state.is_dry_run():
+            shutil.rmtree(full)
+    except Exception as exc:  # noqa: BLE001
+        _log("orphan remove error:", traceback.format_exc())
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+    profile = _state.get_active_profile_id()
+    return {"ok": True, "orphans": _compute_install_health(profile)["orphans"]}
+
+
+@method("addon.updateDiff")
+def _addon_update_diff(params: dict[str, Any]) -> dict[str, Any]:
+    """Preview what an update would change for an installed addon (#61).
+
+    Compares the installed folder set against the catalog package's folder
+    set and reports the version transition.
+    params: {id: str}
+    returns: {id, name, from_version, to_version, added: [str], removed: [str], same: [str]}
+    """
+    from wowusky import orchestrator as _orch
+    from wowusky.core import installed as _installed
+    from wowusky.core import state as _state
+
+    addon_id = params.get("id")
+    if not addon_id:
+        raise ValueError("id is required")
+
+    profile = _state.get_active_profile_id()
+    db = _installed.load(profile)
+    inst = db.get(addon_id) or {}
+    cat = _orch.find_addon_by_id(addon_id) or {}
+
+    cur_folders = set(inst.get("folders") or [])
+    new_folders = set(cat.get("folders") or []) or cur_folders
+    from_version = inst.get("version") or "unknown"
+    try:
+        to_version = _orch.get_latest_version(cat) if cat else None
+    except Exception:  # noqa: BLE001
+        to_version = None
+
+    return {
+        "id": addon_id,
+        "name": inst.get("name") or cat.get("name") or addon_id,
+        "from_version": from_version,
+        "to_version": to_version or from_version,
+        "added": sorted(new_folders - cur_folders),
+        "removed": sorted(cur_folders - new_folders),
+        "same": sorted(cur_folders & new_folders),
     }
 
 

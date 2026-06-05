@@ -16,6 +16,16 @@ interface ActionResult extends InstalledResult {
   error?: string;
 }
 
+interface UpdateDiff {
+  id: string;
+  name: string;
+  from_version: string;
+  to_version: string;
+  added: string[];
+  removed: string[];
+  same: string[];
+}
+
 function MonoBadge({ a, size = 34 }: { a: InstalledAddon; size?: number }): JSX.Element {
   return (
     <div
@@ -45,6 +55,17 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const progress = useActionProgress();
   const liveLabel = busy ? progressLabel(progress[busy]) : null;
+  // Update-diff confirmation (#61).
+  const [diffSetting, setDiffSetting] = useState(false);
+  const [pendingDiff, setPendingDiff] = useState<{ addon: InstalledAddon; diff: UpdateDiff } | null>(null);
+  const [diffLoading, setDiffLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    bridge
+      .call<{ update_diff_before_install?: boolean }>("settings.get", {})
+      .then((s) => setDiffSetting(!!s.update_diff_before_install))
+      .catch(() => {});
+  }, []);
 
   function checkUpdates() {
     setCheckingUpdates(true);
@@ -131,7 +152,31 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
       .finally(() => { setBusy(null); checkUpdates(); });
   }
 
+  // Update path with optional diff confirmation (#61).
+  function requestUpdate(a: InstalledAddon) {
+    if (busy) return;
+    if (!diffSetting) { execAction("addon.update", a); return; }
+    setDiffLoading(a.id);
+    bridge
+      .call<UpdateDiff>("addon.updateDiff", { id: a.id })
+      .then((diff) => setPendingDiff({ addon: a, diff }))
+      .catch(() => execAction("addon.update", a))
+      .finally(() => setDiffLoading(null));
+  }
+
+  function confirmDiff() {
+    if (!pendingDiff) return;
+    const a = pendingDiff.addon;
+    setPendingDiff(null);
+    execAction("addon.update", a);
+  }
+
   function runAction(method: "addon.update" | "addon.remove", a: InstalledAddon) {
+    if (method === "addon.update") { requestUpdate(a); return; }
+    execAction(method, a);
+  }
+
+  function execAction(method: "addon.update" | "addon.remove", a: InstalledAddon) {
     if (busy) return;
     if (method === "addon.remove" && !window.confirm(`Remove ${a.name}? A backup is taken first.`)) {
       return;
@@ -194,6 +239,28 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
 
   return (
     <div className="page">
+      {pendingDiff && (
+        <div className="diff-overlay" onClick={() => setPendingDiff(null)}>
+          <div className="diff-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Update {pendingDiff.addon.name}?</h3>
+            <div className="diff-ver">
+              v{pendingDiff.diff.from_version} → v{pendingDiff.diff.to_version}
+            </div>
+            <div className="diff-list">
+              {pendingDiff.diff.added.map((f) => <div key={"a" + f} className="diff-line add">+ {f}</div>)}
+              {pendingDiff.diff.removed.map((f) => <div key={"r" + f} className="diff-line rem">− {f}</div>)}
+              {pendingDiff.diff.same.map((f) => <div key={"s" + f} className="diff-line same">  {f}</div>)}
+              {pendingDiff.diff.added.length === 0 && pendingDiff.diff.removed.length === 0 && (
+                <div className="diff-line same">No folder changes — same files, new version.</div>
+              )}
+            </div>
+            <div className="diff-foot">
+              <button className="btn btn-sm" onClick={() => setPendingDiff(null)}>Cancel</button>
+              <button className="btn btn-sm btn-primary" onClick={confirmDiff}>Update</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="page-head">
         <div className="page-title">
           Installed
@@ -371,7 +438,7 @@ export function InstalledScreen({ refreshKey, onChanged }: Props): JSX.Element {
                         disabled={busy !== null}
                         onClick={() => runAction("addon.update", a)}
                       >
-                        {busy === a.id ? (progressLabel(progress[a.id]) ?? "…") : "Update"}
+                        {busy === a.id ? (progressLabel(progress[a.id]) ?? "…") : diffLoading === a.id ? "…" : "Update"}
                       </button>
                     )}
                     <button

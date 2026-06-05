@@ -313,3 +313,29 @@
 @keyframes fadeUp { from { transform: translateY(7px); } to { transform: none; } }
 .fade { animation: fadeUp .22s var(--ease); }
 @media (prefers-reduced-motion: reduce) { .fade { animation: none; } }
+
+/* Health screen — installation + catalog sections (#59/#60) */
+.health-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.health-section-head h3 { margin: 0; font-size: 14px; }
+.health-empty, .health-ok { font-size: 13px; color: var(--text-dim); padding: 10px 0; }
+.health-ok { color: var(--green); }
+.health-problems { display: flex; flex-direction: column; gap: 14px; }
+.health-group { border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); padding: 10px 12px; }
+.health-group-title { font-size: 13px; font-weight: 600; }
+.health-group-sub { font-size: 11.5px; color: var(--text-faint); margin: 2px 0 8px; }
+.health-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--border); }
+.health-row:first-of-type { border-top: none; }
+.health-row .hr-name { font-size: 13px; font-weight: 500; min-width: 160px; }
+.health-row .hr-detail { flex: 1; min-width: 0; font-size: 11.5px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Update-diff confirm modal (#61) */
+.diff-overlay { position: fixed; inset: 0; z-index: 9990; display: flex; align-items: center; justify-content: center; background: color-mix(in oklab, var(--bg-deep), transparent 35%); backdrop-filter: blur(2px); }
+.diff-modal { width: min(460px, 92vw); background: var(--panel); border: 1px solid var(--border-2); border-radius: var(--radius, 12px); box-shadow: 0 12px 48px rgba(0,0,0,.45); padding: 18px 20px; }
+.diff-modal h3 { margin: 0 0 4px; font-size: 15px; }
+.diff-ver { font-size: 12.5px; color: var(--text-dim); margin-bottom: 12px; }
+.diff-list { display: flex; flex-direction: column; gap: 3px; max-height: 240px; overflow: auto; margin-bottom: 14px; }
+.diff-line { font-size: 12px; font-family: var(--mono, monospace); }
+.diff-line.add { color: var(--green); }
+.diff-line.rem { color: var(--red); }
+.diff-line.same { color: var(--text-faint); }
+.diff-foot { display: flex; gap: 8px; justify-content: flex-end; }

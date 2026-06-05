@@ -97,6 +97,12 @@ def get_desktop_notifications() -> bool:
 def set_desktop_notifications(value: bool) -> None:
     set_key("desktop_notifications", bool(value))
 
+def get_update_diff_before_install() -> bool:
+    return bool(get("update_diff_before_install", False))
+
+def set_update_diff_before_install(value: bool) -> None:
+    set_key("update_diff_before_install", bool(value))
+
 
 def migrate_legacy_installed(target_profile_id: str) -> bool:
     """Move the pre-0.4 ``installed.json`` into the per-profile location.

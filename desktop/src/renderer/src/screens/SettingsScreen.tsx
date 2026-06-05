@@ -24,6 +24,7 @@ interface CoreSettings {
   dry_run: boolean;
   auto_update_on_launch: boolean;
   desktop_notifications: boolean;
+  update_diff_before_install: boolean;
   curseforge_api_key_set: boolean;
   active_profile: string;
   profiles: ProfileSummary[];
@@ -282,6 +283,11 @@ export function SettingsScreen({
   function toggleDesktopNotifications() {
     if (!core) return;
     bridge.call<CoreSettings>("settings.update", { desktop_notifications: !core.desktop_notifications })
+      .then(setCore).catch(() => {});
+  }
+  function toggleUpdateDiff() {
+    if (!core) return;
+    bridge.call<CoreSettings>("settings.update", { update_diff_before_install: !core.update_diff_before_install })
       .then(setCore).catch(() => {});
   }
   function switchProfile(id: string) {
@@ -1059,6 +1065,15 @@ export function SettingsScreen({
                 </div>
                 <div className="sr">
                   <div className={`switch${core?.desktop_notifications ? " on" : ""}`} onClick={toggleDesktopNotifications}><i /></div>
+                </div>
+              </div>
+              <div className="set-row">
+                <div className="sl">
+                  <div className="st">Confirm update diff</div>
+                  <div className="sd">Before updating an addon, show which folders change (added / removed) and confirm.</div>
+                </div>
+                <div className="sr">
+                  <div className={`switch${core?.update_diff_before_install ? " on" : ""}`} onClick={toggleUpdateDiff}><i /></div>
                 </div>
               </div>
               <div className="set-row">
