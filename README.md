@@ -18,19 +18,21 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ## What's new in v0.16.0
 
 ### Added
-- **Installation health in the UI** (#59): the Health screen now leads with an
-  **Installation** section that detects missing folders (tracked addons whose
-  files are gone), duplicate folder claims, and orphan folders — with one-click
-  fixes (re-sync with disk, remove dangling entry). Backed by the new
-  `health.installed`, `health.fixResync` and `health.removeEntry` bridge methods.
-- **Orphan management** (#60): addon folders present on disk but not tracked are
-  surfaced with **Adopt** (register into the profile, catalog-matched where
-  possible) and **Delete** (remove from disk, backup taken first) actions.
-  Backed by `orphans.list`, `orphans.adopt` and `orphans.remove`.
+- **Installation health in the UI** (#59): the Health screen gains an
+  **Installation** section that reconciles the profile's installed database
+  against the filesystem and reports missing folders, duplicate folder claims,
+  and orphan folders, with one-click fixes (re-sync with disk, remove a
+  dangling entry). Backed by the new `health.installed`, `health.fixResync`
+  and `health.removeEntry` bridge methods.
+- **Orphan management** (#60): addon folders on disk but not tracked in the DB
+  are surfaced with **Adopt** (register into the profile, catalog-matched where
+  possible, else recorded as external) and **Delete** (remove from disk, with a
+  backup) actions. Backed by `orphans.list`, `orphans.adopt`, `orphans.remove`.
 - **Update diff before install** (#61): an opt-in **Confirm update diff**
-  setting (Settings → Advanced) shows which folders an update adds or removes,
-  plus the version transition, and asks for confirmation before applying.
-  Backed by the new `addon.updateDiff` bridge method.
+  setting (Settings → Advanced) shows the folders an update would add or remove
+  plus the version transition, and requires confirmation before applying.
+  Backed by the new `addon.updateDiff` bridge method and the
+  `update_diff_before_install` config option.
 <!-- WHATS-NEW:END -->
 
 ---
