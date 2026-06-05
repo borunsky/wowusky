@@ -18,18 +18,19 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ## What's new in v0.17.0
 
 ### Added
-- **Aura diff before update** (#62): updating a tracked WeakAura now shows the
-  version transition and the author's changelog in a confirmation dialog first
-  (falling back to a direct update when no changelog is available). Backed by
-  the new `wago.updateNotes` bridge method.
-- **Companion auto-build timer** (#63): a systemd user timer that rebuilds the
-  WeakAurasCompanion addon on a schedule so tracked auras flow back into the
-  game without manual action. Managed from **Settings → Companion Auto-Build**.
-  Backed by `companionSchedule.status` / `.enable` / `.disable`.
+- **Aura diff before update** (#62): updating a tracked WeakAura first shows the
+  version transition and the author's changelog in a confirmation dialog,
+  falling back to a direct update when no changelog is available. Backed by the
+  new `wago.updateNotes` bridge method and `wago.wago_update_notes()`.
+- **Companion auto-build timer** (#63): a third systemd user timer that runs
+  `wowusky weakauras companion` on a schedule so tracked auras flow back into
+  the game without manual action. Managed from **Settings → Companion
+  Auto-Build**. Backed by `schedule.companion_*` and the
+  `companionSchedule.status` / `.enable` / `.disable` bridge methods.
 - **Bulk untrack & collections** (#64): select multiple auras with checkboxes
   and untrack them in one action, and import every aura in a wago collection by
   pasting its URL. Backed by the new `wago.untrackMany` and `wago.addCollection`
-  bridge methods.
+  bridge methods (`wago.wago_untrack_many()`, `wago.wago_add_collection()`).
 <!-- WHATS-NEW:END -->
 
 ---
