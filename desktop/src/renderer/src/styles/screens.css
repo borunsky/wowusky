@@ -339,3 +339,7 @@
 .diff-line.rem { color: var(--red); }
 .diff-line.same { color: var(--text-faint); }
 .diff-foot { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* WeakAuras card selection (#64) */
+.wa-check { margin-right: 2px; cursor: pointer; flex: none; }
+.wa-card.sel { border-color: var(--accent-line); box-shadow: 0 0 0 1px var(--accent-line) inset; }

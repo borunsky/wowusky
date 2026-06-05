@@ -782,6 +782,67 @@ def _wago_generate_companion(_params: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "count": count, "path": addons_path}
 
 
+@method("wago.updateNotes")
+def _wago_update_notes(params: dict[str, Any]) -> dict[str, Any]:
+    """Return a tracked aura's version transition + changelog (#62).
+
+    params: {slug: str}
+    returns: {slug, name, current_version, latest_version, changelog} or
+             {error} when the slug is not tracked.
+    """
+    from wowusky.core import wago as _wago
+
+    slug = str(params.get("slug", "")).strip()
+    if not slug:
+        raise ValueError("slug is required")
+    try:
+        notes = _wago.wago_update_notes(slug)
+    except Exception as exc:  # noqa: BLE001
+        return {"error": str(exc)}
+    if notes is None:
+        return {"error": "not tracked"}
+    return notes
+
+
+@method("wago.untrackMany")
+def _wago_untrack_many(params: dict[str, Any]) -> dict[str, Any]:
+    """Untrack several auras at once (#64).
+
+    params: {slugs: [str]}
+    returns: {ok, removed}
+    """
+    from wowusky.core import wago as _wago
+
+    slugs = list(params.get("slugs") or [])
+    if not slugs:
+        raise ValueError("slugs is required")
+    removed = _wago.wago_untrack_many(slugs)
+    return {"ok": True, "removed": removed}
+
+
+@method("wago.addCollection")
+def _wago_add_collection(params: dict[str, Any]) -> dict[str, Any]:
+    """Track every aura in a wago collection (#64).
+
+    params: {url: str}  (a wago collection URL or bare collection id)
+    returns: {ok, total, added, already} or {ok: False, error}
+    """
+    from wowusky.core import wago as _wago
+
+    raw = str(params.get("url", "")).strip()
+    if not raw:
+        raise ValueError("url is required")
+    # Accept a full URL (…/collections/<id> or …/<id>) or a bare id.
+    cid = raw.rstrip("/").split("/")[-1]
+    try:
+        result = _wago.wago_add_collection(cid)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+    if result.get("total", 0) == 0:
+        return {"ok": False, "error": "no auras found in that collection"}
+    return {"ok": True, **result}
+
+
 # ---------------------------------------------------------------------------
 # Release notes (#53)
 # ---------------------------------------------------------------------------
@@ -867,6 +928,33 @@ def _backup_schedule_disable(_params: dict[str, Any]) -> dict[str, Any]:
     from wowusky.core import schedule as _schedule
 
     return _schedule.backup_disable()
+
+
+# ---------------------------------------------------------------------------
+# Scheduled companion rebuilds (#63)
+# ---------------------------------------------------------------------------
+
+
+@method("companionSchedule.status")
+def _companion_schedule_status(_params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import schedule as _schedule
+
+    return _schedule.companion_status()
+
+
+@method("companionSchedule.enable")
+def _companion_schedule_enable(params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import schedule as _schedule
+
+    interval = str(params.get("interval", "daily") or "daily")
+    return _schedule.companion_enable(interval)
+
+
+@method("companionSchedule.disable")
+def _companion_schedule_disable(_params: dict[str, Any]) -> dict[str, Any]:
+    from wowusky.core import schedule as _schedule
+
+    return _schedule.companion_disable()
 
 
 # ---------------------------------------------------------------------------

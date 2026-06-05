@@ -121,6 +121,10 @@ export function SettingsScreen({
   const [bkInterval, setBkInterval] = useState<string>("daily");
   const [bkKeep, setBkKeep] = useState<number>(5);
   const [bkWorking, setBkWorking] = useState(false);
+  // Scheduled companion rebuilds (#63)
+  const [coSchedule, setCoSchedule] = useState<ScheduleStatus | null>(null);
+  const [coInterval, setCoInterval] = useState<string>("daily");
+  const [coWorking, setCoWorking] = useState(false);
   const [dlZips, setDlZips] = useState<DownloadZip[] | null>(null);
   const [dlScanning, setDlScanning] = useState(false);
   const [dlBusy, setDlBusy] = useState<string | null>(null);
@@ -196,6 +200,10 @@ export function SettingsScreen({
       if (s.interval) setBkInterval(s.interval);
       if (s.keep) setBkKeep(s.keep);
     }).catch(() => {});
+    bridge.call<ScheduleStatus>("companionSchedule.status", {}).then((s) => {
+      setCoSchedule(s);
+      if (s.interval) setCoInterval(s.interval);
+    }).catch(() => {});
   }
   useEffect(reload, []);
 
@@ -226,6 +234,20 @@ export function SettingsScreen({
       .then((r) => setBkSchedule(r))
       .catch(() => {})
       .finally(() => setBkWorking(false));
+  }
+  function enableCoSchedule() {
+    setCoWorking(true);
+    bridge.call<ScheduleStatus & { ok: boolean }>("companionSchedule.enable", { interval: coInterval })
+      .then((r) => setCoSchedule(r))
+      .catch(() => {})
+      .finally(() => setCoWorking(false));
+  }
+  function disableCoSchedule() {
+    setCoWorking(true);
+    bridge.call<ScheduleStatus & { ok: boolean }>("companionSchedule.disable", {})
+      .then((r) => setCoSchedule(r))
+      .catch(() => {})
+      .finally(() => setCoWorking(false));
   }
 
   function scanDownloads() {
@@ -976,6 +998,71 @@ export function SettingsScreen({
                       {bkSchedule.installed && (
                         <button className="btn btn-sm btn-danger" disabled={bkWorking} onClick={disableBkSchedule}>
                           {bkWorking ? "…" : "Disable"}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Companion Auto-Build (#63) */}
+          {coSchedule && (
+            <div className="set-group">
+              <h3>Companion Auto-Build</h3>
+              <p className="gdesc">
+                Automatically rebuild the WeakAurasCompanion addon via a systemd user timer, so
+                tracked auras flow back into the game without manual action. Runs
+                <code> wowusky weakauras companion</code> on the configured schedule.
+              </p>
+              <div className="set-card">
+                {!coSchedule.available ? (
+                  <div className="set-row">
+                    <div className="sl">
+                      <div className="st">Companion auto-build</div>
+                      <div className="sd">Not available — systemd user instance not detected.</div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="set-row">
+                      <div className="sl">
+                        <div className="st">
+                          Timer status
+                          {coSchedule.installed && (
+                            <span className={`installed-tag${coSchedule.enabled && coSchedule.active ? "" : " conflict"}`} style={{ marginLeft: 8 }}>
+                              {coSchedule.enabled && coSchedule.active ? `enabled · ${coSchedule.interval ?? "daily"}` : coSchedule.enabled ? "enabled, inactive" : "disabled"}
+                            </span>
+                          )}
+                        </div>
+                        {coSchedule.installed && coSchedule.next_run && (
+                          <div className="sd">Next run: {coSchedule.next_run}</div>
+                        )}
+                        {!coSchedule.installed && (
+                          <div className="sd">No timer installed.</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="set-row" style={{ gap: 10 }}>
+                      <div className="sl" style={{ flex: "none" }}>
+                        <select
+                          className="field"
+                          value={coInterval}
+                          onChange={(e) => setCoInterval(e.target.value)}
+                          disabled={coWorking}
+                        >
+                          <option value="hourly">Hourly</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                        </select>
+                      </div>
+                      <button className="btn btn-sm btn-primary" disabled={coWorking} onClick={enableCoSchedule}>
+                        {coWorking ? "…" : coSchedule.installed ? "Update timer" : "Enable"}
+                      </button>
+                      {coSchedule.installed && (
+                        <button className="btn btn-sm btn-danger" disabled={coWorking} onClick={disableCoSchedule}>
+                          {coWorking ? "…" : "Disable"}
                         </button>
                       )}
                     </div>

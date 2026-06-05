@@ -23,6 +23,9 @@ TIMER_NAME = "wowusky-update.timer"
 BACKUP_SERVICE_NAME = "wowusky-backup.service"
 BACKUP_TIMER_NAME = "wowusky-backup.timer"
 
+COMPANION_SERVICE_NAME = "wowusky-companion.service"
+COMPANION_TIMER_NAME = "wowusky-companion.timer"
+
 # systemd OnCalendar expressions for the intervals we expose.
 INTERVALS = {
     "hourly": "hourly",
@@ -303,3 +306,99 @@ def backup_disable() -> dict:
             os.remove(path)
     _systemctl("daemon-reload")
     return {"ok": True, **backup_status()}
+
+
+# ---------------------------------------------------------------------------
+# Scheduled WeakAurasCompanion rebuilds (#63) — a third user timer
+# ---------------------------------------------------------------------------
+
+def companion_service_path() -> str:
+    return os.path.join(_unit_dir(), COMPANION_SERVICE_NAME)
+
+
+def companion_timer_path() -> str:
+    return os.path.join(_unit_dir(), COMPANION_TIMER_NAME)
+
+
+def companion_status() -> dict:
+    """Report the current companion-build timer state (mirrors :func:`status`)."""
+    if not available():
+        return {"available": False, "installed": False}
+    if not os.path.isfile(companion_timer_path()):
+        return {"available": True, "installed": False}
+    enabled = _show("UnitFileState", COMPANION_TIMER_NAME) in ("enabled", "enabled-runtime")
+    active = _show("ActiveState", COMPANION_TIMER_NAME) == "active"
+    interval = "daily"
+    try:
+        with open(companion_timer_path(), encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("OnCalendar="):
+                    val = line.split("=", 1)[1].strip()
+                    interval = next((n for n, e in INTERVALS.items() if e == val), val)
+                    break
+    except OSError:
+        pass
+    return {
+        "available": True,
+        "installed": True,
+        "enabled": enabled,
+        "active": active,
+        "interval": interval,
+        "next_run": _show("NextElapseUSecRealtime", COMPANION_TIMER_NAME) or None,
+        "last_run": _show("LastTriggerUSec", COMPANION_TIMER_NAME) or None,
+    }
+
+
+def _write_companion_units(interval: str) -> None:
+    oncal = INTERVALS.get(interval, INTERVALS["daily"])
+    os.makedirs(_unit_dir(), exist_ok=True)
+    service = (
+        "[Unit]\n"
+        "Description=wowusky scheduled WeakAurasCompanion rebuild\n"
+        "\n"
+        "[Service]\n"
+        "Type=oneshot\n"
+        f"ExecStart={_wowusky_exec()} weakauras companion -q\n"
+    )
+    timer = (
+        "[Unit]\n"
+        "Description=wowusky scheduled WeakAurasCompanion rebuild timer\n"
+        "\n"
+        "[Timer]\n"
+        f"OnCalendar={oncal}\n"
+        "Persistent=true\n"
+        "\n"
+        "[Install]\n"
+        "WantedBy=timers.target\n"
+    )
+    with open(companion_service_path(), "w", encoding="utf-8") as fh:
+        fh.write(service)
+    with open(companion_timer_path(), "w", encoding="utf-8") as fh:
+        fh.write(timer)
+
+
+def companion_enable(interval: str = "daily") -> dict:
+    """Install + enable the scheduled companion-rebuild timer."""
+    if not available():
+        return {"ok": False, "error": "systemd user instance not available"}
+    if interval not in INTERVALS:
+        interval = "daily"
+    _write_companion_units(interval)
+    _systemctl("daemon-reload")
+    rc, out = _systemctl("enable", "--now", COMPANION_TIMER_NAME)
+    if rc != 0:
+        return {"ok": False, "error": out or "failed to enable companion timer"}
+    return {"ok": True, **companion_status()}
+
+
+def companion_disable() -> dict:
+    """Stop, disable and remove the companion-rebuild timer + service units."""
+    if not available():
+        return {"ok": False, "error": "systemd user instance not available"}
+    _systemctl("disable", "--now", COMPANION_TIMER_NAME)
+    for path in (companion_timer_path(), companion_service_path()):
+        with contextlib.suppress(OSError):
+            os.remove(path)
+    _systemctl("daemon-reload")
+    return {"ok": True, **companion_status()}

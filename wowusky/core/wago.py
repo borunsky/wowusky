@@ -84,6 +84,111 @@ def wago_check_updates():
     return updates
 
 
+def wago_update_notes(slug):
+    """Return the version transition + changelog for a tracked aura (#62).
+
+    Compares the locally tracked version against wago's current version and
+    surfaces the changelog text where the API provides one. Returns ``None``
+    when the slug is not tracked.
+    """
+    wago = load_wago()
+    entry = wago.get("auras", {}).get(slug)
+    if entry is None:
+        return None
+    info = wago_fetch_info(slug) or {}
+    latest = info.get("version") or info.get("wagoVersion") or entry.get("version")
+    changelog = ""
+    for key in ("changelog", "versionNote", "changeLog", "patchNotes"):
+        val = info.get(key)
+        if isinstance(val, str) and val.strip():
+            changelog = val
+            break
+        if isinstance(val, dict):
+            text = val.get("text") or val.get("message") or ""
+            if text.strip():
+                changelog = text
+                break
+    return {
+        "slug": slug,
+        "name": entry.get("name") or info.get("name") or slug,
+        "current_version": entry.get("version"),
+        "latest_version": latest,
+        "changelog": changelog,
+    }
+
+
+def wago_untrack_many(slugs):
+    """Remove several tracked auras at once. Returns the count removed (#64)."""
+    wago = load_wago()
+    auras = wago.get("auras", {})
+    removed = 0
+    for slug in slugs:
+        if slug in auras:
+            del auras[slug]
+            removed += 1
+    if removed:
+        save_wago(wago)
+    return removed
+
+
+def wago_fetch_collection(collection_id):
+    """Fetch the member aura slugs of a wago collection.
+
+    The collection endpoint returns a JSON object; we look for the common
+    array shapes (``auras`` / ``imports`` / ``items``) and pull a slug from
+    each member. Returns a list of slugs (possibly empty).
+    """
+    data = None
+    for url in (
+        f"https://data.wago.io/api/collections/{collection_id}",
+        f"https://data.wago.io/api/raw/collection?id={collection_id}",
+    ):
+        try:
+            data = http_get_json(url)
+        except Exception:
+            data = None
+        if data:
+            break
+    if not isinstance(data, dict):
+        return []
+    members = (
+        data.get("auras")
+        or data.get("imports")
+        or data.get("items")
+        or data.get("wagos")
+        or []
+    )
+    slugs = []
+    for m in members:
+        if isinstance(m, str):
+            slugs.append(m)
+        elif isinstance(m, dict):
+            s = m.get("slug") or m.get("_id") or m.get("id")
+            if s:
+                slugs.append(str(s))
+    # De-dupe while preserving order.
+    seen = set()
+    return [s for s in slugs if not (s in seen or seen.add(s))]
+
+
+def wago_add_collection(collection_id):
+    """Track every aura in a wago collection. Returns a summary dict (#64)."""
+    wago = load_wago()
+    existing = set(wago.get("auras", {}).keys())
+    slugs = wago_fetch_collection(collection_id)
+    added, already = [], []
+    for slug in slugs:
+        if slug in existing:
+            already.append(slug)
+            continue
+        try:
+            wago_add(slug)
+            added.append(slug)
+        except Exception:
+            pass
+    return {"total": len(slugs), "added": added, "already": already}
+
+
 def wago_search(query, limit=20):
     """Search wago.io for auras."""
     try:

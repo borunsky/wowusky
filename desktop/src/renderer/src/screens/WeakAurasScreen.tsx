@@ -26,6 +26,14 @@ interface SearchHit {
   type: string;
 }
 
+interface AuraNotes {
+  slug: string;
+  name: string;
+  current_version: number | string;
+  latest_version: number | string;
+  changelog: string;
+}
+
 export function WeakAurasScreen(): JSX.Element {
   const [result, setResult] = useState<WaResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +49,14 @@ export function WeakAurasScreen(): JSX.Element {
   // Import / companion (#49 / #50)
   const [importing, setImporting] = useState(false);
   const [generating, setGenerating] = useState(false);
+  // Aura update notes (#62)
+  const [pendingNotes, setPendingNotes] = useState<AuraNotes | null>(null);
+  const [notesLoading, setNotesLoading] = useState<string | null>(null);
+  // Bulk untrack + collection import (#64)
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [untracking, setUntracking] = useState(false);
+  const [collUrl, setCollUrl] = useState("");
+  const [collBusy, setCollBusy] = useState(false);
 
   function reload() {
     setLoading(true);
@@ -114,7 +130,21 @@ export function WeakAurasScreen(): JSX.Element {
       .finally(() => setChecking(false));
   }
 
+  // Show the changelog before updating a single aura (#62).
+  function requestUpdate(slug: string) {
+    setNotesLoading(slug);
+    setNotice(null);
+    bridge.call<AuraNotes & { error?: string }>("wago.updateNotes", { slug })
+      .then((r) => {
+        if (r.error) { updateAura(slug); return; }
+        setPendingNotes(r);
+      })
+      .catch(() => updateAura(slug))
+      .finally(() => setNotesLoading(null));
+  }
+
   function updateAura(slug: string) {
+    setPendingNotes(null);
     setUpdating(slug);
     setNotice(null);
     bridge.call<{ ok: boolean; error?: string }>("wago.update", { slug })
@@ -124,6 +154,49 @@ export function WeakAurasScreen(): JSX.Element {
       })
       .catch((e) => setNotice(String(e)))
       .finally(() => setUpdating(null));
+  }
+
+  function toggleSelect(slug: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(slug)) next.delete(slug); else next.add(slug);
+      return next;
+    });
+  }
+
+  function untrackSelected() {
+    const slugs = [...selected];
+    if (slugs.length === 0) return;
+    if (!window.confirm(`Untrack ${slugs.length} aura${slugs.length === 1 ? "" : "s"}?`)) return;
+    setUntracking(true);
+    setNotice(null);
+    bridge.call<{ ok: boolean; removed: number }>("wago.untrackMany", { slugs })
+      .then((r) => {
+        setNotice(`Untracked ${r.removed} aura${r.removed === 1 ? "" : "s"}`);
+        setSelected(new Set());
+        reload();
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => setUntracking(false));
+  }
+
+  function trackCollection() {
+    const url = collUrl.trim();
+    if (!url) return;
+    setCollBusy(true);
+    setNotice(null);
+    bridge.call<{ ok: boolean; added?: string[]; already?: string[]; error?: string }>(
+      "wago.addCollection", { url })
+      .then((r) => {
+        if (!r.ok) { setNotice(r.error ?? "could not import collection"); return; }
+        const a = r.added?.length ?? 0;
+        const e = r.already?.length ?? 0;
+        setNotice(`Collection: tracked ${a} new${e ? `, ${e} already tracked` : ""}`);
+        setCollUrl("");
+        reload();
+      })
+      .catch((e) => setNotice(String(e)))
+      .finally(() => setCollBusy(false));
   }
 
   function updateAll() {
@@ -144,6 +217,25 @@ export function WeakAurasScreen(): JSX.Element {
 
   return (
     <div className="page">
+      {pendingNotes && (
+        <div className="diff-overlay" onClick={() => setPendingNotes(null)}>
+          <div className="diff-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Update {pendingNotes.name}?</h3>
+            <div className="diff-ver">
+              v{pendingNotes.current_version} → v{pendingNotes.latest_version}
+            </div>
+            <div className="notes-body" style={{ maxHeight: 240, overflow: "auto", marginBottom: 14 }}>
+              {pendingNotes.changelog
+                ? <pre className="notes-pre">{pendingNotes.changelog}</pre>
+                : <div className="notes-muted">No changelog provided by the author.</div>}
+            </div>
+            <div className="diff-foot">
+              <button className="btn btn-sm" onClick={() => setPendingNotes(null)}>Cancel</button>
+              <button className="btn btn-sm btn-primary" onClick={() => updateAura(pendingNotes.slug)}>Update</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="page-head">
         <div className="page-title">
           WeakAuras
@@ -191,7 +283,26 @@ export function WeakAurasScreen(): JSX.Element {
                   {updating === "__all__" ? "Updating…" : `Update All (${updateCount})`}
                 </button>
               )}
+              {selected.size > 0 && (
+                <button className="btn btn-sm btn-danger" onClick={untrackSelected} disabled={untracking}>
+                  {untracking ? "Untracking…" : `Untrack (${selected.size})`}
+                </button>
+              )}
             </div>
+          </div>
+
+          {/* Track a wago collection (#64) */}
+          <div className="wa-search" style={{ marginTop: 8 }}>
+            <input
+              type="text"
+              placeholder="Track a wago collection URL…"
+              value={collUrl}
+              onChange={(e) => setCollUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") trackCollection(); }}
+            />
+            <button className="btn btn-sm" onClick={trackCollection} disabled={collBusy || !collUrl.trim()}>
+              {collBusy ? "…" : "Track collection"}
+            </button>
           </div>
 
           {/* Search results (#48) */}
@@ -246,8 +357,15 @@ export function WeakAurasScreen(): JSX.Element {
           ) : (
             <div className="wa-grid">
               {items.map((a) => (
-                <div className={`wa-card${a.has_update ? " wa-card-upd" : ""}`} key={a.slug}>
+                <div className={`wa-card${a.has_update ? " wa-card-upd" : ""}${selected.has(a.slug) ? " sel" : ""}`} key={a.slug}>
                   <div className="wa-top">
+                    <input
+                      type="checkbox"
+                      className="wa-check"
+                      aria-label={`Select ${a.name}`}
+                      checked={selected.has(a.slug)}
+                      onChange={() => toggleSelect(a.slug)}
+                    />
                     <div className="wa-ic">
                       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                         <path d="M10 2 4 10h4l-1 6 6-8h-4l1-6z" fill="currentColor"/>
@@ -260,10 +378,10 @@ export function WeakAurasScreen(): JSX.Element {
                     {a.has_update ? (
                       <button
                         className="btn btn-sm btn-accent wa-upd-btn"
-                        onClick={() => updateAura(a.slug)}
-                        disabled={updating !== null}
+                        onClick={() => requestUpdate(a.slug)}
+                        disabled={updating !== null || notesLoading !== null}
                       >
-                        {updating === a.slug ? "…" : `v${a.latest_version}`}
+                        {updating === a.slug || notesLoading === a.slug ? "…" : `v${a.latest_version}`}
                       </button>
                     ) : (
                       <span className="wa-sync">current</span>
