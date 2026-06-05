@@ -4,6 +4,23 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] — 2026-06-05
+
+### Added
+- **Aura diff before update** (#62): updating a tracked WeakAura first shows the
+  version transition and the author's changelog in a confirmation dialog,
+  falling back to a direct update when no changelog is available. Backed by the
+  new `wago.updateNotes` bridge method and `wago.wago_update_notes()`.
+- **Companion auto-build timer** (#63): a third systemd user timer that runs
+  `wowusky weakauras companion` on a schedule so tracked auras flow back into
+  the game without manual action. Managed from **Settings → Companion
+  Auto-Build**. Backed by `schedule.companion_*` and the
+  `companionSchedule.status` / `.enable` / `.disable` bridge methods.
+- **Bulk untrack & collections** (#64): select multiple auras with checkboxes
+  and untrack them in one action, and import every aura in a wago collection by
+  pasting its URL. Backed by the new `wago.untrackMany` and `wago.addCollection`
+  bridge methods (`wago.wago_untrack_many()`, `wago.wago_add_collection()`).
+
 ## [0.16.0] — 2026-06-05
 
 ### Added
@@ -1154,6 +1171,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.17.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.17.0
 [0.16.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.16.0
 [0.15.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.15.0
 [0.14.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.14.0

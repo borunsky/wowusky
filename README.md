@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.16.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.17.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,22 +15,21 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.16.0
+## What's new in v0.17.0
 
 ### Added
-- **Installation health in the UI** (#59): the Health screen now leads with an
-  **Installation** section that detects missing folders (tracked addons whose
-  files are gone), duplicate folder claims, and orphan folders — with one-click
-  fixes (re-sync with disk, remove dangling entry). Backed by the new
-  `health.installed`, `health.fixResync` and `health.removeEntry` bridge methods.
-- **Orphan management** (#60): addon folders present on disk but not tracked are
-  surfaced with **Adopt** (register into the profile, catalog-matched where
-  possible) and **Delete** (remove from disk, backup taken first) actions.
-  Backed by `orphans.list`, `orphans.adopt` and `orphans.remove`.
-- **Update diff before install** (#61): an opt-in **Confirm update diff**
-  setting (Settings → Advanced) shows which folders an update adds or removes,
-  plus the version transition, and asks for confirmation before applying.
-  Backed by the new `addon.updateDiff` bridge method.
+- **Aura diff before update** (#62): updating a tracked WeakAura now shows the
+  version transition and the author's changelog in a confirmation dialog first
+  (falling back to a direct update when no changelog is available). Backed by
+  the new `wago.updateNotes` bridge method.
+- **Companion auto-build timer** (#63): a systemd user timer that rebuilds the
+  WeakAurasCompanion addon on a schedule so tracked auras flow back into the
+  game without manual action. Managed from **Settings → Companion Auto-Build**.
+  Backed by `companionSchedule.status` / `.enable` / `.disable`.
+- **Bulk untrack & collections** (#64): select multiple auras with checkboxes
+  and untrack them in one action, and import every aura in a wago collection by
+  pasting its URL. Backed by the new `wago.untrackMany` and `wago.addCollection`
+  bridge methods.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -40,8 +39,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.16.0.zip
-cd wowusky-v0.16.0
+unzip wowusky-v0.17.0.zip
+cd wowusky-v0.17.0
 chmod +x install.sh
 ./install.sh
 ```
@@ -65,7 +64,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.16.0-py3-none-any.whl
+pip install dist/wowusky-0.17.0-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
