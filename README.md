@@ -18,17 +18,18 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ## What's new in v0.15.0
 
 ### Added
-- **First-run wizard** (#56): starting wowusky with no configured profile now
-  shows a guided setup overlay that autoscans for WoW installations, lets you
-  adopt one with a single click (or set a path manually), and then drops you
-  on the Installed screen. No more empty Settings screen for new users.
-- **Search & filter on the Installed screen** (#57): the installed list gains
-  a source filter and an **Outdated only** toggle alongside the existing
-  text search (which now also matches addon ids). Filters combine and the
-  empty state adapts to the active filters.
-- **Keyboard shortcuts** (#58): global shortcuts for navigation and actions —
-  `B` Browse, `I` Installed, `W` WeakAuras, `S` Settings, `U` update all
-  outdated addons, `R` rescan. Ignored while typing in a field.
+- **First-run wizard** (#56): when wowusky starts with no configured profile,
+  a guided setup overlay appears — it autoscans for WoW installations, lets
+  you adopt one with one click or set a path manually, then hands control
+  back on the Installed screen. Reuses the existing `profiles.scan` /
+  `profiles.addFromPath` bridge methods; no new backend.
+- **Search & filter on the Installed screen** (#57): the installed list adds a
+  source filter and an **Outdated only** toggle next to the text search (now
+  matching ids as well as names). Filters combine and the empty state reflects
+  the active filters. Entirely renderer-side over the existing `installed.list`.
+- **Keyboard shortcuts** (#58): global shortcuts — `B` Browse, `I` Installed,
+  `W` WeakAuras, `S` Settings, `U` update all outdated addons, `R` rescan.
+  Suppressed while a text field is focused and when modifier keys are held.
 <!-- WHATS-NEW:END -->
 
 ---
