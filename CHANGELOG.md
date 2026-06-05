@@ -4,6 +4,28 @@ All notable changes to wowusky will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] — 2026-06-05
+
+### Added
+- **Full profile bundle export/import** (#65): export an entire profile —
+  installed addons, tracked WeakAuras, and safe settings — as a single portable
+  JSON file, and import it on any other machine. The CurseForge API key is
+  deliberately excluded. Backed by `profile.exportBundle`,
+  `profile.importBundlePreview` and `profile.importBundleApply` bridge methods
+  plus `profile_bundle.export_profile_bundle()` / `import_bundle_apply()`.
+- **Git-based profile sync** (#66): configure a git repository path and push or
+  pull the profile bundle in one click. The bundle is committed to the repo, so
+  any git host (GitHub, Gitea, bare remote, …) acts as a sync server. Accessible
+  from **Settings → Profile Sync & Bundle** and from the new `wowusky sync`
+  CLI subcommand (`status`, `set-repo`, `push`, `pull`). Backed by
+  `sync.status`, `sync.setRepo`, `sync.push`, `sync.pull`.
+- **Change history / audit log** (#67): every install, update and removal is
+  recorded in a persistent per-profile JSONL log at
+  `~/.local/share/wowusky/history/<profile_id>.jsonl`. The new **History**
+  screen in the desktop app provides full-text search and action filtering;
+  the entire log can be cleared from there. Backed by `history.list` and
+  `history.clear`.
+
 ## [0.17.0] — 2026-06-05
 
 ### Added
@@ -1171,6 +1193,7 @@ and the duplicated flavor/TOC/HTTP/catalog literals are gone.
 Single-file GUI prototype focused on a single WoW installation.
 See git history for details.
 
+[0.18.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.18.0
 [0.17.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.17.0
 [0.16.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.16.0
 [0.15.0]:        https://github.com/borunsky/wowusky/releases/tag/v0.15.0

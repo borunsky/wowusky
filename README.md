@@ -3,7 +3,7 @@
 **Minimalist World of Warcraft addon manager for Linux.**
 
 ```
-◆ wowusky v0.17.0    Browse  Installed  WeakAuras  Import  Log   ● TBC Anniversary ⚙
+◆ wowusky v0.18.0    Browse  Installed  WeakAuras  History  Log   ● TBC Anniversary ⚙
 ```
 
 Standard-library Python · CachyOS/Arch-friendly · 241+ curated addons across
@@ -15,21 +15,23 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 <!-- This section is generated from the latest CHANGELOG.md entry by
      .github/workflows/readme-version-sync.yml on each published release.
      Edit CHANGELOG.md, not the text between these markers. -->
-## What's new in v0.17.0
+## What's new in v0.18.0
 
 ### Added
-- **Aura diff before update** (#62): updating a tracked WeakAura now shows the
-  version transition and the author's changelog in a confirmation dialog first
-  (falling back to a direct update when no changelog is available). Backed by
-  the new `wago.updateNotes` bridge method.
-- **Companion auto-build timer** (#63): a systemd user timer that rebuilds the
-  WeakAurasCompanion addon on a schedule so tracked auras flow back into the
-  game without manual action. Managed from **Settings → Companion Auto-Build**.
-  Backed by `companionSchedule.status` / `.enable` / `.disable`.
-- **Bulk untrack & collections** (#64): select multiple auras with checkboxes
-  and untrack them in one action, and import every aura in a wago collection by
-  pasting its URL. Backed by the new `wago.untrackMany` and `wago.addCollection`
-  bridge methods.
+- **Full profile bundle export/import** (#65): export your entire profile
+  (installed addons, tracked WeakAuras, safe settings) as a single portable
+  JSON file and import it on another machine. CurseForge API key is deliberately
+  excluded. Backed by `profile.exportBundle`, `profile.importBundlePreview` and
+  `profile.importBundleApply` bridge methods.
+- **Git-based profile sync** (#66): point wowusky at a git repository and push
+  or pull your profile bundle with one click. The bundle is committed to the
+  repo so you can sync across machines via any git host. Managed from
+  **Settings → Profile Sync & Bundle**. Backed by `sync.status`, `sync.setRepo`,
+  `sync.push` and `sync.pull`, plus the `wowusky sync` CLI subcommand.
+- **Change history / audit log** (#67): every install, update and removal is
+  recorded in a persistent per-profile JSONL log. Browse the log in the new
+  **History** screen with full-text search and action filtering, and clear it at
+  any time. Backed by `history.list` and `history.clear`.
 <!-- WHATS-NEW:END -->
 
 ---
@@ -39,8 +41,8 @@ Tukui · GitHub · WoWInterface · WeakAuras/Wago · CurseForge.
 ### Local install (CachyOS / Arch / any Linux)
 
 ```bash
-unzip wowusky-v0.17.0.zip
-cd wowusky-v0.17.0
+unzip wowusky-v0.18.0.zip
+cd wowusky-v0.18.0
 chmod +x install.sh
 ./install.sh
 ```
@@ -64,7 +66,7 @@ If `~/.local/bin` is not in your `PATH`, the installer reminds you.
 ```bash
 pip install build
 python -m build
-pip install dist/wowusky-0.17.0-py3-none-any.whl
+pip install dist/wowusky-0.18.0-py3-none-any.whl
 ```
 
 ### From PyPI (after first tagged release)
